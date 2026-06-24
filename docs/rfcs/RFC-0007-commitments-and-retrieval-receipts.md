@@ -65,6 +65,11 @@ class RetrievalReceipt:
 
 The store appends content ids to a Merkle Mountain Range. `commit()` seals the current peak set, persists a sidecar, updates manifest commitment fields, and returns the root. `prove(ids)` returns inclusion proofs for ids present at the current root. `query(with_receipt=True)` snapshots the current root, builds proofs for returned ids, and attaches query parameters sufficient for deterministic replay.
 
+The implemented local receipt binds query parameters with a vector digest,
+vector shape and dtype, `k`, metric, optional `ef`, filters, temporal decay, and
+optional encoder fingerprint. The receipt JSON does not embed raw latent query
+vectors.
+
 Verification:
 
 1. canonicalize returned items and recompute content ids;
@@ -74,6 +79,10 @@ Verification:
 5. verify query parameters match the replay request.
 
 The receipt does not prove the index returned the true top-k neighbors. It proves returned items were committed and unaltered.
+
+The initial local verifier supports unsigned receipts. Signed-root verification
+is a compatible schema extension and remains separate from membership proof
+semantics.
 
 ## Alternatives Considered
 

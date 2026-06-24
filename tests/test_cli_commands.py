@@ -12,6 +12,8 @@ from mneme.core import (
     CliExitCode,
     EncoderFingerprint,
     MemoryItem,
+    Metric,
+    QuerySpec,
     Transition,
 )
 from mneme.eval import validate_report_json
@@ -315,16 +317,42 @@ def test_eval_benchmark_cli_reports_missing_dataset(tmp_path: Path) -> None:
     assert "benchmark dataset file not found" in str(error["errors"][0])
 
 
-def test_receipts_verify_cli_reports_documented_placeholder(tmp_path: Path) -> None:
-    receipt = tmp_path / "receipt.json"
-    receipt.write_text("{}", encoding="utf-8")
+def test_receipts_verify_cli_verifies_committed_receipt(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    receipt_path = tmp_path / "receipt.json"
+    store = init_store(root)
+    store.put_batch([_item(float(index), step=index) for index in range(2)])
+    committed_root = store.commit()
+    retrieval = store.query(
+        QuerySpec(
+            vector=np.array([0.0, 0.0], dtype=np.float32),
+            k=1,
+            metric=Metric.L2,
+            with_receipt=True,
+        )
+    )
+    assert retrieval.receipt is not None
+    receipt_path.write_text(
+        json.dumps(retrieval.receipt.to_json()),
+        encoding="utf-8",
+    )
 
-    result = _run_cli("receipts", "verify", receipt, "--root", "00")
+    ok = _run_cli("receipts", "verify", receipt_path, "--root", committed_root.hex())
+    wrong_root = _run_cli(
+        "receipts",
+        "verify",
+        receipt_path,
+        "--root",
+        "00" * 32,
+    )
 
-    assert result.returncode == int(CliExitCode.USER_INPUT)
-    error = _stdout_json(result)
-    assert error["schema_version"] == "mneme.cli_error.v1"
-    assert error["error_type"] == "UnsupportedOperationError"
+    assert ok.returncode == int(CliExitCode.SUCCESS), ok.stdout + ok.stderr
+    ok_json = _stdout_json(ok)
+    assert ok_json["schema_version"] == "mneme.receipt_verification.v1"
+    assert ok_json["ok"] is True
+    assert ok_json["proof_count"] == 1
+    assert wrong_root.returncode == int(CliExitCode.DATA_VALIDATION)
+    assert _stdout_json(wrong_root)["ok"] is False
 
 
 def _fingerprint() -> EncoderFingerprint:

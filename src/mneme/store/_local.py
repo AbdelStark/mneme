@@ -40,6 +40,7 @@ from mneme.receipts import (
 )
 from mneme.receipts import (
     InclusionProof,
+    build_retrieval_receipt,
     load_commitment_state,
     save_commitment_state,
 )
@@ -305,6 +306,7 @@ class LocalStore:
         """Query the in-memory index and load values from the value log cache."""
 
         started = start_event_timer(self.observability)
+        commitment_state = self.commitment_state() if spec.with_receipt else None
         index_fp = (
             self.manifest.active_fingerprints[0]
             if len(self.manifest.active_fingerprints) == 1
@@ -364,9 +366,21 @@ class LocalStore:
                     self.observability,
                 ),
             )
+        receipt = None
+        if commitment_state is not None:
+            result_ids = tuple(cid for cid, _ in results)
+            proofs = tuple(commitment_state.prove(cid) for cid in result_ids)
+            receipt = build_retrieval_receipt(
+                root=commitment_state.root,
+                ids=result_ids,
+                proofs=proofs,
+                query=spec,
+                store_id=str(self.manifest.store_id),
+            )
         return Retrieval(
             items=items,
             distances=tuple(distance for _, distance in results),
+            receipt=receipt,
         )
 
     def commit(self) -> bytes:

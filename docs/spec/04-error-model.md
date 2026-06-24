@@ -52,6 +52,11 @@ store.
 `commit` and `prove`
 : Unsupported stores raise `UnsupportedOperationError`. Invalid proofs raise `ReceiptVerificationError`.
 
+`receipts verify`
+: Malformed receipt files and invalid roots raise `ReceiptVerificationError`.
+  Validly parsed receipts that do not match the supplied root or proof set
+  return a schema-versioned `ok: false` report and a data-validation exit.
+
 CLI
 : Maps typed errors to stable exit codes defined in [Public API](02-public-api.md#command-line-surface).
 

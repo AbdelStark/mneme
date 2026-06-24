@@ -68,5 +68,8 @@ Deferred:
 
 ## Resolved Bootstrap Decisions
 
-- Signing backend: v0.3 root signatures use Ed25519 through the `cryptography` package behind the receipts extra. Root signing is optional for local stores and required for remote/shared-store examples that claim signed provenance.
+- Signing backend: the receipt schema reserves signer and signature fields for
+  an Ed25519 backend behind the receipts extra. Local unsigned receipts can
+  verify membership today; any remote/shared-store example that claims signed
+  provenance must add and test a signing backend first.
 - v1.0 confidentiality requirement: built-in encryption at rest is not required for v1.0. v1.0 requires clear deployment guidance, redaction defaults, validation, and receipt integrity. Built-in encrypted stores require a separate post-v1.0 RFC because key management is a distinct design problem.

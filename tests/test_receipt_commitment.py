@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,18 +12,24 @@ from blake3 import blake3
 from mneme.core import (
     EncoderFingerprint,
     MemoryItem,
+    Metric,
+    QuerySpec,
     ReceiptVerificationError,
     Transition,
     UnsupportedOperationError,
+    ValidationError,
     content_id,
 )
 from mneme.receipts import (
     COMMITMENT_SCHEMA,
     CommitmentState,
     InclusionProof,
+    RetrievalReceipt,
+    build_retrieval_receipt,
     load_commitment_state,
     save_commitment_state,
     verify_inclusion_proof,
+    verify_retrieval_receipt,
 )
 from mneme.store import init_store, open_store
 
@@ -145,11 +152,117 @@ def test_store_commit_persists_mmr_sidecar_and_proves_value_log_order(
         reopened.prove([blake3(b"missing").digest()])
 
 
+def test_retrieval_receipt_verifies_items_root_and_query(tmp_path: Path) -> None:
+    store = init_store(tmp_path / "store")
+    store.put_batch([_item(float(index), step=index) for index in range(3)])
+    root = store.commit()
+    spec = QuerySpec(
+        vector=np.array([1.0, 0.0], dtype=np.float32),
+        k=2,
+        metric=Metric.L2,
+        with_receipt=True,
+    )
+
+    retrieval = open_store(store.path).query(spec)
+
+    assert isinstance(retrieval.receipt, RetrievalReceipt)
+    assert retrieval.receipt.root == root
+    assert retrieval.receipt.ids == tuple(
+        item.content_id or content_id(item) for item in retrieval.items
+    )
+    assert verify_retrieval_receipt(
+        retrieval.receipt,
+        retrieval.items,
+        root=root,
+        query=spec,
+    )
+    reloaded = RetrievalReceipt.from_json(retrieval.receipt.to_json())
+    assert verify_retrieval_receipt(reloaded, retrieval.items, root=root, query=spec)
+
+
+def test_retrieval_receipt_fails_for_altered_items_and_root(
+    tmp_path: Path,
+) -> None:
+    store = init_store(tmp_path / "store")
+    store.put_batch([_item(float(index), step=index) for index in range(2)])
+    root = store.commit()
+    spec = QuerySpec(
+        vector=np.array([0.0, 0.0], dtype=np.float32),
+        k=1,
+        metric=Metric.L2,
+        with_receipt=True,
+    )
+    retrieval = open_store(store.path).query(spec)
+    assert isinstance(retrieval.receipt, RetrievalReceipt)
+
+    item = retrieval.items[0]
+    altered_item = replace(item, meta={**dict(item.meta), "tampered": True})
+
+    assert not verify_retrieval_receipt(
+        retrieval.receipt,
+        (altered_item,),
+        root=root,
+        query=spec,
+    )
+    assert not verify_retrieval_receipt(
+        retrieval.receipt,
+        retrieval.items,
+        root=blake3(b"wrong-root").digest(),
+        query=spec,
+    )
+    assert not verify_retrieval_receipt(
+        retrieval.receipt,
+        retrieval.items,
+        root=root,
+        query=replace(spec, k=2),
+    )
+
+
+def test_build_retrieval_receipt_requires_matching_ids_and_proofs(
+    tmp_path: Path,
+) -> None:
+    store = init_store(tmp_path / "store")
+    (cid,) = store.put_batch([_item(1.0)])
+    root = store.commit()
+    spec = QuerySpec(
+        vector=np.array([1.0, 0.0], dtype=np.float32),
+        k=1,
+        metric=Metric.L2,
+    )
+
+    receipt = build_retrieval_receipt(
+        root=root,
+        ids=(cid,),
+        proofs=tuple(store.prove([cid])),
+        query=spec,
+        store_id=str(store.manifest.store_id),
+        created_at="2026-06-24T00:00:00Z",
+    )
+
+    assert receipt.to_json()["created_at"] == "2026-06-24T00:00:00Z"
+    with pytest.raises(ValidationError, match="ids and proofs"):
+        build_retrieval_receipt(
+            root=root,
+            ids=(cid,),
+            proofs=(),
+            query=spec,
+            store_id=str(store.manifest.store_id),
+        )
+
+
 def test_uncommitted_store_root_and_prove_fail_closed(tmp_path: Path) -> None:
     store = init_store(tmp_path / "store")
     store.put(_item(1.0))
+    spec = QuerySpec(
+        vector=np.array([1.0, 0.0], dtype=np.float32),
+        k=1,
+        metric=Metric.L2,
+        with_receipt=True,
+    )
 
     with pytest.raises(UnsupportedOperationError, match="commitments"):
         store.root()
     with pytest.raises(UnsupportedOperationError, match="commitments"):
         store.prove([content_id(_item(2.0))])
+    with pytest.raises(UnsupportedOperationError, match="commitments"):
+        store.query(spec)

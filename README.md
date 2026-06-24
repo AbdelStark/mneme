@@ -121,8 +121,8 @@ contain real environment data. See [SECURITY.md](SECURITY.md) and
   yet.
 - The in-context conditioner is a baseline for compatible predictor wrappers;
   its attention cost scales with retrieved `k`.
-- MMR commitment state exists, but retrieval receipt construction, signing, and
-  CLI verification are not complete yet.
+- Local retrieval receipts verify committed membership and canonical item bytes,
+  but signing, verifiable search, and private retrieval are not complete yet.
 - No external benchmark or drift-improvement claim without an external report.
 
 ## Documentation
