@@ -10,6 +10,7 @@ __pycache__/
 .coverage.*
 htmlcov/
 coverage.xml
+.mypy_cache/
 .pytest_cache/
 .hypothesis/
 .ruff_cache/
