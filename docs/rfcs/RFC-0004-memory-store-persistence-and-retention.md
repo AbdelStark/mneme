@@ -62,7 +62,7 @@ Recovery reads pending transactions on open. If all value records are present an
 Retention policies:
 
 - `CountRetention(max_items=N)`
-- `AgeRetention(max_age_seconds=N)`
+- `AgeRetention(max_age_seconds=N)` over stored transition event time `t`
 - `DensityRetention(max_items_per_bucket=N)` after summary bucketing exists
 
 Retention writes tombstones in the manifest. Physical compaction is a separate maintenance command and must produce a new value log and rebuilt index.
@@ -94,7 +94,7 @@ v0.1 implements local single-writer stores, verification, and index rebuild. v0.
 
 ## Resolved Bootstrap Decisions
 
-- v0.1 retention may leave tombstoned records. Physical compaction is deferred to v0.2 or later because the v0.1 durability requirement is safer with append-only value logs and rebuildable indexes.
+- v0.1 retention implements count caps and event-time age windows, and may leave tombstoned records. Physical compaction is deferred to v0.2 or later because the v0.1 durability requirement is safer with append-only value logs and rebuildable indexes.
 
 ## References
 

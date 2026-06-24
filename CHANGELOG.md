@@ -16,6 +16,7 @@ changes may occur before the first stable release.
 - Structured operation events with default redaction rules.
 - Hosted CI gates, release checklist, and release artifact validation command.
 - Optional FAISS HNSW approximate index backend behind the `index` extra.
+- Count and event-time age retention policies with manifest tombstones.
 
 ### Security
 

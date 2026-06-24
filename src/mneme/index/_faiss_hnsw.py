@@ -18,6 +18,7 @@ from mneme.core import (
     ShapeError,
     SummaryVec,
 )
+from mneme.index._protocols import Index
 
 _COSINE_NORM_TOLERANCE = 1e-4
 
@@ -167,7 +168,7 @@ def create_index_backend(
     params: Mapping[str, Any] | None = None,
     *,
     observability: Any | None = None,
-) -> Any:
+) -> Index:
     """Create an index backend from a manifest backend name and params."""
 
     from mneme.core import IndexUnavailableError

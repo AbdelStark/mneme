@@ -231,7 +231,7 @@ distance distributions for the target encoder, summarizer, and task.
 The v0.1 package must provide:
 
 ```python
-from mneme.store import init_store, open_store, rebuild_index, verify_store
+from mneme.store import age_retention, count_retention, init_store, open_store, rebuild_index, verify_store
 
 def init_store(path: Path | str, *, ...) -> LocalStore: ...
 def open_store(path: Path | str, *, create: bool = False) -> LocalStore: ...
@@ -251,6 +251,11 @@ index, transaction, and commitment-reservation fields.
 `LocalStore.put` and `put_batch` append length-prefixed, checksummed value
 records under a transaction intent/commit file, update the manifest, and rebuild
 queryability from the value log on restart.
+`count_retention(max_items)` caps visible items by newest `Transition.t` and
+records tombstones in the manifest. `age_retention(max_age_seconds)` excludes
+items older than the newest visible event-time `Transition.t` minus the age
+window. Tombstoned records remain in value logs until a future compaction
+command; queries and rebuilt indexes exclude them.
 `LocalStore.recovery_events` is a tuple of schema-versioned
 `StoreRecoveryEvent` objects produced by `open_store` when it completes or rolls
 back pending transactions.

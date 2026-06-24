@@ -12,6 +12,7 @@ from mneme.core import EncoderFingerprint, SchemaVersionError, StoreCorruptionEr
 
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
 _SUPPORTED_MAJOR: Final = 1
+_RETENTION_POLICIES: Final = frozenset({"none", "count", "age"})
 
 
 def _require_string(value: object, field_name: str) -> str:
@@ -40,6 +41,22 @@ def _require_non_negative_int(value: object, field_name: str) -> int:
     if value < 0:
         raise StoreCorruptionError(f"{field_name} must be >= 0")
     return value
+
+
+def count_retention(max_items: int) -> dict[str, Any]:
+    """Return a JSON-ready count retention policy."""
+
+    return _require_retention_policy(
+        {"policy": "count", "max_items": max_items, "tombstones": []}
+    )
+
+
+def age_retention(max_age_seconds: int) -> dict[str, Any]:
+    """Return a JSON-ready event-time age retention policy."""
+
+    return _require_retention_policy(
+        {"policy": "age", "max_age_seconds": max_age_seconds, "tombstones": []}
+    )
 
 
 @dataclass(frozen=True)
@@ -181,7 +198,7 @@ class StoreManifest:
         object.__setattr__(
             self,
             "retention_policy",
-            _require_json_mapping(self.retention_policy, "retention_policy"),
+            _require_retention_policy(self.retention_policy),
         )
         if self.last_completed_transaction is not None and not isinstance(
             self.last_completed_transaction, str
@@ -219,8 +236,8 @@ class StoreManifest:
             ),
             value_logs=tuple(ValueLogRef.from_json(item) for item in value_logs),
             index=IndexConfig.from_json(mapping.get("index")),
-            retention_policy=_require_json_mapping(
-                mapping.get("retention_policy", {}), "retention_policy"
+            retention_policy=_require_retention_policy(
+                mapping.get("retention_policy", {})
             ),
             last_completed_transaction=_optional_string(
                 mapping.get("last_completed_transaction"),
@@ -299,6 +316,56 @@ def _require_json_mapping(data: object, field_name: str) -> Mapping[str, Any]:
     return dict(mapping)
 
 
+def _require_retention_policy(data: object) -> dict[str, Any]:
+    mapping = dict(_require_json_mapping(data, "retention_policy"))
+    policy = mapping.get("policy", "none")
+    if not isinstance(policy, str) or policy not in _RETENTION_POLICIES:
+        raise StoreCorruptionError("retention_policy policy is unsupported")
+    tombstones = _require_tombstones(mapping.get("tombstones", []))
+    normalized: dict[str, Any] = {"policy": policy, "tombstones": tombstones}
+    if policy == "count":
+        normalized["max_items"] = _require_non_negative_int(
+            mapping.get("max_items"), "retention_policy max_items"
+        )
+    elif policy == "age":
+        normalized["max_age_seconds"] = _require_non_negative_int(
+            mapping.get("max_age_seconds"),
+            "retention_policy max_age_seconds",
+        )
+    return normalized
+
+
+def _require_tombstones(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise StoreCorruptionError("retention_policy tombstones must be a list")
+    tombstones: list[dict[str, Any]] = []
+    for index, raw in enumerate(value):
+        mapping = _require_mapping(raw, f"retention_policy tombstones[{index}]")
+        content_id = _require_string(mapping.get("content_id"), "tombstone content_id")
+        try:
+            bytes.fromhex(content_id)
+        except ValueError as exc:
+            raise StoreCorruptionError(
+                "tombstone content_id must be hex bytes"
+            ) from exc
+        tombstone: dict[str, Any] = {
+            "content_id": content_id,
+            "reason": _require_string(mapping.get("reason"), "tombstone reason"),
+            "created_at": _require_string(
+                mapping.get("created_at"), "tombstone created_at"
+            ),
+        }
+        transaction_id = _optional_string(
+            mapping.get("transaction_id"),
+            "tombstone transaction_id",
+        )
+        if transaction_id is not None:
+            tombstone["transaction_id"] = transaction_id
+        tombstones.append(tombstone)
+    tombstones.sort(key=lambda item: item["content_id"])
+    return tombstones
+
+
 def _validate_json_value(value: object, field_name: str) -> None:
     if value is None or isinstance(value, bool | str):
         return
@@ -349,5 +416,7 @@ __all__ = [
     "IndexConfig",
     "StoreManifest",
     "ValueLogRef",
+    "age_retention",
+    "count_retention",
     "validate_manifest_schema",
 ]

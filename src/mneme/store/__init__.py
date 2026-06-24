@@ -14,6 +14,8 @@ from mneme.store._manifest import (
     IndexConfig,
     StoreManifest,
     ValueLogRef,
+    age_retention,
+    count_retention,
 )
 from mneme.store._verify import (
     INDEX_DATA_SCHEMA,
@@ -39,6 +41,8 @@ __all__ = [
     "StoreStats",
     "StoreVerificationReport",
     "ValueLogRef",
+    "age_retention",
+    "count_retention",
     "init_store",
     "load_manifest",
     "open_store",
