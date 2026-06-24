@@ -1,0 +1,42 @@
+{
+  "schema_version": "mneme.eval_report.v1",
+  "report_id": "fixture-gate-golden",
+  "command": [
+    "mneme",
+    "eval",
+    "gate",
+    "--fixture"
+  ],
+  "package_version": "0.1.0.dev0",
+  "git_commit": "0000000",
+  "created_at": "2026-06-24T00:00:00Z",
+  "platform": {
+    "machine": "fixture",
+    "python": "3.12",
+    "system": "fixture"
+  },
+  "seed": 1234,
+  "dataset": {
+    "schema_version": "mneme.dataset_ref.v1",
+    "dataset_id": "synthetic-gate-fixture",
+    "kind": "fixture",
+    "split": "golden",
+    "version": "v1",
+    "uri": null,
+    "metadata": {
+      "source": "tests/fixtures/condition/gate_behavior_cases.json"
+    }
+  },
+  "metrics": {
+    "far_gate_max": 0.000001,
+    "near_gate_min": 0.4,
+    "case_count": 2
+  },
+  "artifacts": {
+    "gate_cases": "tests/fixtures/condition/gate_behavior_cases.json"
+  },
+  "caveats": [
+    "Synthetic fixture evidence cannot prove external task success."
+  ],
+  "passed": true
+}

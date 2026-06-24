@@ -98,6 +98,7 @@ Logs may include:
 
 Every evaluation command writes a JSON report with:
 
+- `schema_version` equal to `mneme.eval_report.v1`
 - command arguments
 - package version
 - git commit when available
@@ -109,6 +110,8 @@ Every evaluation command writes a JSON report with:
 - caveats
 
 Reports must be suitable for later README or paper claims. A result without the report is not public evidence.
+Fixture reports must include caveats stating that fixture evidence cannot prove
+external task success.
 
 ## Resolved Bootstrap Decisions
 
