@@ -64,8 +64,11 @@ class StoreStats:
     active_fingerprint_count: int
     value_log_count: int
     value_record_count: int
+    visible_record_count: int
     value_bytes: int
     index_backend: str
+    retention_policy: str
+    tombstone_count: int
     last_completed_transaction: str | None
     commitments_enabled: bool
 
@@ -120,6 +123,7 @@ class LocalStore:
     def stats(self) -> StoreStats:
         value_record_count = sum(log.record_count for log in self.manifest.value_logs)
         value_bytes = sum(log.size_bytes for log in self.manifest.value_logs)
+        tombstoned = _tombstoned_cids(self.manifest)
         return StoreStats(
             store_id=self.manifest.store_id,
             path=self.path,
@@ -127,8 +131,11 @@ class LocalStore:
             active_fingerprint_count=len(self.manifest.active_fingerprints),
             value_log_count=len(self.manifest.value_logs),
             value_record_count=value_record_count,
+            visible_record_count=len(set(self._items) - tombstoned),
             value_bytes=value_bytes,
             index_backend=self.manifest.index.backend,
+            retention_policy=str(self.manifest.retention_policy.get("policy", "none")),
+            tombstone_count=len(tombstoned),
             last_completed_transaction=self.manifest.last_completed_transaction,
             commitments_enabled=self.manifest.commitment.enabled,
         )
@@ -201,12 +208,20 @@ class LocalStore:
             )
             for item in prepared:
                 self._items[item.content_id or content_id(item)] = item
+            previous_tombstones = _tombstoned_cids(self.manifest)
             self.manifest = _manifest_after_commit(
                 self.manifest,
                 txid=txid,
                 items=prepared,
                 log_size=log_path.stat().st_size,
+                all_items=self._items,
             )
+            if _tombstoned_cids(self.manifest) != previous_tombstones:
+                self.index = _index_from_items(
+                    self.manifest,
+                    self._items,
+                    observability=self.observability,
+                )
             _write_json_atomic(self.path / _MANIFEST_FILE, self.manifest.to_json())
             _write_transaction(
                 self.path,
@@ -453,11 +468,6 @@ def _store_from_manifest(
     recovery_events: tuple[StoreRecoveryEvent, ...] = (),
     observability: ObservabilityConfig | None = None,
 ) -> LocalStore:
-    index = create_index_backend(
-        manifest.index.backend,
-        manifest.index.params,
-        observability=observability,
-    )
     items: dict[Cid, MemoryItem] = {}
     for value_log in manifest.value_logs:
         log_path = root / value_log.path
@@ -466,7 +476,7 @@ def _store_from_manifest(
         for item in read_value_records(log_path):
             cid = item.content_id or content_id(item)
             items[cid] = item
-            index.add(cid, item.key)
+    index = _index_from_items(manifest, items, observability=observability)
     return LocalStore(
         path=root,
         manifest=manifest,
@@ -511,6 +521,7 @@ def _manifest_after_commit(
     txid: str,
     items: list[MemoryItem],
     log_size: int,
+    all_items: Mapping[Cid, MemoryItem],
 ) -> StoreManifest:
     current_log = manifest.value_logs[0]
     updated_log = replace(
@@ -522,13 +533,155 @@ def _manifest_after_commit(
     for item in items:
         if item.encoder_fp not in active_fingerprints:
             active_fingerprints.append(item.encoder_fp)
-    return replace(
+    updated = replace(
         manifest,
         updated_at=_utc_now(),
         active_fingerprints=tuple(active_fingerprints),
         value_logs=(updated_log, *manifest.value_logs[1:]),
         last_completed_transaction=txid,
     )
+    return replace(
+        updated,
+        retention_policy=_apply_retention_policy(
+            updated.retention_policy,
+            all_items,
+            transaction_id=txid,
+        ),
+    )
+
+
+def _index_from_items(
+    manifest: StoreManifest,
+    items: Mapping[Cid, MemoryItem],
+    *,
+    observability: ObservabilityConfig | None,
+) -> Index:
+    index = create_index_backend(
+        manifest.index.backend,
+        manifest.index.params,
+        observability=observability,
+    )
+    for cid in sorted(_visible_cids(manifest, items)):
+        index.add(cid, items[cid].key)
+    return index
+
+
+def _visible_cids(
+    manifest: StoreManifest,
+    items: Mapping[Cid, MemoryItem],
+) -> set[Cid]:
+    return set(items) - _tombstoned_cids(manifest)
+
+
+def _tombstoned_cids(manifest: StoreManifest) -> set[Cid]:
+    tombstones = manifest.retention_policy.get("tombstones", [])
+    if not isinstance(tombstones, list):
+        return set()
+    cids: set[Cid] = set()
+    for tombstone in tombstones:
+        if isinstance(tombstone, Mapping):
+            raw = tombstone.get("content_id")
+            if isinstance(raw, str):
+                try:
+                    cids.add(bytes.fromhex(raw))
+                except ValueError:
+                    continue
+    return cids
+
+
+def _apply_retention_policy(
+    policy: Mapping[str, Any],
+    all_items: Mapping[Cid, MemoryItem],
+    *,
+    transaction_id: str,
+) -> dict[str, Any]:
+    policy_name = str(policy.get("policy", "none"))
+    tombstones = _retention_tombstones(policy)
+    live = {cid: item for cid, item in all_items.items() if cid not in tombstones}
+    if policy_name == "count":
+        max_items = int(policy["max_items"])
+        evicted = _count_evictions(live, max_items)
+        tombstones.update(
+            _new_tombstones(evicted, reason="count", transaction_id=transaction_id)
+        )
+        return {
+            "policy": "count",
+            "max_items": max_items,
+            "tombstones": _sorted_tombstones(tombstones),
+        }
+    if policy_name == "age":
+        max_age_seconds = int(policy["max_age_seconds"])
+        evicted = _age_evictions(live, max_age_seconds)
+        tombstones.update(
+            _new_tombstones(evicted, reason="age", transaction_id=transaction_id)
+        )
+        return {
+            "policy": "age",
+            "max_age_seconds": max_age_seconds,
+            "tombstones": _sorted_tombstones(tombstones),
+        }
+    return {"policy": "none", "tombstones": _sorted_tombstones(tombstones)}
+
+
+def _retention_tombstones(policy: Mapping[str, Any]) -> dict[Cid, dict[str, Any]]:
+    raw_tombstones = policy.get("tombstones", [])
+    tombstones: dict[Cid, dict[str, Any]] = {}
+    if not isinstance(raw_tombstones, list):
+        return tombstones
+    for raw in raw_tombstones:
+        if not isinstance(raw, Mapping):
+            continue
+        content_id_hex = raw.get("content_id")
+        if not isinstance(content_id_hex, str):
+            continue
+        try:
+            cid = bytes.fromhex(content_id_hex)
+        except ValueError:
+            continue
+        tombstones[cid] = dict(raw)
+    return tombstones
+
+
+def _count_evictions(items: Mapping[Cid, MemoryItem], max_items: int) -> list[Cid]:
+    ordered = sorted(
+        items.items(),
+        key=lambda entry: (entry[1].value.t, entry[0]),
+        reverse=True,
+    )
+    return [cid for cid, _ in ordered[max_items:]]
+
+
+def _age_evictions(items: Mapping[Cid, MemoryItem], max_age_seconds: int) -> list[Cid]:
+    if not items:
+        return []
+    newest = max(item.value.t for item in items.values())
+    return [
+        cid for cid, item in items.items() if newest - item.value.t > max_age_seconds
+    ]
+
+
+def _new_tombstones(
+    cids: list[Cid],
+    *,
+    reason: str,
+    transaction_id: str,
+) -> dict[Cid, dict[str, Any]]:
+    created_at = _utc_now()
+    return {
+        cid: {
+            "content_id": cid.hex(),
+            "reason": reason,
+            "created_at": created_at,
+            "transaction_id": transaction_id,
+        }
+        for cid in cids
+    }
+
+
+def _sorted_tombstones(
+    tombstones: Mapping[Cid, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    return [dict(tombstones[cid]) for cid in sorted(tombstones)]
 
 
 def _write_transaction(root: Path, txid: str, data: dict[str, Any]) -> None:
@@ -714,6 +867,7 @@ def _complete_recovered_transaction(
             txid=transaction.transaction_id,
             items=[item for item, _, _ in appended],
             log_size=actual_size,
+            all_items=_items_from_value_log(root / transaction.value_log),
         )
         _write_json_atomic(root / _MANIFEST_FILE, completed.to_json())
     _write_transaction_state(
@@ -723,6 +877,13 @@ def _complete_recovered_transaction(
         written_offsets=[(start, end) for _, start, end in appended],
     )
     return completed
+
+
+def _items_from_value_log(path: Path) -> dict[Cid, MemoryItem]:
+    items: dict[Cid, MemoryItem] = {}
+    for item in read_value_records(path):
+        items[item.content_id or content_id(item)] = item
+    return items
 
 
 def _truncate_value_log(path: Path, size: int) -> None:

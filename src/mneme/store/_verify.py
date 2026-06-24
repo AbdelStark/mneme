@@ -171,6 +171,7 @@ def rebuild_index(path: str | Path) -> IndexRebuildReport:
             data_path=_INDEX_DATA_FILE,
             errors=tuple(read_errors),
         )
+    visible_items = _visible_items(manifest, items)
 
     _write_json_atomic(
         root / _INDEX_BACKEND_FILE,
@@ -181,16 +182,18 @@ def rebuild_index(path: str | Path) -> IndexRebuildReport:
         {
             "schema_version": INDEX_DATA_SCHEMA,
             "backend": manifest.index.backend,
-            "item_count": len(items),
+            "item_count": len(visible_items),
             "items": [
                 {"content_id": cid.hex(), "key": _key_to_json(item.key)}
-                for cid, item in sorted(items.items(), key=lambda entry: entry[0])
+                for cid, item in sorted(
+                    visible_items.items(), key=lambda entry: entry[0]
+                )
             ],
         },
     )
     return IndexRebuildReport(
         ok=True,
-        item_count=len(items),
+        item_count=len(visible_items),
         index_backend=manifest.index.backend,
         data_path=_INDEX_DATA_FILE,
         errors=(),
@@ -337,6 +340,7 @@ def _validate_index_data(
             f"actual={len(items)}"
         )
     seen: set[Cid] = set()
+    tombstoned = _tombstoned_cids(manifest)
     for index, raw_item in enumerate(items):
         if not isinstance(raw_item, dict):
             errors.append(f"index data item {index} must be an object")
@@ -350,13 +354,41 @@ def _validate_index_data(
         seen.add(cid)
         if cid not in value_log_items:
             errors.append(f"index references missing value log item: {cid.hex()}")
+        if cid in tombstoned:
+            errors.append(f"index references tombstoned value log item: {cid.hex()}")
         errors.extend(
             _validate_index_key(raw_item.get("key"), cid, value_log_items.get(cid))
         )
-    missing_from_index = set(value_log_items) - seen
+    missing_from_index = set(value_log_items) - tombstoned - seen
     for cid in sorted(missing_from_index):
         errors.append(f"value log item missing from index data: {cid.hex()}")
     return errors
+
+
+def _visible_items(
+    manifest: StoreManifest,
+    items: dict[Cid, MemoryItem],
+) -> dict[Cid, MemoryItem]:
+    tombstoned = _tombstoned_cids(manifest)
+    return {cid: item for cid, item in items.items() if cid not in tombstoned}
+
+
+def _tombstoned_cids(manifest: StoreManifest) -> set[Cid]:
+    tombstones = manifest.retention_policy.get("tombstones", [])
+    if not isinstance(tombstones, list):
+        return set()
+    cids: set[Cid] = set()
+    for tombstone in tombstones:
+        if not isinstance(tombstone, dict):
+            continue
+        content_id_hex = tombstone.get("content_id")
+        if not isinstance(content_id_hex, str):
+            continue
+        try:
+            cids.add(bytes.fromhex(content_id_hex))
+        except ValueError:
+            continue
+    return cids
 
 
 def _validate_index_key(

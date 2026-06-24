@@ -227,8 +227,11 @@ def _stats_json(stats: StoreStats) -> dict[str, Any]:
         "active_fingerprint_count": stats.active_fingerprint_count,
         "value_log_count": stats.value_log_count,
         "value_record_count": stats.value_record_count,
+        "visible_record_count": stats.visible_record_count,
         "value_bytes": stats.value_bytes,
         "index_backend": stats.index_backend,
+        "retention_policy": stats.retention_policy,
+        "tombstone_count": stats.tombstone_count,
         "last_completed_transaction": stats.last_completed_transaction,
         "commitments_enabled": stats.commitments_enabled,
     }

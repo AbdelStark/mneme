@@ -35,6 +35,9 @@ def test_store_init_and_stats_cli_emit_schema_versioned_json(
     assert stats_json["schema_version"] == "mneme.store_stats.v1"
     assert stats_json["store_id"] == init_json["store_id"]
     assert stats_json["value_record_count"] == 0
+    assert stats_json["visible_record_count"] == 0
+    assert stats_json["retention_policy"] == "none"
+    assert stats_json["tombstone_count"] == 0
     assert "path" not in stats_json
     assert str(root) not in stats.stdout
 
