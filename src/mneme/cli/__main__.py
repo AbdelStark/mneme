@@ -23,7 +23,16 @@ from mneme.core import (
     cli_exit_code,
     content_id,
 )
-from mneme.eval import run_fixture_evaluation, run_profile_evaluation, write_report_json
+from mneme.eval import (
+    BenchmarkSpec,
+    DryRunBenchmarkRunner,
+    load_benchmark_dataset_ref,
+    parse_benchmark_modes,
+    run_external_benchmark,
+    run_fixture_evaluation,
+    run_profile_evaluation,
+    write_report_json,
+)
 from mneme.store import StoreStats, init_store, open_store, rebuild_index, verify_store
 
 QUERY_RESULT_SCHEMA = "mneme.query_result.v1"
@@ -140,6 +149,29 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_eval_profile_args(latency_parser)
     latency_parser.set_defaults(command="eval latency", handler=_handle_eval_profile)
+
+    benchmark_parser = eval_subparsers.add_parser(
+        "benchmark",
+        help="write opt-in external benchmark report",
+    )
+    benchmark_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="use the built-in dry-run runner",
+    )
+    benchmark_parser.add_argument("--dataset", required=True, type=Path)
+    benchmark_parser.add_argument("--out", required=True, type=Path)
+    benchmark_parser.add_argument("--checkpoint", required=True)
+    benchmark_parser.add_argument(
+        "--modes",
+        default="no_memory,corrector,in_context,adapter",
+        help="comma-separated comparison modes",
+    )
+    benchmark_parser.add_argument("--seed", default=0, type=int)
+    benchmark_parser.set_defaults(
+        command="eval benchmark",
+        handler=_handle_eval_benchmark,
+    )
 
     receipts_parser = subparsers.add_parser("receipts", help="receipt commands")
     receipts_subparsers = receipts_parser.add_subparsers(
@@ -259,6 +291,44 @@ def _handle_eval_profile(args: argparse.Namespace) -> object:
         write_report_json(report, args.out)
     except OSError as exc:
         raise EvaluationError(f"failed to write profile report: {args.out}") from exc
+    return report
+
+
+def _handle_eval_benchmark(args: argparse.Namespace) -> object:
+    if not args.dry_run:
+        raise UnsupportedOperationError(
+            "external benchmark execution requires an explicit runner; "
+            "use --dry-run for the built-in fixture runner"
+        )
+    command = (
+        "mneme",
+        "eval",
+        "benchmark",
+        "--dry-run",
+        "--dataset",
+        str(args.dataset),
+        "--out",
+        str(args.out),
+        "--checkpoint",
+        str(args.checkpoint),
+        "--modes",
+        str(args.modes),
+        "--seed",
+        str(args.seed),
+    )
+    spec = BenchmarkSpec(
+        dataset=load_benchmark_dataset_ref(args.dataset),
+        dataset_manifest=str(args.dataset),
+        checkpoint_uri=str(args.checkpoint),
+        modes=parse_benchmark_modes(args.modes),
+        command=command,
+        seed=args.seed,
+    )
+    report = run_external_benchmark(DryRunBenchmarkRunner(), spec)
+    try:
+        write_report_json(report, args.out)
+    except OSError as exc:
+        raise EvaluationError(f"failed to write benchmark report: {args.out}") from exc
     return report
 
 

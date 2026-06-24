@@ -25,6 +25,8 @@ changes may occur before the first stable release.
   wrappers.
 - Adapter checkpoint metadata sidecar validation and fingerprint-checked
   checkpoint loading.
+- Opt-in external benchmark runner protocol, dry-run runner, and benchmark
+  report command.
 
 ### Security
 

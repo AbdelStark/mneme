@@ -247,6 +247,74 @@ def test_eval_recall_and_latency_aliases_emit_profile_reports(tmp_path: Path) ->
         assert report.metrics["query_latency_p50_ms"] >= 0.0
 
 
+def test_eval_benchmark_dry_run_cli_writes_valid_external_report(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    output = tmp_path / "reports" / "benchmark.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "mneme.dataset_ref.v1",
+                "dataset_id": "loopnav-dry-run",
+                "kind": "external",
+                "split": "dry-run",
+                "version": "v0",
+                "uri": "https://example.invalid/loopnav",
+                "metadata": {"dry_run": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = _run_cli(
+        "eval",
+        "benchmark",
+        "--dry-run",
+        "--dataset",
+        dataset_path,
+        "--out",
+        output,
+        "--checkpoint",
+        "checkpoints/base.json",
+        "--modes",
+        "no_memory,corrector,in_context,adapter",
+        "--seed",
+        "5",
+    )
+
+    assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr
+    printed = validate_report_json(_stdout_json(result))
+    written = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
+    assert printed == written
+    assert printed.dataset.kind == "external"
+    assert printed.dataset.split == "dry-run"
+    assert printed.seed == 5
+    assert printed.artifacts["report_kind"] == "external-benchmark-dry-run"
+    assert printed.metrics["adapter_status"] == "dry_run"
+    assert printed.caveats
+
+
+def test_eval_benchmark_cli_reports_missing_dataset(tmp_path: Path) -> None:
+    result = _run_cli(
+        "eval",
+        "benchmark",
+        "--dry-run",
+        "--dataset",
+        tmp_path / "missing.json",
+        "--out",
+        tmp_path / "benchmark.json",
+        "--checkpoint",
+        "checkpoints/base.json",
+    )
+
+    assert result.returncode == int(CliExitCode.INTERNAL)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "EvaluationError"
+    assert "benchmark dataset file not found" in str(error["errors"][0])
+
+
 def test_receipts_verify_cli_reports_documented_placeholder(tmp_path: Path) -> None:
     receipt = tmp_path / "receipt.json"
     receipt.write_text("{}", encoding="utf-8")

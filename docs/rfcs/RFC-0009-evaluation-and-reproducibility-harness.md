@@ -71,6 +71,34 @@ Required v0.1 evidence:
 
 External benchmark reports are opt-in artifacts and must identify dataset, split, model checkpoint, hardware, and command.
 
+External runner interface:
+
+```python
+class BenchmarkRunner(Protocol):
+    def run(self, spec: BenchmarkSpec) -> BenchmarkResult: ...
+
+@dataclass(frozen=True)
+class BenchmarkSpec:
+    dataset: DatasetRef
+    checkpoint_uri: str
+    modes: Sequence[Literal["no_memory", "corrector", "in_context", "adapter"]]
+    command: Sequence[str]
+    seed: int | None = None
+    hardware: Mapping[str, str] = field(default_factory=dict)
+
+@dataclass(frozen=True)
+class BenchmarkResult:
+    metrics: Mapping[str, float | int | str]
+    artifacts: Mapping[str, str]
+    caveats: Sequence[str]
+    passed: bool
+```
+
+The built-in `DryRunBenchmarkRunner` exercises report generation for the
+no-memory, corrector, in-context, and adapter comparison modes without touching
+external datasets or model checkpoints. It is a fixture adapter for interface
+validation only.
+
 ## Alternatives Considered
 
 - Use ad hoc notebooks as evaluation output: useful during exploration, but not enough for public claim evidence.

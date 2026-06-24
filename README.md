@@ -95,6 +95,16 @@ Fixture evaluation report:
 python -m mneme.eval.fixtures --out .artifacts/fixtures.json
 ```
 
+Opt-in external benchmark dry-run:
+
+```bash
+python -m mneme.cli eval benchmark --dry-run --dataset dataset.json --checkpoint CHECKPOINT --out reports/benchmark.json
+```
+
+The benchmark command writes a valid `mneme.eval_report.v1` envelope for runner
+plumbing and claim review. The built-in dry-run runner is not benchmark
+evidence.
+
 ## Security And Privacy
 
 Mneme stores are not confidential by default. Treat readable store directories,

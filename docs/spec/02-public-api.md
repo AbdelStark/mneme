@@ -112,6 +112,7 @@ class Summarizer(Protocol):
 from mneme.index import FaissHnswIndex, FlatIndex, Index, planned_search_k, search_index
 from mneme.condition import CondCtx, Conditioner, InContextConditioner, KnnCorrector
 from mneme.adapter import AdapterCheckpointMetadata, load_adapter_checkpoint
+from mneme.eval import BenchmarkResult, BenchmarkRunner, BenchmarkSpec, DryRunBenchmarkRunner
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -209,6 +210,18 @@ def load_adapter_checkpoint(
     expected_base_fingerprint: EncoderFingerprint | None = None,
     require_weights: bool = True,
 ) -> AdapterCheckpoint: ...
+
+class BenchmarkRunner(Protocol):
+    def run(self, spec: BenchmarkSpec) -> BenchmarkResult: ...
+
+@dataclass(frozen=True)
+class BenchmarkSpec:
+    dataset: DatasetRef
+    checkpoint_uri: str
+    modes: Sequence[Literal["no_memory", "corrector", "in_context", "adapter"]]
+    command: Sequence[str]
+    seed: int | None = None
+    hardware: Mapping[str, str] = field(default_factory=dict)
 ```
 
 Minimum custom adapter example:
@@ -326,6 +339,13 @@ directory containing `adapter.json` or a metadata JSON path, validates the
 sidecar, rejects absolute or parent-traversing weight paths, checks that the
 weight file exists by default, and raises `FingerprintMismatchError` when
 `expected_base_fingerprint` does not match the sidecar.
+
+`BenchmarkRunner` is the opt-in external benchmark interface. `BenchmarkSpec`
+requires an external `DatasetRef`, split, model checkpoint URI, comparison modes
+for no-memory/corrector/in-context/adapter, command, optional seed, and hardware
+metadata. Runner results are wrapped in `mneme.eval_report.v1` with caveats; the
+built-in `DryRunBenchmarkRunner` validates report plumbing only and is not
+benchmark evidence.
 
 ## Constructors
 
