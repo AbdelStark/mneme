@@ -22,13 +22,30 @@ handling.
 
 - Encryption at rest
 - Private retrieval
-- Remote authentication
+- Production remote authentication or secret management
 - Sandboxing malicious Python code in the same process
 - Proofs that approximate search returned the exact top-k set
 
 Deployments that require confidentiality must add access control, filesystem or
 volume encryption, secret management, and transport controls outside Mneme until
 an explicit encrypted-store RFC lands.
+
+## Remote And Shared Stores
+
+Do not expose anonymous readable or writable stores. Remote/shared deployments
+must provide authenticated transport, network policy, operator-managed
+credentials or equivalent deployment authentication, and external
+confidentiality controls when stores contain sensitive data. Mneme bearer-token
+checks are an application boundary, not a replacement for TLS, credential
+storage, rotation, or host access control.
+
+Remote clients must validate responses before conditioning on returned items:
+use `validate_query_response` for schema, content-id, fingerprint, and requested
+receipt checks. Receipt-based examples must also link to
+`verify_retrieval_receipt` and explain that receipts prove committed membership
+and canonical item bytes only. Operators own publication, retention, backup, and
+audit policy for roots, manifests, value logs, commitment sidecars, and run
+logs.
 
 ## Reporting
 

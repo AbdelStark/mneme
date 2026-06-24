@@ -64,6 +64,35 @@ Deferred:
 - private retrieval;
 - deletion proofs.
 
+## Shared-Store Deployment Checklist
+
+Remote/shared stores use the same integrity model as local stores, but they add
+operator-owned deployment risks. A remote/shared example or deployment guide
+must state these controls before it is presented as supported:
+
+- Access control: do not expose anonymous readable or writable stores. Require
+  authenticated transport, network policy, and operator-managed bearer
+  credentials or equivalent deployment authentication. Rotate credentials and
+  keep them out of Mneme logs, reports, store metadata, and issue trackers.
+- Confidentiality: Mneme v0.x does not provide encrypted stores, private
+  retrieval, encrypted search, or secret management. Use TLS or mTLS,
+  filesystem or volume encryption, backup access controls, and host-level
+  isolation outside Mneme when memories contain sensitive data.
+- Client validation: remote clients must call `validate_query_response` before
+  conditioning on returned items. That validation rejects malformed schemas,
+  recomputes content ids, rejects encoder fingerprint mismatches, and verifies
+  receipts when requested.
+- Receipt validation: examples that request receipts must link to
+  `verify_retrieval_receipt` and explain that receipts prove committed
+  membership and canonical item bytes only; they do not prove private retrieval
+  or exact top-k search.
+- Roots and logs: operators own root publication, retention, backup, and audit
+  policy for manifests, value logs, commitment sidecars, and run logs. Do not
+  claim signed provenance unless signed roots are configured and tested.
+- Release checks: run `mneme eval remote-conformance --out ...` for the selected
+  transport and keep redaction regression tests passing before publishing a
+  shared-store example.
+
 ## Security Failure Responses
 
 - Invalid content id: reject on write; fail verification on read.
@@ -73,6 +102,8 @@ Deferred:
 - Remote response with mismatched fingerprint: reject before conditioning.
 - Malformed remote error envelope: reject with the local schema or validation error.
 - Missing or invalid remote bearer token: reject before dispatching to the store.
+- Anonymous writable shared store: unsupported deployment; add authentication
+  and network controls before use.
 
 ## Resolved Bootstrap Decisions
 

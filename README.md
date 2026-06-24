@@ -112,11 +112,17 @@ value logs, manifests, fixture reports, and run outputs as sensitive when they
 contain real environment data. See [SECURITY.md](SECURITY.md) and
 [Security](docs/spec/06-security.md).
 
+Remote/shared stores require deployment controls outside Mneme: authenticated
+transport, network policy, credential management, backup controls, and external
+confidentiality protections when memories are sensitive. Remote examples should
+link to `validate_query_response`, receipt verification steps, and the
+[shared-store checklist](docs/spec/06-security.md#shared-store-deployment-checklist).
+
 ## Limitations
 
 - No encryption at rest.
 - No private retrieval.
-- No remote authentication.
+- No built-in production authentication service for remote stores.
 - No production trained-adapter checkpoint or external trained-adapter report
   yet.
 - The in-context conditioner is a baseline for compatible predictor wrappers;
