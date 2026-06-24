@@ -113,7 +113,14 @@ from mneme.index import FaissHnswIndex, FlatIndex, Index, planned_search_k, sear
 from mneme.condition import CondCtx, Conditioner, InContextConditioner, KnnCorrector
 from mneme.adapter import AdapterCheckpointMetadata, load_adapter_checkpoint
 from mneme.eval import BenchmarkResult, BenchmarkRunner, BenchmarkSpec, DryRunBenchmarkRunner
-from mneme.receipts import CommitmentState, InclusionProof, verify_inclusion_proof
+from mneme.receipts import (
+    CommitmentState,
+    InclusionProof,
+    QueryReceiptParams,
+    RetrievalReceipt,
+    verify_inclusion_proof,
+    verify_retrieval_receipt,
+)
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -400,8 +407,11 @@ including `index/backend.json` and a `mneme.flat_index_snapshot.v1`
 persists `receipts/commitment-mmr-v1.json`, updates manifest commitment fields,
 and returns the root bytes. `LocalStore.prove(ids)` returns inclusion proofs for
 committed content ids and raises `ReceiptVerificationError` for unknown ids.
-`verify_inclusion_proof` verifies a content id and proof against a root; it does
-not prove search optimality or build a full retrieval receipt.
+`query(with_receipt=True)` attaches a `RetrievalReceipt` when all returned ids
+are included in the current committed root. `verify_retrieval_receipt` verifies
+the receipt root, inclusion proofs, optional replay query parameters, and
+canonical item bytes when returned items are supplied. Receipts prove committed
+membership and item integrity; they do not prove search optimality.
 
 ## Command-Line Surface
 
@@ -421,8 +431,10 @@ Store stats, verification, index rebuild, query, fixture-eval, profile-eval,
 recall-eval, and latency-eval commands print schema-versioned JSON reports.
 CLI error responses print
 `mneme.cli_error.v1` JSON with `ok: false`, typed `error_type`, and `errors`.
-`receipts verify` is wired as the documented command shape but returns
-`UnsupportedOperationError` until the receipt implementation lands.
+`receipts verify` validates a retrieval receipt file against the supplied root
+and prints a `mneme.receipt_verification.v1` JSON report. The CLI checks the
+receipt root and inclusion proofs; item-byte verification is available through
+the Python API when returned `MemoryItem` objects are supplied.
 
 CLI implementations translate public errors with:
 

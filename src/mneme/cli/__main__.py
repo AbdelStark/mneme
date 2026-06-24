@@ -19,6 +19,7 @@ from mneme.core import (
     MnemeError,
     QueryError,
     QuerySpec,
+    ReceiptVerificationError,
     UnsupportedOperationError,
     cli_exit_code,
     content_id,
@@ -33,11 +34,13 @@ from mneme.eval import (
     run_profile_evaluation,
     write_report_json,
 )
+from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import StoreStats, init_store, open_store, rebuild_index, verify_store
 
 QUERY_RESULT_SCHEMA = "mneme.query_result.v1"
 STORE_STATS_SCHEMA = "mneme.store_stats.v1"
 CLI_ERROR_SCHEMA = "mneme.cli_error.v1"
+RECEIPT_VERIFICATION_SCHEMA = "mneme.receipt_verification.v1"
 
 
 @dataclass(frozen=True)
@@ -333,8 +336,19 @@ def _handle_eval_benchmark(args: argparse.Namespace) -> object:
 
 
 def _handle_receipts_verify(args: argparse.Namespace) -> object:
-    _ = args
-    raise UnsupportedOperationError("receipt verification is not implemented in v0.1")
+    receipt = _load_receipt(args.receipt_file)
+    root = _root_from_hex(args.root)
+    ok = verify_retrieval_receipt(receipt, root=root)
+    return JsonResult(
+        ok=ok,
+        payload={
+            "schema_version": RECEIPT_VERIFICATION_SCHEMA,
+            "root": root.hex(),
+            "receipt_root": receipt.root.hex(),
+            "proof_count": len(receipt.proofs),
+            "item_count": len(receipt.ids),
+        },
+    )
 
 
 def _load_vector(path: Path) -> np.ndarray:
@@ -350,6 +364,31 @@ def _load_vector(path: Path) -> np.ndarray:
         return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
     except (TypeError, ValueError) as exc:
         raise QueryError("vector file must contain a numeric JSON array") from exc
+
+
+def _load_receipt(path: Path) -> RetrievalReceipt:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ReceiptVerificationError(f"receipt file not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ReceiptVerificationError("receipt file is not valid JSON") from exc
+    try:
+        return RetrievalReceipt.from_json(data)
+    except MnemeError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise ReceiptVerificationError("receipt file is invalid") from exc
+
+
+def _root_from_hex(value: str) -> bytes:
+    try:
+        root = bytes.fromhex(value)
+    except ValueError as exc:
+        raise ReceiptVerificationError("root must be hex bytes") from exc
+    if len(root) != 32:
+        raise ReceiptVerificationError("root must be 32 bytes")
+    return root
 
 
 def _add_eval_profile_args(parser: argparse.ArgumentParser) -> None:

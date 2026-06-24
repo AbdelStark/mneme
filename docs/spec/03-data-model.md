@@ -135,6 +135,11 @@ Required fields:
 - `signer`
 - `signature`
 
+`params` stores a schema-versioned query-parameter digest, including vector
+digest, vector shape and dtype, `k`, metric, optional `ef`, filters, temporal
+decay, and optional encoder fingerprint. The receipt binds a replay request
+without embedding raw latent vectors in the receipt JSON.
+
 ## Persistence Manifest
 
 The manifest records:
