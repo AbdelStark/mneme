@@ -109,7 +109,7 @@ class Summarizer(Protocol):
     def id(self) -> str: ...
     def summarize(self, z: Latent) -> SummaryVec: ...
 
-from mneme.index import FlatIndex, Index
+from mneme.index import FlatIndex, Index, planned_search_k, search_index
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -180,6 +180,13 @@ The helper binds the summarizer id and summarizer config into
 `FlatIndex` is the required exact reference backend. It performs NumPy flat
 search, returns stable results by breaking equal-distance ties with content-id
 bytes, and does not require optional index extras.
+
+`search_index` applies shared `QuerySpec` semantics around an index backend:
+fail-closed fingerprint checks, deterministic over-fetch before store filters,
+stable de-duplication by first occurrence, optional temporal decay, and final
+top-k truncation. `planned_search_k` returns `k` for unfiltered exact search and
+`max(k * 4, ef or k)` when filters require over-fetching unless callers provide
+a different multiplier.
 
 ## Constructors
 
