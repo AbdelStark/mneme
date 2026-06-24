@@ -10,7 +10,15 @@ def __getattr__(name: str) -> Any:
         from mneme.adapter._cross_attention import CrossAttnAdapter
 
         return CrossAttnAdapter
+    if name == "AdapterTrainingBatch":
+        from mneme.adapter._training import AdapterTrainingBatch
+
+        return AdapterTrainingBatch
+    if name == "train_frozen_base_adapter":
+        from mneme.adapter._training import train_frozen_base_adapter
+
+        return train_frozen_base_adapter
     raise AttributeError(f"module 'mneme.adapter' has no attribute {name!r}")
 
 
-__all__ = ["CrossAttnAdapter"]
+__all__ = ["AdapterTrainingBatch", "CrossAttnAdapter", "train_frozen_base_adapter"]
