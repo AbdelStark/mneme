@@ -110,6 +110,7 @@ class Summarizer(Protocol):
     def summarize(self, z: Latent) -> SummaryVec: ...
 
 from mneme.index import FlatIndex, Index, planned_search_k, search_index
+from mneme.condition import CondCtx, Conditioner
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -125,6 +126,14 @@ class MemoryStore(Protocol):
     def prove(self, ids: Sequence[Cid]) -> list[InclusionProof]: ...
     def root(self) -> MerkleRoot: ...
     def stats(self) -> StoreStats: ...
+
+@dataclass(frozen=True)
+class CondCtx:
+    current_latent: Latent | None
+    step: int | None = None
+    goal_latent: Latent | None = None
+    metadata: Mapping[str, Any] | None = None
+    schema_version: str = "mneme.cond_ctx.v1"
 
 class Conditioner(Protocol):
     def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
@@ -187,6 +196,13 @@ stable de-duplication by first occurrence, optional temporal decay, and final
 top-k truncation. `planned_search_k` returns `k` for unfiltered exact search and
 `max(k * 4, ef or k)` when filters require over-fetching unless callers provide
 a different multiplier.
+
+`Conditioner` is the public protocol for memory-conditioned prediction. It
+accepts an already computed parametric latent, a retrieval, and `CondCtx`; it
+does not own or require gradients through a base model. Conditioners must return
+the parametric latent unchanged for empty retrievals unless they document a
+stricter typed failure mode. `CondCtx` carries the current latent, optional goal
+latent, optional step, and JSON-safe metadata for one conditioning call.
 
 ## Constructors
 
