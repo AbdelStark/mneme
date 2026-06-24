@@ -42,6 +42,8 @@ The first shippable milestone, v0.1, is narrower: core data types, deterministic
 - [RFC-0008: Remote Store Protocol Messages](docs/rfcs/RFC-0008-remote-store-protocol-messages.md)
 - [RFC-0009: Evaluation and Reproducibility Harness](docs/rfcs/RFC-0009-evaluation-and-reproducibility-harness.md)
 - [RFC-0010: Packaging, CI, and Release Discipline](docs/rfcs/RFC-0010-packaging-ci-and-release-discipline.md)
+- [RFC-0011: Observability and Redaction](docs/rfcs/RFC-0011-observability-and-redaction.md)
+- [RFC-0012: Security Boundaries and Privacy Tiers](docs/rfcs/RFC-0012-security-boundaries-and-privacy-tiers.md)
 
 ## Milestone Map
 
