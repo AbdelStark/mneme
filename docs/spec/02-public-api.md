@@ -193,7 +193,10 @@ a different multiplier.
 The v0.1 package must provide:
 
 ```python
-def open_store(path: Path | str, *, create: bool = False) -> MemoryStore: ...
+from mneme.store import init_store, open_store
+
+def init_store(path: Path | str, *, ...) -> LocalStore: ...
+def open_store(path: Path | str, *, create: bool = False) -> LocalStore: ...
 def build_item(value: Transition, key: SummaryVec, encoder_fp: EncoderFingerprint, meta: Mapping[str, Any] | None = None) -> MemoryItem: ...
 def content_id(item: MemoryItem) -> Cid: ...
 def canonical_bytes(item: MemoryItem | Transition | EncoderFingerprint) -> bytes: ...
@@ -202,6 +205,9 @@ def canonical_bytes(item: MemoryItem | Transition | EncoderFingerprint) -> bytes
 These constructors centralize validation and prevent callers from bypassing schema and content-id rules.
 `content_id` computes a BLAKE3 digest over canonical bytes and excludes the
 `content_id` field itself from the digest.
+`init_store` creates the local v0.1 directory layout and schema-versioned
+manifest. `open_store(...).stats()` returns manifest-derived store id, value-log,
+index, transaction, and commitment-reservation fields.
 
 ## Command-Line Surface
 
