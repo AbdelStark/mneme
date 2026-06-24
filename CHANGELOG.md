@@ -19,6 +19,7 @@ changes may occur before the first stable release.
 - Count and event-time age retention policies with manifest tombstones.
 - Torch-compatible `KnnCorrector` latent handling with NumPy parity coverage.
 - Local profile evaluation reports for recall, latency, and footprint evidence.
+- Optional `CrossAttnAdapter` trained memory module behind the `ml` extra.
 
 ### Security
 

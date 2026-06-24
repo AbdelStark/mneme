@@ -147,6 +147,23 @@ class KnnCorrector:
     mode: Literal["delta", "absolute"] = "delta"
 
     def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
+
+class CrossAttnAdapter(torch.nn.Module):
+    def __init__(
+        self,
+        latent_dim: int,
+        hidden_dim: int,
+        num_heads: int,
+        num_layers: int,
+        dropout: float = 0.0,
+    ) -> None: ...
+
+    def forward(
+        self,
+        predictor_hidden: torch.Tensor,
+        retrieved_values: torch.Tensor,
+        attention_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor: ...
 ```
 
 Minimum custom adapter example:
@@ -184,6 +201,9 @@ summarizer: Summarizer = MySummarizer()
 
 Adapter implementations own model-specific imports. Importing `mneme.encode`
 must not import optional ML backends such as torch.
+Importing `mneme.adapter` must also avoid importing torch; requesting
+`CrossAttnAdapter` requires the `ml` extra and raises
+`OptionalDependencyError(extra="ml", package="torch")` when torch is missing.
 
 `MeanPoolSummarizer` is the v0.1 default summarizer. It mean-pools all
 non-feature axes, returns a contiguous finite `float32` vector, and L2-normalizes
@@ -225,6 +245,15 @@ as nearest-neighbor distance grows.
 The default gate parameters are fixture baselines, not universal safety
 guarantees; deployment-safe fallback depends on calibrating nearest-neighbor
 distance distributions for the target encoder, summarizer, and task.
+
+`CrossAttnAdapter` is the v0.2 trained memory module behind the `ml` extra.
+`predictor_hidden` has shape `(batch, predictor_tokens, hidden_dim)`.
+`retrieved_values` has shape `(batch, retrieved, latent_dim)` and is projected
+into hidden space before cross-attention. `attention_mask`, when provided, has
+shape `(batch, retrieved)` and uses `True`/`1` for valid retrieved slots; masked
+slots are not attended. Retrieved values and masks are moved to the
+`predictor_hidden` dtype and device before attention. The module returns
+`(batch, predictor_tokens, hidden_dim)` and does not own base predictor weights.
 
 ## Constructors
 
