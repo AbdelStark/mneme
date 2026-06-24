@@ -86,3 +86,4 @@ v0.1 ships validation, redaction, `.gitignore` protections for raw data and run 
 - [Security](../spec/06-security.md)
 - [Observability](../spec/05-observability.md#redaction)
 - [RFC-0007](RFC-0007-commitments-and-retrieval-receipts.md)
+- [RFC-0013](RFC-0013-cross-source-memory-provenance.md)

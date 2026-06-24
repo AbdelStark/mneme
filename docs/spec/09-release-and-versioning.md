@@ -76,6 +76,8 @@ Every release candidate must pass:
 - security and license file presence.
 - security boundary review confirming public docs do not claim store
   confidentiality by default and link the redaction regression tests.
+- cross-source memory sharing claims link to RFC-0013 and do not imply private
+  retrieval, encrypted storage, consent automation, or federation support.
 
 ## Changelog Discipline
 

@@ -24,6 +24,8 @@ The project is not a new world-model architecture. It is infrastructure around e
 - Add a trained memory adapter in v0.2 without requiring gradients through the base model.
 - Make memory items content-addressed and support retrieval receipts in v0.3.
 - Support local stores first, then remote or shared stores through schema-versioned messages.
+- Keep cross-source memory sharing experiments behind explicit source identity,
+  provenance receipts, and privacy limits.
 - Preserve numerical contracts for dtype, shape, device movement, determinism, and evaluation hygiene.
 - Keep public claims tied to reproducible commands and stored artifacts.
 
@@ -35,6 +37,8 @@ The project is not a new world-model architecture. It is infrastructure around e
 - Mneme v0.x does not prove approximate search returned the exact top-k set.
 - Mneme v0.1 does not target embedded or minimal-footprint deployment.
 - Mneme does not define a new benchmark suite; it consumes existing tasks and fixture-scale local tests.
+- Mneme v0.x does not provide private retrieval or confidentiality for
+  cross-source memory sharing.
 
 ## v0.1 Scope
 
@@ -70,8 +74,14 @@ The strongest current claim is that the PRD defines a plausible retrieval-memory
 - RISK: Summary keys may not preserve the semantics needed for useful neighbors. Resolution: require exact-index recall checks and summary-key ablations.
 - RISK: Large latent values may dominate memory footprint. Resolution: separate index keys from values and implement retention before scaling claims.
 - RISK: Remote-store semantics may drift from local-store semantics. Resolution: define shared schema and conformance tests before remote release.
+- RISK: Cross-source sharing may be mistaken for a confidentiality or consent
+  guarantee. Resolution: require RFC-0013 source identities, provenance
+  receipts, transfer metrics, and explicit privacy caveats before v0.5 work.
 
 ## Resolved Bootstrap Decisions
 
 - First external benchmark target: LOOPNAV is the first non-fixture benchmark because it directly exercises revisit and loop-closure behavior, which is the narrowest claim Mneme must prove before broader embodied-task claims.
 - Default approximate backend: FAISS HNSW is the v0.1 approximate backend behind the index extra. `FlatIndex` remains the minimal-install default and the correctness reference. If FAISS packaging is unavailable on a platform, that platform still supports `FlatIndex`; it is not treated as supporting the approximate extra until the FAISS path is validated there.
+- Cross-source memory provenance: v0.5 experiments must follow
+  [RFC-0013](../rfcs/RFC-0013-cross-source-memory-provenance.md) before adding
+  federation-style behavior.
