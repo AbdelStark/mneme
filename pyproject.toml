@@ -67,6 +67,7 @@ select = ["E", "F", "I", "UP", "B"]
 testpaths = ["tests"]
 
 [tool.mypy]
-python_version = "3.11"
+# NumPy 2.5 stubs use Python 3.12 type-alias syntax; Ruff still targets py311.
+python_version = "3.12"
 packages = ["mneme"]
 strict = true

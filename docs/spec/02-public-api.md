@@ -15,14 +15,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence
 from uuid import UUID
 
 import numpy as np
-import torch
 
-Latent = torch.Tensor | np.ndarray
+Latent = Any  # np.ndarray or shape/dtype-compatible tensor without importing optional backends
 SummaryVec = np.ndarray
 Cid = bytes
 MerkleRoot = bytes
@@ -60,16 +58,41 @@ class Transition:
     t: int
     episode_id: UUID
     reward: float | None = None
+    schema_version: str = "mneme.transition.v1"
 
 @dataclass(frozen=True)
 class MemoryItem:
     content_id: Cid | None
     key: SummaryVec
-    value: Transition | Frame | Window
+    value: Transition
     meta: Mapping[str, Any]
     encoder_fp: EncoderFingerprint
     schema_version: str = "mneme.memory_item.v1"
+
+@dataclass(frozen=True)
+class QuerySpec:
+    vector: SummaryVec
+    k: int
+    metric: Metric = Metric.COSINE
+    ef: int | None = None
+    filters: Mapping[str, Any] | None = None
+    temporal_decay: float | None = None
+    with_receipt: bool = False
+    encoder_fp: EncoderFingerprint | None = None
+    schema_version: str = "mneme.query_spec.v1"
+
+@dataclass(frozen=True)
+class Retrieval:
+    items: tuple[MemoryItem, ...]
+    distances: tuple[float, ...]
+    receipt: object | None = None
+    schema_version: str = "mneme.retrieval.v1"
 ```
+
+These v0.1 carriers are exported from `mneme.core`: `Latent`, `SummaryVec`,
+`Cid`, `Metric`, `EncoderFingerprint`, `Transition`, `MemoryItem`,
+`QuerySpec`, and `Retrieval`. `mneme.core` may import NumPy, but it must not
+import optional ML, index, receipt, or remote backends.
 
 ## Protocols
 
