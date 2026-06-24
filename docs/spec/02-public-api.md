@@ -193,10 +193,12 @@ a different multiplier.
 The v0.1 package must provide:
 
 ```python
-from mneme.store import init_store, open_store
+from mneme.store import init_store, open_store, rebuild_index, verify_store
 
 def init_store(path: Path | str, *, ...) -> LocalStore: ...
 def open_store(path: Path | str, *, create: bool = False) -> LocalStore: ...
+def verify_store(path: Path | str, *, raise_on_error: bool = False) -> StoreVerificationReport: ...
+def rebuild_index(path: Path | str) -> IndexRebuildReport: ...
 def build_item(value: Transition, key: SummaryVec, encoder_fp: EncoderFingerprint, meta: Mapping[str, Any] | None = None) -> MemoryItem: ...
 def content_id(item: MemoryItem) -> Cid: ...
 def canonical_bytes(item: MemoryItem | Transition | EncoderFingerprint) -> bytes: ...
@@ -211,6 +213,12 @@ index, transaction, and commitment-reservation fields.
 `LocalStore.put` and `put_batch` append length-prefixed, checksummed value
 records under a transaction intent/commit file, update the manifest, and rebuild
 queryability from the value log on restart.
+`verify_store` returns a schema-versioned JSON-ready report for manifest,
+value-log checksum/content-id/fingerprint, and index-reference validation; with
+`raise_on_error=True`, failed reports raise `StoreCorruptionError`.
+`rebuild_index` rewrites non-destructive index metadata from value logs only,
+including `index/backend.json` and a `mneme.flat_index_snapshot.v1`
+`index/data.json` snapshot. It never deletes value logs.
 
 ## Command-Line Surface
 
@@ -218,13 +226,15 @@ queryability from the value log on restart.
 mneme store init PATH
 mneme store stats PATH --json
 mneme store verify PATH
-mneme index rebuild PATH --encoder-fingerprint FINGERPRINT
+mneme index rebuild PATH
 mneme query PATH --vector VECTOR_FILE --k 16 --metric cosine --json
 mneme eval fixtures --out reports/fixtures.json
 mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 ```
 
 Commands return exit code 0 on success, 2 for invalid user input, 3 for data validation failure, 4 for unavailable optional dependency, and 5 for internal errors.
+The implemented v0.1 module entry points are `python -m mneme.cli store verify PATH`
+and `python -m mneme.cli index rebuild PATH`; both print JSON reports.
 
 CLI implementations translate public errors with:
 
