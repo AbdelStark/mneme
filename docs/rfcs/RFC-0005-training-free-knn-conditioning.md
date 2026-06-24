@@ -102,9 +102,9 @@ v0.1 exposes the corrector as the default conditioner. Later releases may add le
 - Torch and NumPy paths produce equivalent values on simple fixtures.
 - Fixture evaluation writes gate-behavior report.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Default gate parameter calibration for the first non-fixture benchmark. Owner: maintainer. Target: v0.2 evaluation planning.
+- Gate calibration for the first non-fixture benchmark uses a held-out calibration split from LOOPNAV. The procedure grid-searches `tau`, `lambda_max`, and `alpha`, sets `delta0` from nearest-neighbor distance quantiles on revisit-positive examples, and selects the configuration that lowers long-horizon latent error while keeping out-of-distribution harm within one percent of the no-memory baseline. The uncalibrated v0.1 defaults remain the fixture baseline.
 
 ## References
 

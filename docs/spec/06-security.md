@@ -65,7 +65,7 @@ Deferred:
 - Metadata redaction failure in tests: fail CI.
 - Remote response with mismatched fingerprint: reject before conditioning.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Which signing backend is selected for v0.3 roots. Owner: maintainer. Target: v0.3 design freeze.
-- OPEN QUESTION: Whether v1.0 requires encryption-at-rest support or only deployment guidance. Owner: maintainer. Target: v1.0 planning.
+- Signing backend: v0.3 root signatures use Ed25519 through the `cryptography` package behind the receipts extra. Root signing is optional for local stores and required for remote/shared-store examples that claim signed provenance.
+- v1.0 confidentiality requirement: built-in encryption at rest is not required for v1.0. v1.0 requires clear deployment guidance, redaction defaults, validation, and receipt integrity. Built-in encrypted stores require a separate post-v1.0 RFC because key management is a distinct design problem.

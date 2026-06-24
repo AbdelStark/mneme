@@ -94,10 +94,10 @@ v0.4 adds remote message models and a conformance suite. The first transport ada
 - Remote error mapping tests.
 - Receipt verification tests over remote query responses.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: First supported transport adapter for v0.4. Owner: maintainer. Target: v0.4 design kickoff.
-- OPEN QUESTION: Minimum authentication guidance for shared stores. Owner: maintainer. Target: v0.4 security review.
+- First supported transport: v0.4 implements HTTP JSON over an ASGI-compatible service boundary. The message schema remains transport-independent, but the first adapter uses request/response semantics that match `put`, `query`, `prove`, `root`, and `stats`.
+- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. Anonymous writable stores are not a supported deployment pattern.
 
 ## References
 

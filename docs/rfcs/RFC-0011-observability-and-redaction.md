@@ -85,9 +85,9 @@ v0.1 adds event emission for core local operations and tests redaction. v0.3 add
 - CI test that public fixture logs contain no raw latent arrays.
 - Evaluation report test that command, seed, package version, and caveats are present.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: First optional metrics adapter for long-running remote stores. Owner: maintainer. Target: v0.4 implementation.
+- The first optional metrics adapter targets OpenTelemetry and lives behind an observability extra. Core remains backend-neutral through `EventSink`.
 
 ## References
 

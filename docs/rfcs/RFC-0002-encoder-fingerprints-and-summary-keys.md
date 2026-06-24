@@ -94,9 +94,9 @@ v0.1 supports one fingerprint per local store and rejects mismatches. Multi-fing
 - Store rejects mismatched fingerprints.
 - Index rebuild test proves values can be re-summarized into a fresh index.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether deterministic projection belongs in v0.1 or waits for the first large latent adapter. Owner: maintainer. Target: v0.1 summarizer implementation.
+- Deterministic projection waits until v0.2 or the first large-latent adapter that needs it. v0.1 ships mean pooling plus L2 normalization only, which keeps the first summarizer auditable and avoids adding projection-matrix migration state before it is needed.
 
 ## References
 

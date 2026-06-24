@@ -73,7 +73,7 @@ Deprecations include:
 - earliest removal version;
 - migration note.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Exact build backend and lockfile policy. Owner: maintainer. Target: v0.1 packaging implementation.
-- OPEN QUESTION: Whether v0.1 publishes to package index or only ships source. Owner: maintainer. Target: v0.1 release planning.
+- Build backend and lockfile policy: use Hatchling as the PEP 517 build backend. Do not commit a library lockfile in v0.1; CI tests declared dependency ranges and may generate throwaway lockfiles for reproducible jobs.
+- v0.1 publication policy: v0.1 ships source and wheel artifacts from the repository release only. Package-index publication starts no earlier than v0.2, after the fixture evidence, README, security boundary, and install checks are stable.

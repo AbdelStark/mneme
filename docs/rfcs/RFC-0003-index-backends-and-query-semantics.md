@@ -82,9 +82,9 @@ v0.1 implements `FlatIndex` and one approximate backend. The manifest records ba
 - Query validation tests for k, metric, ef, vector shape, dtype, and non-finite values.
 - Filter and temporal decay integration tests at the store layer.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Which approximate backend is selected as the default optional backend for v0.1. Owner: maintainer. Target: v0.1 index implementation.
+- FAISS HNSW is the default optional approximate backend for v0.1. `FlatIndex` remains mandatory, minimal, and exact. Platforms without validated FAISS installation support remain flat-only until a separate backend RFC or implementation issue adds a supported approximate fallback.
 
 ## References
 

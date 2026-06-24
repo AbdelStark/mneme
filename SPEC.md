@@ -58,6 +58,6 @@ The first shippable milestone, v0.1, is narrower: core data types, deterministic
 
 The repository does not yet contain an implementation or benchmark evidence. Claims about drift reduction, latency, recall, adapter accuracy, receipt overhead, and downstream task success are requirements and validation targets, not achieved results. Any README, paper, release note, or issue must preserve that boundary until the corresponding evidence is produced by the evaluation harness.
 
-## Open Questions
+## Bootstrap Decision Status
 
-The active open questions are recorded in the relevant RFCs with owners and target milestones. They do not block v0.1 unless explicitly marked as v0.1-critical.
+The bootstrap undecided items were resolved on 2026-06-24 in the relevant spec sections and RFCs. Implementation issues should treat those decisions as binding unless a later RFC supersedes them.

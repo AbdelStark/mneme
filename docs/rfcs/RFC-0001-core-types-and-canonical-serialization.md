@@ -109,9 +109,9 @@ v0.1 implements schema `v1` only and rejects unknown major versions. Minor schem
 - Validation tests for NaN, dtype, shape, metadata, UUID, and schema errors.
 - Import-boundary test proving `import mneme.core` does not import optional ML or index backends.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether value tensor persistence uses the same canonical format or a separate chunked value-log format. Owner: maintainer. Target: v0.1 storage implementation.
+- Value tensor persistence uses a separate chunked value-log format, not the small-object canonical serialization format. Each record has a canonical header and normalized numeric payload bytes, so content ids remain deterministic without forcing large tensors through a metadata-heavy object encoder.
 
 ## References
 

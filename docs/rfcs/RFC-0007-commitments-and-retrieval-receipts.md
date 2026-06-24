@@ -95,9 +95,9 @@ v0.3 adds commitment files to existing stores through an offline `mneme store co
 - Store upgrade test from uncommitted v0.1 store.
 - Receipt overhead benchmark with proof size as a function of item count.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Final signing backend for optional root signatures. Owner: maintainer. Target: v0.3 implementation.
+- Optional root signatures use Ed25519 through the `cryptography` package. The receipt schema stores the public key identifier, signature algorithm, signature bytes, and signed root payload version so a later signing backend can be added without changing inclusion-proof semantics.
 
 ## References
 

@@ -85,6 +85,6 @@ python -m mneme.cli store verify tests/fixtures/store
 
 The exact command module names may change during implementation, but the gates above define the required coverage.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether static type checking is enforced from v0.1 or v0.2. Owner: maintainer. Target: v0.1 packaging implementation.
+- Static type checking is enforced from v0.1. CI runs mypy on public package modules with strictness focused on exported protocols, dataclasses, and constructors; tests may use a looser profile until v0.2.

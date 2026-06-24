@@ -77,9 +77,9 @@ v0.1 ships validation, redaction, `.gitignore` protections for raw data and run 
 - Security doc test or checklist in release CI.
 - Receipt validation failure tests when RFC-0007 lands.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether v1.0 requires built-in encrypted stores or documented deployment controls. Owner: maintainer. Target: v1.0 planning.
+- v1.0 requires documented deployment controls, redaction defaults, validation, and receipt integrity. Built-in encrypted stores are deferred to a post-v1.0 RFC because encryption requires a key-management and recovery design that is separate from Mneme's v1 integrity contract.
 
 ## References
 

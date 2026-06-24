@@ -141,6 +141,6 @@ Commands return exit code 0 on success, 2 for invalid user input, 3 for data val
 
 Before v1.0, public breaking changes require a changelog entry and migration note. After v1.0, a public API is deprecated for at least one minor release before removal unless a security issue requires faster removal.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether `Frame` and `Window` ship in v0.1 or start as v0.2 types. Owner: maintainer. Target: v0.1 API implementation.
+- `Frame` and `Window` remain documented data concepts but do not ship as required v0.1 public types. v0.1 implements `Transition` only; `Frame` and `Window` move to v0.2 or later when a concrete conditioning path needs them.

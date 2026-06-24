@@ -149,6 +149,6 @@ The manifest records:
 - commitment state when enabled
 - last completed transaction id
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: The default binary tensor format for persisted torch values. Owner: maintainer. Target: v0.1 storage implementation.
+- Default tensor persistence: value-log records use a chunked binary format with a canonical metadata header and raw numeric array payloads. Torch tensors are detached, moved to CPU, converted to contiguous numeric arrays, and stored without Python pickle. The content id is computed over the canonical header plus normalized tensor bytes.

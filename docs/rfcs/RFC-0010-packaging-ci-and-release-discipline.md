@@ -95,10 +95,10 @@ v0.1 creates package scaffolding and minimal CI. Optional extras are tested in a
 - Test each optional extra in at least one CI job when implemented.
 - Validate README claim links against evaluation reports.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Exact build backend and lockfile policy. Owner: maintainer. Target: v0.1 packaging implementation.
-- OPEN QUESTION: Whether type checking is required in v0.1 CI or introduced in v0.2. Owner: maintainer. Target: v0.1 CI implementation.
+- Build backend and lockfile policy: use Hatchling as the build backend. Do not commit a lockfile for the library in v0.1; CI may generate temporary lockfiles but package metadata remains the dependency source of truth.
+- Type checking is required in v0.1 CI. mypy runs against public package modules, with strictness concentrated on exported protocols, dataclasses, constructors, and serialization boundaries.
 
 ## References
 

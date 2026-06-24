@@ -93,9 +93,9 @@ v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adap
 - CLI tests for report output paths.
 - Golden report fixture with known metrics.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: First external benchmark accepted as release evidence. Owner: maintainer. Target: v0.2 planning.
+- LOOPNAV is the first external benchmark accepted as release evidence. It is narrow enough to test the project's core loop-closure and revisit-consistency claim before broader navigation or manipulation benchmarks are used for public claims.
 
 ## References
 

@@ -98,10 +98,10 @@ v0.2 ships adapter modules behind an ML extra and at least one reference wrapper
 - Fixture training smoke test on a tiny synthetic dataset.
 - Evaluation comparing no-memory, corrector, in-context, and adapter reports.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Which external predictor wrapper is implemented first. Owner: maintainer. Target: v0.2 adapter kickoff.
-- OPEN QUESTION: Whether adapter checkpoint format uses a safetensor-compatible path. Owner: maintainer. Target: v0.2 packaging.
+- First predictor wrapper: v0.2 implements a generic PyTorch predictor wrapper with explicit hidden-state hooks first. The first model-specific wrapper is the LeJEPA reference wrapper because it is closest to the project thesis and avoids coupling the adapter milestone to a heavier external integration.
+- Adapter checkpoint format: adapter weights use a safetensors-compatible file and a JSON metadata sidecar containing schema version, base fingerprint, adapter config, package version, and training report reference.
 
 ## References
 

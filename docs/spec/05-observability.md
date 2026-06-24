@@ -110,6 +110,6 @@ Every evaluation command writes a JSON report with:
 
 Reports must be suitable for later README or paper claims. A result without the report is not public evidence.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Metrics export surface for long-running services. Owner: maintainer. Target: v0.4 remote-store implementation.
+- Metrics export surface: core continues to emit structured events through `EventSink`. Long-running services add an optional OpenTelemetry adapter behind an observability extra; no telemetry backend becomes a core dependency.

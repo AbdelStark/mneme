@@ -71,6 +71,6 @@ mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 
 Repair commands must write a report before changing the store and must never delete value logs unless an explicit destructive flag is implemented later.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether strict query mode belongs in `QuerySpec` or store configuration. Owner: maintainer. Target: v0.1 API implementation.
+- Strict query mode belongs in store configuration, not `QuerySpec`. `QuerySpec` describes the semantic query; store policy decides whether empty stores, filtered-underflow results, and receipt-unavailable cases return empty results or raise typed errors.

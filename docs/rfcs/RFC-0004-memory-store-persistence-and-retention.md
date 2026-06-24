@@ -92,9 +92,9 @@ v0.1 implements local single-writer stores, verification, and index rebuild. v0.
 - Retention tests that prove no dangling index ids after query.
 - Store verification CLI success and corruption cases.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Whether v0.1 compaction is required or retention may leave tombstoned records until v0.2. Owner: maintainer. Target: v0.1 store implementation.
+- v0.1 retention may leave tombstoned records. Physical compaction is deferred to v0.2 or later because the v0.1 durability requirement is safer with append-only value logs and rebuildable indexes.
 
 ## References
 

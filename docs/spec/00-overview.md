@@ -71,7 +71,7 @@ The strongest current claim is that the PRD defines a plausible retrieval-memory
 - RISK: Large latent values may dominate memory footprint. Resolution: separate index keys from values and implement retention before scaling claims.
 - RISK: Remote-store semantics may drift from local-store semantics. Resolution: define shared schema and conformance tests before remote release.
 
-## Open Questions
+## Resolved Bootstrap Decisions
 
-- OPEN QUESTION: Which external benchmark is the first non-fixture target? Owner: maintainer. Target: v0.2 planning.
-- OPEN QUESTION: Which approximate index backend ships by default on each supported platform? Owner: maintainer. Target: v0.1 implementation.
+- First external benchmark target: LOOPNAV is the first non-fixture benchmark because it directly exercises revisit and loop-closure behavior, which is the narrowest claim Mneme must prove before broader embodied-task claims.
+- Default approximate backend: FAISS HNSW is the v0.1 approximate backend behind the index extra. `FlatIndex` remains the minimal-install default and the correctness reference. If FAISS packaging is unavailable on a platform, that platform still supports `FlatIndex`; it is not treated as supporting the approximate extra until the FAISS path is validated there.
