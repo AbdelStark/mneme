@@ -25,6 +25,9 @@ release gate, not a release announcement.
   confidential by default.
 - [ ] Complete [SECURITY_REVIEW.md](SECURITY_REVIEW.md) and run its security
   slice before tagging a v1.0 release candidate.
+- [ ] Complete [V1_READINESS_REPORT.md](V1_READINESS_REPORT.md) with issue,
+  evaluation, documentation, security, API compatibility, and CI evidence links
+  before tagging a v1.0 release candidate.
 - [ ] Confirm optional extras that are implemented for the release have at least
   one install/import check.
 
