@@ -23,6 +23,8 @@ release gate, not a release announcement.
   unless matching evidence artifacts exist.
 - [ ] Confirm the security boundary still states that stores are not
   confidential by default.
+- [ ] Complete [SECURITY_REVIEW.md](SECURITY_REVIEW.md) and run its security
+  slice before tagging a v1.0 release candidate.
 - [ ] Confirm optional extras that are implemented for the release have at least
   one install/import check.
 
