@@ -35,6 +35,16 @@ It writes `mneme.eval_report.v1` with FlatIndex recall ground truth, query and
 conditioning latency percentiles, footprint fields, hardware fields, and caveats
 for exact-only runs when an approximate backend is unavailable.
 
+External benchmark runs are opt-in. The dry-run interface command is:
+
+```bash
+python -m mneme.cli eval benchmark --dry-run --dataset DATASET.json --checkpoint CHECKPOINT --out reports/benchmark.json
+```
+
+`DATASET.json` must be a `DatasetRef` with `kind: external` and a non-empty
+`split`. The dry-run runner records no-memory, corrector, in-context, and
+adapter comparison slots in an `EvalReport`, but it is not benchmark evidence.
+
 ## Memory Budget
 
 - Summary keys are `float32`, one-dimensional arrays.
