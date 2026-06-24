@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 import pytest
+from blake3 import blake3
 
 from mneme.core import (
     EncoderFingerprint,
@@ -17,7 +19,7 @@ from mneme.core import (
     content_id,
 )
 from mneme.store import init_store, open_store, rebuild_index
-from mneme.store._value_log import append_value_record
+from mneme.store._value_log import VALUE_RECORD_SCHEMA, append_value_record
 
 
 def _fingerprint() -> EncoderFingerprint:
@@ -214,3 +216,90 @@ def test_value_log_checksum_corruption_is_detected_on_open(tmp_path: Path) -> No
 
     with pytest.raises(StoreCorruptionError, match="checksum mismatch"):
         open_store(root)
+
+
+def test_value_log_invalid_content_id_hex_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    _write_raw_value_record(
+        root / "values" / "log-000000.mnv",
+        _value_record(content_id="not hex"),
+    )
+
+    with pytest.raises(StoreCorruptionError, match="content_id must be hex bytes"):
+        open_store(root)
+
+
+def test_value_log_invalid_base64_array_data_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00")
+    record["item"]["key"]["data"] = "not base64!"
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(StoreCorruptionError, match="array data must be base64"):
+        open_store(root)
+
+
+def test_value_log_unsupported_value_kind_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00")
+    record["item"]["value_kind"] = "frame"
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(
+        StoreCorruptionError, match="unsupported value record value_kind"
+    ):
+        open_store(root)
+
+
+def _write_raw_value_record(path: Path, record: dict[str, object]) -> None:
+    payload = json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    header = len(payload).to_bytes(8, "big") + blake3(payload).digest(length=32)
+    path.write_bytes(header + payload)
+
+
+def _value_record(*, content_id: str) -> dict[str, object]:
+    return {
+        "schema_version": VALUE_RECORD_SCHEMA,
+        "content_id": content_id,
+        "item": {
+            "schema_version": "mneme.memory_item.v1",
+            "key": _array_payload(np.array([1.0, 0.0], dtype=np.float32)),
+            "value_kind": "transition",
+            "value": {
+                "schema_version": "mneme.transition.v1",
+                "z_src": _array_payload(np.array([1.0, 0.0], dtype=np.float32)),
+                "action": _array_payload(np.array([0.1], dtype=np.float32)),
+                "z_next": _array_payload(np.array([2.0, 0.0], dtype=np.float32)),
+                "delta": _array_payload(np.array([1.0, 0.0], dtype=np.float32)),
+                "t": 1,
+                "episode_id": str(uuid4()),
+                "reward": None,
+            },
+            "meta": {},
+            "encoder_fp": {
+                "schema_version": "mneme.encoder_fingerprint.v1",
+                "encoder_id": "encoder.fixture",
+                "summarizer_id": "meanpool-v1",
+                "weights_digest": None,
+                "config_digest": "blake3:config",
+            },
+        },
+    }
+
+
+def _array_payload(array: np.ndarray) -> dict[str, object]:
+    canonical = np.ascontiguousarray(array)
+    return {
+        "dtype": str(canonical.dtype),
+        "shape": list(canonical.shape),
+        "data": base64.b64encode(canonical.tobytes(order="C")).decode("ascii"),
+    }

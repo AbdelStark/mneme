@@ -65,6 +65,10 @@ def test_invalid_query_construction_raises_query_error() -> None:
         _query(k=3, ef=2)
     with pytest.raises(QueryError, match="metric must be a Metric"):
         _query(metric="l2")
+    with pytest.raises(QueryError, match="reserved"):
+        _query(filters={"schema_version": "mneme.query_filter.v1"})
+    with pytest.raises(QueryError, match="JSON-compatible"):
+        _query(filters={"source": object()})
 
 
 def test_search_index_de_duplicates_stably() -> None:
