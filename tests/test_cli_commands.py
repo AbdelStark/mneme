@@ -249,6 +249,40 @@ def test_eval_recall_and_latency_aliases_emit_profile_reports(tmp_path: Path) ->
         assert report.metrics["query_latency_p50_ms"] >= 0.0
 
 
+def test_eval_receipts_cli_writes_and_prints_valid_report(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    output = tmp_path / "reports" / "receipts.json"
+    store = init_store(root)
+    store.put_batch([_item(float(index), step=index) for index in range(4)])
+    store.commit()
+
+    result = _run_cli(
+        "eval",
+        "receipts",
+        "--store",
+        root,
+        "--out",
+        output,
+        "--k",
+        "2",
+        "--metric",
+        "l2",
+        "--queries",
+        "2",
+        "--warmup",
+        "0",
+        "--measurements",
+        "1",
+    )
+
+    assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr
+    printed = validate_report_json(_stdout_json(result))
+    written = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
+    assert printed == written
+    assert printed.artifacts["report_kind"] == "receipt-overhead"
+    assert printed.metrics["receipt_proof_count_mean"] == 2.0
+
+
 def test_eval_benchmark_dry_run_cli_writes_valid_external_report(
     tmp_path: Path,
 ) -> None:

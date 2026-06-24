@@ -428,14 +428,15 @@ mneme store commit-init PATH
 mneme index rebuild PATH
 mneme query PATH --vector VECTOR_FILE --k 16 --metric cosine --json
 mneme eval fixtures --out reports/fixtures.json
+mneme eval receipts --store STORE --out reports/receipts.json
 mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 ```
 
 Commands return exit code 0 on success, 2 for invalid user input, 3 for data validation failure, 4 for unavailable optional dependency, and 5 for internal errors.
 The implemented v0.1 module entry point is `python -m mneme.cli ...`.
 Store stats, verification, committed-store initialization, index rebuild, query,
-fixture-eval, profile-eval, recall-eval, and latency-eval commands print
-schema-versioned JSON reports.
+fixture-eval, profile-eval, recall-eval, latency-eval, and receipt-overhead eval
+commands print schema-versioned JSON reports.
 CLI error responses print
 `mneme.cli_error.v1` JSON with `ok: false`, typed `error_type`, and `errors`.
 `receipts verify` validates a retrieval receipt file against the supplied root

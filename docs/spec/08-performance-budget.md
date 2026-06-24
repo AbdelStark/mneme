@@ -35,6 +35,19 @@ It writes `mneme.eval_report.v1` with FlatIndex recall ground truth, query and
 conditioning latency percentiles, footprint fields, hardware fields, and caveats
 for exact-only runs when an approximate backend is unavailable.
 
+The receipt overhead command is:
+
+```bash
+python -m mneme.cli eval receipts --store STORE --out reports/receipts.json
+```
+
+It writes `mneme.eval_report.v1` with receipt-disabled query latency,
+receipt-enabled query latency, receipt build latency, receipt verification
+latency, proof counts, proof byte sizes, a proof-size trend over committed item
+counts, hardware fields, and caveats that receipts do not prove search
+correctness or control-loop suitability. Public receipt-overhead claims should
+cite the generated report path or release artifact.
+
 External benchmark runs are opt-in. The dry-run interface command is:
 
 ```bash
