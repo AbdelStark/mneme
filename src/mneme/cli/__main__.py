@@ -28,11 +28,14 @@ from mneme.eval import (
     BenchmarkSpec,
     DryRunBenchmarkRunner,
     load_benchmark_dataset_ref,
+    load_replay_trace_json,
     parse_benchmark_modes,
+    replay_receipt_trace,
     run_external_benchmark,
     run_fixture_evaluation,
     run_profile_evaluation,
     run_receipt_profile_evaluation,
+    write_replay_report_json,
     write_report_json,
 )
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
@@ -180,6 +183,15 @@ def _build_parser() -> argparse.ArgumentParser:
         command="eval receipts",
         handler=_handle_eval_receipts,
     )
+
+    replay_parser = eval_subparsers.add_parser(
+        "replay",
+        help="replay a receipt-bound conditioning trace",
+    )
+    replay_parser.add_argument("--trace", required=True, type=Path)
+    replay_parser.add_argument("--out", required=True, type=Path)
+    replay_parser.add_argument("--atol", default=1e-6, type=float)
+    replay_parser.set_defaults(command="eval replay", handler=_handle_eval_replay)
 
     benchmark_parser = eval_subparsers.add_parser(
         "benchmark",
@@ -367,6 +379,16 @@ def _handle_eval_receipts(args: argparse.Namespace) -> object:
         raise EvaluationError(
             f"failed to write receipt profile report: {args.out}"
         ) from exc
+    return report
+
+
+def _handle_eval_replay(args: argparse.Namespace) -> object:
+    trace = load_replay_trace_json(args.trace)
+    report = replay_receipt_trace(trace, atol=args.atol)
+    try:
+        write_replay_report_json(report, args.out)
+    except OSError as exc:
+        raise EvaluationError(f"failed to write replay report: {args.out}") from exc
     return report
 
 

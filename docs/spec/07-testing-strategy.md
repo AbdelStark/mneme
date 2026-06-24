@@ -46,6 +46,8 @@ Receipts:
 - valid inclusion proofs verify;
 - altered item bytes fail verification;
 - mismatched root fails verification;
+- receipt-backed replay reproduces a logged conditioning output and refuses
+  altered items before conditioning;
 - receipt overhead is measured on fixture stores.
 
 Evaluation:

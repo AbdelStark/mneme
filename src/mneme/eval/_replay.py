@@ -1,0 +1,553 @@
+"""Receipt-backed conditioning replay harness."""
+
+from __future__ import annotations
+
+import json
+import math
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Final
+
+import numpy as np
+
+from mneme.condition import CondCtx, KnnCorrector, KnnMode
+from mneme.core import (
+    Cid,
+    EncoderFingerprint,
+    EvaluationError,
+    MemoryItem,
+    Metric,
+    QuerySpec,
+    Retrieval,
+    content_id,
+)
+from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
+from mneme.store._value_log import (
+    _array_from_json,
+    _array_to_json,
+    _fingerprint_from_json,
+    _json_ready,
+    _transition_from_json,
+    _transition_to_json,
+)
+
+RECEIPT_REPLAY_TRACE_SCHEMA: Final = "mneme.receipt_replay_trace.v1"
+RECEIPT_REPLAY_REPORT_SCHEMA: Final = "mneme.receipt_replay_report.v1"
+
+
+@dataclass(frozen=True)
+class KnnReplayConfig:
+    """Replay-safe subset of the KNN conditioner configuration."""
+
+    tau: float = 0.1
+    lambda_max: float = 0.5
+    alpha: float = 10.0
+    delta0: float = 0.2
+    mode: KnnMode = "delta"
+
+    def conditioner(self) -> KnnCorrector:
+        """Return the configured conditioner."""
+
+        return KnnCorrector(
+            tau=self.tau,
+            lambda_max=self.lambda_max,
+            alpha=self.alpha,
+            delta0=self.delta0,
+            mode=self.mode,
+        )
+
+    def to_json(self) -> dict[str, object]:
+        """Return a JSON-ready conditioner config."""
+
+        return {
+            "kind": "knn_corrector",
+            "tau": self.tau,
+            "lambda_max": self.lambda_max,
+            "alpha": self.alpha,
+            "delta0": self.delta0,
+            "mode": self.mode,
+        }
+
+    @classmethod
+    def from_json(cls, data: object) -> KnnReplayConfig:
+        mapping = _require_mapping(data, "conditioner")
+        if mapping.get("kind") != "knn_corrector":
+            raise EvaluationError("unsupported replay conditioner")
+        return cls(
+            tau=_require_finite_float(mapping.get("tau"), "tau"),
+            lambda_max=_require_finite_float(
+                mapping.get("lambda_max"),
+                "lambda_max",
+            ),
+            alpha=_require_finite_float(mapping.get("alpha"), "alpha"),
+            delta0=_require_finite_float(mapping.get("delta0"), "delta0"),
+            mode=_knn_mode(mapping.get("mode")),
+        )
+
+
+@dataclass(frozen=True)
+class ReceiptReplayTrace:
+    """Logged conditioning set bound to a retrieval receipt."""
+
+    query: QuerySpec
+    items: tuple[MemoryItem, ...]
+    distances: tuple[float, ...]
+    receipt: RetrievalReceipt
+    conditioner: KnnReplayConfig
+    parametric_prediction: np.ndarray
+    current_latent: np.ndarray
+    expected_prediction: np.ndarray
+    schema_version: str = RECEIPT_REPLAY_TRACE_SCHEMA
+
+    def __post_init__(self) -> None:
+        if self.schema_version != RECEIPT_REPLAY_TRACE_SCHEMA:
+            raise EvaluationError("unsupported replay trace schema")
+        if not isinstance(self.query, QuerySpec):
+            raise EvaluationError("query must be a QuerySpec")
+        object.__setattr__(
+            self, "items", tuple(_require_item(item) for item in self.items)
+        )
+        distances = tuple(
+            _require_finite_float(distance, "distance") for distance in self.distances
+        )
+        if len(self.items) != len(distances):
+            raise EvaluationError("items and distances must have matching lengths")
+        object.__setattr__(self, "distances", distances)
+        if not isinstance(self.receipt, RetrievalReceipt):
+            raise EvaluationError("receipt must be a RetrievalReceipt")
+        if not isinstance(self.conditioner, KnnReplayConfig):
+            raise EvaluationError("conditioner must be KnnReplayConfig")
+        object.__setattr__(
+            self,
+            "parametric_prediction",
+            _require_array(self.parametric_prediction, "parametric_prediction"),
+        )
+        object.__setattr__(
+            self,
+            "current_latent",
+            _require_array(self.current_latent, "current_latent"),
+        )
+        object.__setattr__(
+            self,
+            "expected_prediction",
+            _require_array(self.expected_prediction, "expected_prediction"),
+        )
+
+    @property
+    def root(self) -> bytes:
+        """Return the committed root bound to the receipt."""
+
+        return self.receipt.root
+
+    @property
+    def ids(self) -> tuple[Cid, ...]:
+        """Return receipt ids in retrieval order."""
+
+        return self.receipt.ids
+
+    def to_json(self) -> dict[str, object]:
+        """Return a JSON-ready replay trace."""
+
+        return {
+            "schema_version": self.schema_version,
+            "query": _query_to_json(self.query),
+            "items": [_item_to_json(item) for item in self.items],
+            "distances": list(self.distances),
+            "receipt": self.receipt.to_json(),
+            "conditioner": self.conditioner.to_json(),
+            "parametric_prediction": _array_to_json(self.parametric_prediction),
+            "current_latent": _array_to_json(self.current_latent),
+            "expected_prediction": _array_to_json(self.expected_prediction),
+        }
+
+    @classmethod
+    def from_json(cls, data: object) -> ReceiptReplayTrace:
+        mapping = _require_mapping(data, "replay trace")
+        schema_version = _require_string(
+            mapping.get("schema_version"), "schema_version"
+        )
+        if schema_version != RECEIPT_REPLAY_TRACE_SCHEMA:
+            raise EvaluationError("unsupported replay trace schema")
+        items = _require_sequence(mapping.get("items"), "items")
+        distances = _require_sequence(mapping.get("distances"), "distances")
+        return cls(
+            schema_version=schema_version,
+            query=_query_from_json(mapping.get("query")),
+            items=tuple(_item_from_json(item) for item in items),
+            distances=tuple(
+                _require_finite_float(item, "distance") for item in distances
+            ),
+            receipt=RetrievalReceipt.from_json(mapping.get("receipt")),
+            conditioner=KnnReplayConfig.from_json(mapping.get("conditioner")),
+            parametric_prediction=_array_from_json(
+                mapping.get("parametric_prediction")
+            ),
+            current_latent=_array_from_json(mapping.get("current_latent")),
+            expected_prediction=_array_from_json(mapping.get("expected_prediction")),
+        )
+
+
+@dataclass(frozen=True)
+class ReceiptReplayReport:
+    """Result of replaying one receipt-bound conditioning trace."""
+
+    ok: bool
+    root: bytes
+    ids: tuple[Cid, ...]
+    conditioned: bool
+    mismatch_causes: tuple[str, ...]
+    max_abs_error: float | None
+    expected_prediction: np.ndarray
+    replayed_prediction: np.ndarray | None
+    schema_version: str = RECEIPT_REPLAY_REPORT_SCHEMA
+
+    def to_json(self) -> dict[str, object]:
+        """Return a JSON-ready replay report."""
+
+        return {
+            "schema_version": self.schema_version,
+            "ok": self.ok,
+            "root": self.root.hex(),
+            "ids": [cid.hex() for cid in self.ids],
+            "conditioned": self.conditioned,
+            "mismatch_causes": list(self.mismatch_causes),
+            "max_abs_error": self.max_abs_error,
+            "expected_prediction": _array_to_json(self.expected_prediction),
+            "replayed_prediction": None
+            if self.replayed_prediction is None
+            else _array_to_json(self.replayed_prediction),
+        }
+
+
+def build_receipt_replay_trace(
+    *,
+    query: QuerySpec,
+    retrieval: Retrieval,
+    parametric_prediction: np.ndarray,
+    current_latent: np.ndarray,
+    conditioner: KnnReplayConfig | None = None,
+    expected_prediction: np.ndarray | None = None,
+) -> ReceiptReplayTrace:
+    """Record a replayable conditioning set from a receipt-bearing retrieval."""
+
+    receipt = _require_receipt(retrieval)
+    config = KnnReplayConfig() if conditioner is None else conditioner
+    if not verify_retrieval_receipt(
+        receipt, retrieval.items, root=receipt.root, query=query
+    ):
+        raise EvaluationError("retrieval receipt does not verify")
+    expected = (
+        _condition(config, parametric_prediction, retrieval, current_latent)
+        if expected_prediction is None
+        else expected_prediction
+    )
+    return ReceiptReplayTrace(
+        query=query,
+        items=tuple(retrieval.items),
+        distances=tuple(retrieval.distances),
+        receipt=receipt,
+        conditioner=config,
+        parametric_prediction=parametric_prediction,
+        current_latent=current_latent,
+        expected_prediction=expected,
+    )
+
+
+def replay_receipt_trace(
+    trace: ReceiptReplayTrace,
+    *,
+    atol: float = 1e-6,
+) -> ReceiptReplayReport:
+    """Replay a receipt-bound trace and report deterministic mismatch causes."""
+
+    _require_non_negative_float(atol, "atol")
+    if not verify_retrieval_receipt(
+        trace.receipt,
+        trace.items,
+        root=trace.root,
+        query=trace.query,
+    ):
+        return ReceiptReplayReport(
+            ok=False,
+            root=trace.root,
+            ids=trace.ids,
+            conditioned=False,
+            mismatch_causes=("receipt_verification_failed",),
+            max_abs_error=None,
+            expected_prediction=trace.expected_prediction,
+            replayed_prediction=None,
+        )
+    retrieval = Retrieval(
+        items=trace.items,
+        distances=trace.distances,
+        receipt=trace.receipt,
+    )
+    replayed = _condition(
+        trace.conditioner,
+        trace.parametric_prediction,
+        retrieval,
+        trace.current_latent,
+    )
+    max_abs_error = _max_abs_error(replayed, trace.expected_prediction)
+    causes: list[str] = []
+    if replayed.shape != trace.expected_prediction.shape:
+        causes.append("prediction_shape_mismatch")
+    if max_abs_error > atol:
+        causes.append("prediction_value_mismatch")
+    return ReceiptReplayReport(
+        ok=not causes,
+        root=trace.root,
+        ids=trace.ids,
+        conditioned=True,
+        mismatch_causes=tuple(causes),
+        max_abs_error=max_abs_error,
+        expected_prediction=trace.expected_prediction,
+        replayed_prediction=replayed,
+    )
+
+
+def write_replay_trace_json(trace: ReceiptReplayTrace, path: str | Path) -> None:
+    """Write a replay trace JSON artifact."""
+
+    _write_json(path, trace.to_json())
+
+
+def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
+    """Load and validate a replay trace JSON artifact."""
+
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise EvaluationError(f"replay trace not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise EvaluationError("replay trace is not valid JSON") from exc
+    return ReceiptReplayTrace.from_json(data)
+
+
+def write_replay_report_json(report: ReceiptReplayReport, path: str | Path) -> None:
+    """Write a replay report JSON artifact."""
+
+    _write_json(path, report.to_json())
+
+
+def _condition(
+    config: KnnReplayConfig,
+    parametric_prediction: np.ndarray,
+    retrieval: Retrieval,
+    current_latent: np.ndarray,
+) -> np.ndarray:
+    result = config.conditioner().condition(
+        _require_array(parametric_prediction, "parametric_prediction"),
+        retrieval,
+        CondCtx(_require_array(current_latent, "current_latent")),
+    )
+    return _require_array(result, "replayed_prediction")
+
+
+def _query_to_json(spec: QuerySpec) -> dict[str, object]:
+    return {
+        "schema_version": spec.schema_version,
+        "vector": _array_to_json(spec.vector),
+        "k": spec.k,
+        "metric": spec.metric.value,
+        "ef": spec.ef,
+        "filters": None if spec.filters is None else _json_ready(spec.filters),
+        "temporal_decay": spec.temporal_decay,
+        "with_receipt": spec.with_receipt,
+        "encoder_fp": None if spec.encoder_fp is None else asdict(spec.encoder_fp),
+    }
+
+
+def _query_from_json(data: object) -> QuerySpec:
+    mapping = _require_mapping(data, "query")
+    return QuerySpec(
+        vector=_array_from_json(mapping.get("vector")),
+        k=_require_positive_int(mapping.get("k"), "k"),
+        metric=_metric(mapping.get("metric")),
+        ef=_optional_positive_int(mapping.get("ef"), "ef"),
+        filters=_optional_mapping(mapping.get("filters"), "filters"),
+        temporal_decay=_optional_non_negative_float(
+            mapping.get("temporal_decay"),
+            "temporal_decay",
+        ),
+        with_receipt=_require_bool(mapping.get("with_receipt"), "with_receipt"),
+        encoder_fp=_optional_fingerprint(mapping.get("encoder_fp")),
+        schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
+    )
+
+
+def _item_to_json(item: MemoryItem) -> dict[str, object]:
+    cid = item.content_id or content_id(item)
+    return {
+        "schema_version": item.schema_version,
+        "content_id": cid.hex(),
+        "key": _array_to_json(item.key),
+        "value": _transition_to_json(item.value),
+        "meta": _json_ready(item.meta),
+        "encoder_fp": asdict(item.encoder_fp),
+    }
+
+
+def _item_from_json(data: object) -> MemoryItem:
+    mapping = _require_mapping(data, "item")
+    cid = _bytes_from_hex(mapping.get("content_id"), "content_id")
+    item = MemoryItem(
+        content_id=cid,
+        key=_array_from_json(mapping.get("key")),
+        value=_transition_from_json(mapping.get("value")),
+        meta=_require_mapping(mapping.get("meta"), "meta"),
+        encoder_fp=_fingerprint_from_json(mapping.get("encoder_fp")),
+        schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
+    )
+    if item.content_id != content_id(item):
+        raise EvaluationError("item content_id does not match canonical bytes")
+    return item
+
+
+def _require_item(item: object) -> MemoryItem:
+    if not isinstance(item, MemoryItem):
+        raise EvaluationError("items must contain MemoryItem instances")
+    return item
+
+
+def _require_receipt(retrieval: Retrieval) -> RetrievalReceipt:
+    if not isinstance(retrieval.receipt, RetrievalReceipt):
+        raise EvaluationError("replay requires a retrieval receipt")
+    return retrieval.receipt
+
+
+def _require_array(value: object, field_name: str) -> np.ndarray:
+    if not isinstance(value, np.ndarray):
+        raise EvaluationError(f"{field_name} must be a numpy.ndarray")
+    if not np.issubdtype(value.dtype, np.floating):
+        raise EvaluationError(f"{field_name} must have a floating dtype")
+    if value.shape == ():
+        raise EvaluationError(f"{field_name} must have at least one dimension")
+    if not bool(np.isfinite(value).all()):
+        raise EvaluationError(f"{field_name} must contain only finite values")
+    return np.ascontiguousarray(value)
+
+
+def _max_abs_error(left: np.ndarray, right: np.ndarray) -> float:
+    if left.shape != right.shape:
+        return math.inf
+    return float(np.max(np.abs(left - right)))
+
+
+def _write_json(path: str | Path, data: Mapping[str, object]) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(data, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _require_mapping(value: object, field_name: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise EvaluationError(f"{field_name} must be an object")
+    return value
+
+
+def _require_sequence(value: object, field_name: str) -> Sequence[object]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise EvaluationError(f"{field_name} must be a sequence")
+    return value
+
+
+def _require_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise EvaluationError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _require_finite_float(value: object, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise EvaluationError(f"{field_name} must be a finite number")
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise EvaluationError(f"{field_name} must be finite")
+    return numeric
+
+
+def _require_non_negative_float(value: object, field_name: str) -> float:
+    numeric = _require_finite_float(value, field_name)
+    if numeric < 0.0:
+        raise EvaluationError(f"{field_name} must be non-negative")
+    return numeric
+
+
+def _optional_non_negative_float(value: object, field_name: str) -> float | None:
+    if value is None:
+        return None
+    return _require_non_negative_float(value, field_name)
+
+
+def _require_positive_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise EvaluationError(f"{field_name} must be a positive integer")
+    return value
+
+
+def _optional_positive_int(value: object, field_name: str) -> int | None:
+    if value is None:
+        return None
+    return _require_positive_int(value, field_name)
+
+
+def _require_bool(value: object, field_name: str) -> bool:
+    if not isinstance(value, bool):
+        raise EvaluationError(f"{field_name} must be a bool")
+    return value
+
+
+def _optional_mapping(
+    value: object,
+    field_name: str,
+) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    return _require_mapping(value, field_name)
+
+
+def _metric(value: object) -> Metric:
+    text = _require_string(value, "metric")
+    try:
+        return Metric(text)
+    except ValueError as exc:
+        raise EvaluationError(f"unsupported metric: {text}") from exc
+
+
+def _knn_mode(value: object) -> KnnMode:
+    if value == "delta" or value == "absolute":
+        return value
+    raise EvaluationError("mode must be 'delta' or 'absolute'")
+
+
+def _optional_fingerprint(value: object) -> EncoderFingerprint | None:
+    if value is None:
+        return None
+    return _fingerprint_from_json(value)
+
+
+def _bytes_from_hex(value: object, field_name: str) -> bytes:
+    text = _require_string(value, field_name)
+    try:
+        return bytes.fromhex(text)
+    except ValueError as exc:
+        raise EvaluationError(f"{field_name} must be hex bytes") from exc
+
+
+__all__ = [
+    "RECEIPT_REPLAY_REPORT_SCHEMA",
+    "RECEIPT_REPLAY_TRACE_SCHEMA",
+    "KnnReplayConfig",
+    "ReceiptReplayReport",
+    "ReceiptReplayTrace",
+    "build_receipt_replay_trace",
+    "load_replay_trace_json",
+    "replay_receipt_trace",
+    "write_replay_report_json",
+    "write_replay_trace_json",
+]
