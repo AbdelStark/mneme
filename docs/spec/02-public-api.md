@@ -97,7 +97,7 @@ import optional ML, index, receipt, or remote backends.
 ## Protocols
 
 ```python
-from mneme.encode import Encoder, Summarizer
+from mneme.encode import Encoder, MeanPoolSummarizer, Summarizer
 
 class Encoder(Protocol):
     def encode(self, obs: object) -> Latent: ...
@@ -162,6 +162,11 @@ summarizer: Summarizer = MySummarizer()
 
 Adapter implementations own model-specific imports. Importing `mneme.encode`
 must not import optional ML backends such as torch.
+
+`MeanPoolSummarizer` is the v0.1 default summarizer. It mean-pools all
+non-feature axes, returns a contiguous finite `float32` vector, and L2-normalizes
+by default for cosine keys. Deterministic projection is intentionally deferred
+until v0.2 or the first large-latent adapter that needs it.
 
 ## Constructors
 
