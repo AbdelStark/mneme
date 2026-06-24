@@ -1,0 +1,145 @@
+{
+  "adapter_checkpoint_metadata": {
+    "adapter_config": {
+      "hidden_dim": 4,
+      "latent_dim": 2
+    },
+    "adapter_kind": "cross_attention",
+    "base_fingerprint": {
+      "config_digest": "blake3:config",
+      "encoder_id": "encoder.fixture",
+      "schema_version": "mneme.encoder_fingerprint.v1",
+      "summarizer_id": "meanpool-v1",
+      "weights_digest": null
+    },
+    "package_version": "0.1.0.dev0",
+    "schema_version": "mneme.adapter_checkpoint.v1",
+    "training_report_uri": "reports/train.json",
+    "weights_file": "adapter.safetensors"
+  },
+  "dataset_ref": {
+    "dataset_id": "compat-fixture",
+    "kind": "fixture",
+    "metadata": {
+      "fixture_scale": true
+    },
+    "schema_version": "mneme.dataset_ref.v1",
+    "split": "deterministic",
+    "uri": null,
+    "version": "v1"
+  },
+  "eval_report": {
+    "artifacts": {
+      "report_kind": "compat"
+    },
+    "caveats": [
+      "fixture only"
+    ],
+    "command": [
+      "mneme",
+      "compat"
+    ],
+    "created_at": "2026-06-24T00:00:00Z",
+    "dataset": {
+      "dataset_id": "compat-fixture",
+      "kind": "fixture",
+      "metadata": {
+        "fixture_scale": true
+      },
+      "schema_version": "mneme.dataset_ref.v1",
+      "split": "deterministic",
+      "uri": null,
+      "version": "v1"
+    },
+    "git_commit": "abcdef0",
+    "metrics": {
+      "ok": 1
+    },
+    "package_version": "0.1.0.dev0",
+    "passed": true,
+    "platform": {
+      "system": "fixture"
+    },
+    "report_id": "mneme-compat-fixture-v1",
+    "schema_version": "mneme.eval_report.v1",
+    "seed": 0
+  },
+  "index_snapshot": {
+    "backend": "flat",
+    "item_count": 0,
+    "items": [],
+    "schema_version": "mneme.flat_index_snapshot.v1"
+  },
+  "remote_error_message": {
+    "error_type": "ValidationError",
+    "message": "invalid fixture",
+    "retryable": false,
+    "schema_version": "mneme.error.v1"
+  },
+  "remote_query_request": {
+    "query": {
+      "ef": null,
+      "encoder_fp": {
+        "config_digest": "blake3:config",
+        "encoder_id": "encoder.fixture",
+        "schema_version": "mneme.encoder_fingerprint.v1",
+        "summarizer_id": "meanpool-v1",
+        "weights_digest": null
+      },
+      "filters": null,
+      "k": 1,
+      "metric": "l2",
+      "schema_version": "mneme.query_spec.v1",
+      "temporal_decay": null,
+      "vector": {
+        "byte_order": "little",
+        "data": "AACAPwAAAAA=",
+        "dtype": "float32",
+        "encoding": "base64",
+        "shape": [
+          2
+        ]
+      },
+      "with_receipt": false
+    },
+    "schema_version": "mneme.query.request.v1"
+  },
+  "schema_version": "mneme.schema_payload_fixtures.v1",
+  "store_manifest": {
+    "active_fingerprints": [
+      {
+        "config_digest": "blake3:config",
+        "encoder_id": "encoder.fixture",
+        "schema_version": "mneme.encoder_fingerprint.v1",
+        "summarizer_id": "meanpool-v1",
+        "weights_digest": null
+      }
+    ],
+    "commitment": {
+      "backend": null,
+      "enabled": false,
+      "files": [],
+      "root": null
+    },
+    "created_at": "2026-06-24T00:00:00Z",
+    "index": {
+      "backend": "flat",
+      "params": {}
+    },
+    "last_completed_transaction": null,
+    "retention_policy": {
+      "policy": "none",
+      "tombstones": []
+    },
+    "schema_version": "mneme.store_manifest.v1",
+    "store_id": "12345678-1234-5678-1234-567812345678",
+    "updated_at": "2026-06-24T00:00:00Z",
+    "value_logs": [
+      {
+        "path": "values/log-000000.mnv",
+        "record_count": 0,
+        "size_bytes": 0
+      }
+    ]
+  }
+}

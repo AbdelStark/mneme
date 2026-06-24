@@ -71,6 +71,7 @@ Every release candidate must pass:
 - fixture evaluation report generation;
 - package build and install from artifact;
 - import check for minimal core install and each optional extra;
+- public API compatibility snapshot and schema fixture validation;
 - documentation link check;
 - changelog update;
 - security and license file presence.
@@ -95,6 +96,11 @@ Deprecations include:
 - replacement API;
 - earliest removal version;
 - migration note.
+
+The release compatibility gate is documented in
+[API Compatibility Gate](../release/API_COMPATIBILITY.md). Public export,
+signature, or persisted schema changes must update the snapshot digest there and
+carry a migration note or changelog entry.
 
 ## Resolved Bootstrap Decisions
 
