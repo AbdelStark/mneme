@@ -6,7 +6,10 @@ import math
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Final, Protocol
+
+import numpy as np
 
 EVENT_SCHEMA_VERSION: Final = "mneme.event.v1"
 REQUIRED_EVENT_NAMES: Final = (
@@ -19,6 +22,28 @@ REQUIRED_EVENT_NAMES: Final = (
     "mneme.receipt.verify",
     "mneme.eval.run",
 )
+_ARRAY_FIELD_MARKERS: Final = (
+    "action",
+    "delta",
+    "latent",
+    "summary",
+    "vector",
+    "z_next",
+    "z_src",
+)
+_OBSERVATION_FIELD_MARKERS: Final = ("observation", "obs")
+_PATH_FIELD_MARKERS: Final = ("path", "uri")
+_SECRET_FIELD_MARKERS: Final = (
+    "api_key",
+    "credential",
+    "password",
+    "private_key",
+    "secret",
+    "token",
+)
+_METADATA_FIELD_MARKERS: Final = ("meta", "metadata")
+_PRIVATE_DATASET_FIELDS: Final = frozenset({"dataset_id", "dataset_name"})
+_SAFE_METADATA_PREFIX: Final = "safe_"
 
 
 class EventSink(Protocol):
@@ -89,8 +114,55 @@ def emit_event(
     if error is not None:
         payload["error_type"] = type(error).__name__
     for key, value in fields.items():
-        payload[key] = _json_safe(value)
+        payload[key] = redact_event_value(value, field_name=key, config=config)
     config.event_sink.emit(payload)
+
+
+def redact_event_value(
+    value: object,
+    *,
+    field_name: str = "",
+    config: ObservabilityConfig | None = None,
+) -> object:
+    """Return a JSON-safe value with default redaction rules applied."""
+
+    key = field_name.lower()
+    if _is_secret_field(key):
+        return "<redacted:secret>"
+    if key in _PRIVATE_DATASET_FIELDS:
+        return "<redacted:dataset>"
+    if _is_metadata_field(key):
+        return redact_metadata(value, config=config)
+    if _is_observation_field(key):
+        return "<redacted:observation>"
+    if _is_path_field(key) and isinstance(value, str | Path):
+        return "<redacted:path>"
+    if _is_array_field(key) and _is_array_like(value):
+        return _array_summary(value)
+    return _json_safe(value, key=key, config=config)
+
+
+def redact_metadata(
+    metadata: object,
+    *,
+    config: ObservabilityConfig | None = None,
+) -> dict[str, object]:
+    """Return metadata safe for default event logs."""
+
+    if not isinstance(metadata, Mapping):
+        return {}
+    if config is not None and not config.redact_metadata:
+        return {
+            str(key): redact_event_value(value, field_name=str(key), config=config)
+            for key, value in metadata.items()
+        }
+    safe: dict[str, object] = {}
+    for raw_key, value in metadata.items():
+        key = str(raw_key)
+        if not key.startswith(_SAFE_METADATA_PREFIX) or _is_secret_field(key.lower()):
+            continue
+        safe[key] = redact_event_value(value, field_name=key, config=config)
+    return safe
 
 
 def content_id_prefix(cid: bytes, config: ObservabilityConfig | None) -> str | None:
@@ -126,18 +198,90 @@ def _duration_ms(started: float | None) -> float:
     return max(0.0, (time.perf_counter() - started) * 1000.0)
 
 
-def _json_safe(value: object) -> object:
+def _json_safe(
+    value: object,
+    *,
+    key: str,
+    config: ObservabilityConfig | None,
+) -> object:
     if value is None or isinstance(value, str | bool | int):
+        if isinstance(value, str) and _looks_like_absolute_path(value):
+            return "<redacted:path>"
         return value
     if isinstance(value, float):
         return value if math.isfinite(value) else None
+    if isinstance(value, Path):
+        return "<redacted:path>"
+    if isinstance(value, np.ndarray):
+        return _array_summary(value)
     if isinstance(value, bytes):
-        return value.hex()
+        return {"redacted": "bytes", "length": len(value)}
     if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
+        return {
+            str(item_key): redact_event_value(
+                item,
+                field_name=str(item_key),
+                config=config,
+            )
+            for item_key, item in value.items()
+        }
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        return [_json_safe(item) for item in value]
+        if _is_array_field(key) and _is_array_like(value):
+            return _array_summary(value)
+        return [_json_safe(item, key=key, config=config) for item in value]
     return str(value)
+
+
+def _array_summary(value: object) -> dict[str, object]:
+    if isinstance(value, np.ndarray):
+        return {
+            "redacted": "array",
+            "shape": list(value.shape),
+            "dtype": str(value.dtype),
+        }
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        return {
+            "redacted": "array",
+            "shape": [len(value)],
+            "dtype": "sequence",
+        }
+    return {"redacted": "array", "shape": None, "dtype": "unknown"}
+
+
+def _is_array_like(value: object) -> bool:
+    if isinstance(value, np.ndarray):
+        return True
+    if not isinstance(value, Sequence) or isinstance(value, str | bytes | bytearray):
+        return False
+    return all(
+        isinstance(item, int | float) and not isinstance(item, bool) for item in value
+    )
+
+
+def _is_array_field(key: str) -> bool:
+    return any(marker in key for marker in _ARRAY_FIELD_MARKERS)
+
+
+def _is_observation_field(key: str) -> bool:
+    return any(marker in key for marker in _OBSERVATION_FIELD_MARKERS)
+
+
+def _is_path_field(key: str) -> bool:
+    return any(marker in key for marker in _PATH_FIELD_MARKERS)
+
+
+def _is_secret_field(key: str) -> bool:
+    return any(marker in key for marker in _SECRET_FIELD_MARKERS)
+
+
+def _is_metadata_field(key: str) -> bool:
+    return any(marker in key for marker in _METADATA_FIELD_MARKERS)
+
+
+def _looks_like_absolute_path(value: str) -> bool:
+    return value.startswith("/") or (
+        len(value) >= 3 and value[1:3] == ":\\" and value[0].isalpha()
+    )
 
 
 __all__ = [
@@ -150,5 +294,7 @@ __all__ = [
     "distance_min",
     "emit_event",
     "has_event_sink",
+    "redact_event_value",
+    "redact_metadata",
     "start_event_timer",
 ]
