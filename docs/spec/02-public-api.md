@@ -109,6 +109,8 @@ class Summarizer(Protocol):
     def id(self) -> str: ...
     def summarize(self, z: Latent) -> SummaryVec: ...
 
+from mneme.index import FlatIndex, Index
+
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
     def add_batch(self, items: Sequence[tuple[Cid, SummaryVec]]) -> None: ...
@@ -174,6 +176,10 @@ The helper binds the summarizer id and summarizer config into
 `config_digest`, computes optional BLAKE3 weight digests, and requires
 `unweighted=True` when no weight digest exists. Stores and indexes should use
 `ensure_fingerprint_match` before comparing keys from different sources.
+
+`FlatIndex` is the required exact reference backend. It performs NumPy flat
+search, returns stable results by breaking equal-distance ties with content-id
+bytes, and does not require optional index extras.
 
 ## Constructors
 
