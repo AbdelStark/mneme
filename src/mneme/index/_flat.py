@@ -8,6 +8,13 @@ from collections.abc import Sequence
 import numpy as np
 
 from mneme.core import Cid, DTypeError, Metric, QueryError, ShapeError, SummaryVec
+from mneme.observability import (
+    ObservabilityConfig,
+    distance_mean,
+    distance_min,
+    emit_event,
+    start_event_timer,
+)
 
 _COSINE_NORM_TOLERANCE = 1e-4
 
@@ -15,7 +22,8 @@ _COSINE_NORM_TOLERANCE = 1e-4
 class FlatIndex:
     """Exact in-memory index used as the recall ground truth."""
 
-    def __init__(self) -> None:
+    def __init__(self, observability: ObservabilityConfig | None = None) -> None:
+        self.observability = observability
         self._keys: dict[Cid, SummaryVec] = {}
         self._dim: int | None = None
 
@@ -30,6 +38,52 @@ class FlatIndex:
             self.add(cid, key)
 
     def search(
+        self,
+        q: SummaryVec,
+        k: int,
+        *,
+        metric: Metric,
+        ef: int | None = None,
+    ) -> list[tuple[Cid, float]]:
+        started = start_event_timer(self.observability)
+        try:
+            results = self._search(q, k, metric=metric, ef=ef)
+        except Exception as exc:
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.index.search",
+                    operation="index.search",
+                    status="error",
+                    started=started,
+                    error=exc,
+                    backend="flat",
+                    metric=str(metric),
+                    k=k,
+                    ef=ef,
+                    index_size=len(self._keys),
+                )
+            raise
+        if started is not None:
+            distances = tuple(distance for _, distance in results)
+            emit_event(
+                self.observability,
+                event="mneme.index.search",
+                operation="index.search",
+                status="ok",
+                started=started,
+                backend="flat",
+                metric=str(metric),
+                k=k,
+                ef=ef,
+                index_size=len(self._keys),
+                hit_count=len(results),
+                distance_min=distance_min(distances),
+                distance_mean=distance_mean(distances),
+            )
+        return results
+
+    def _search(
         self,
         q: SummaryVec,
         k: int,

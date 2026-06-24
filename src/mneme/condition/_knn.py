@@ -17,6 +17,13 @@ from mneme.core import (
     Transition,
     ValidationError,
 )
+from mneme.observability import (
+    ObservabilityConfig,
+    distance_mean,
+    distance_min,
+    emit_event,
+    start_event_timer,
+)
 
 KnnMode = Literal["delta", "absolute"]
 
@@ -30,6 +37,7 @@ class KnnCorrector:
     alpha: float = 10.0
     delta0: float = 0.2
     mode: KnnMode = "delta"
+    observability: ObservabilityConfig | None = None
 
     def __post_init__(self) -> None:
         _require_positive_finite(self.tau, "tau")
@@ -44,18 +52,66 @@ class KnnCorrector:
     ) -> Latent:
         """Blend a parametric prediction with retrieved transition evidence."""
 
-        if not retrieval.items:
-            return parametric
-        parametric_array = _require_array(parametric, "parametric")
-        distances = _require_distances(retrieval)
-        weights = _softmax(-distances / self.tau)
-        if self.mode == "delta":
-            z_knn = self._delta_prediction(parametric_array, retrieval, ctx, weights)
-        else:
-            z_knn = self._absolute_prediction(parametric_array, retrieval, weights)
-        gate = self.gate(float(distances.min()))
-        blended = (1.0 - gate) * parametric_array + gate * z_knn
-        return np.ascontiguousarray(blended, dtype=parametric_array.dtype)
+        started = start_event_timer(self.observability)
+        try:
+            if not retrieval.items:
+                if started is not None:
+                    emit_event(
+                        self.observability,
+                        event="mneme.condition.apply",
+                        operation="condition.apply",
+                        status="ok",
+                        started=started,
+                        mode=self.mode,
+                        empty_retrieval=True,
+                        hit_count=0,
+                        gate_lambda=0.0,
+                        output_finite=_latent_is_finite(parametric),
+                    )
+                return parametric
+            parametric_array = _require_array(parametric, "parametric")
+            distances = _require_distances(retrieval)
+            weights = _softmax(-distances / self.tau)
+            if self.mode == "delta":
+                z_knn = self._delta_prediction(
+                    parametric_array, retrieval, ctx, weights
+                )
+            else:
+                z_knn = self._absolute_prediction(parametric_array, retrieval, weights)
+            gate = self.gate(float(distances.min()))
+            blended = (1.0 - gate) * parametric_array + gate * z_knn
+            result = np.ascontiguousarray(blended, dtype=parametric_array.dtype)
+        except Exception as exc:
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.condition.apply",
+                    operation="condition.apply",
+                    status="error",
+                    started=started,
+                    error=exc,
+                    mode=self.mode,
+                    empty_retrieval=_safe_empty_retrieval(retrieval),
+                    hit_count=_safe_retrieval_len(retrieval),
+                )
+            raise
+        if started is not None:
+            distance_values = tuple(float(item) for item in distances)
+            emit_event(
+                self.observability,
+                event="mneme.condition.apply",
+                operation="condition.apply",
+                status="ok",
+                started=started,
+                mode=self.mode,
+                empty_retrieval=False,
+                hit_count=len(retrieval.items),
+                distance_min=distance_min(distance_values),
+                distance_mean=distance_mean(distance_values),
+                gate_lambda=gate,
+                output_finite=_latent_is_finite(result),
+            )
+        return result
 
     def gate(self, nearest_distance: float) -> float:
         """Return the memory interpolation weight for a nearest-neighbor distance."""
@@ -186,6 +242,29 @@ def _require_probability(value: object, field_name: str) -> None:
     converted = _require_finite(value, field_name)
     if converted < 0.0 or converted > 1.0:
         raise ValidationError(f"{field_name} must be between 0 and 1")
+
+
+def _latent_is_finite(value: object) -> bool | None:
+    if not isinstance(value, np.ndarray):
+        return None
+    return bool(np.isfinite(value).all())
+
+
+def _safe_empty_retrieval(retrieval: object) -> bool | None:
+    items = getattr(retrieval, "items", None)
+    if items is None:
+        return None
+    return not bool(items)
+
+
+def _safe_retrieval_len(retrieval: object) -> int | None:
+    items = getattr(retrieval, "items", None)
+    if items is None:
+        return None
+    try:
+        return len(items)
+    except TypeError:
+        return None
 
 
 __all__ = ["KnnCorrector", "KnnMode"]

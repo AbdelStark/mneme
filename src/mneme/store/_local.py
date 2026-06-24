@@ -25,6 +25,14 @@ from mneme.core import (
     content_id,
 )
 from mneme.index import FlatIndex, search_index
+from mneme.observability import (
+    ObservabilityConfig,
+    content_id_prefix,
+    distance_mean,
+    distance_min,
+    emit_event,
+    start_event_timer,
+)
 from mneme.store._manifest import (
     STORE_MANIFEST_SCHEMA,
     CommitmentState,
@@ -107,6 +115,7 @@ class LocalStore:
     index: FlatIndex
     _items: dict[Cid, MemoryItem]
     recovery_events: tuple[StoreRecoveryEvent, ...] = ()
+    observability: ObservabilityConfig | None = None
 
     def stats(self) -> StoreStats:
         value_record_count = sum(log.record_count for log in self.manifest.value_logs)
@@ -132,9 +141,40 @@ class LocalStore:
     def put_batch(self, items: list[MemoryItem]) -> list[Cid]:
         """Append a batch of items under one transaction."""
 
+        started = start_event_timer(self.observability)
         if not items:
+            if started is not None:
+                stats = self.stats()
+                emit_event(
+                    self.observability,
+                    event="mneme.store.put",
+                    operation="store.put",
+                    status="ok",
+                    started=started,
+                    store_id=str(self.manifest.store_id),
+                    backend=self.manifest.index.backend,
+                    item_count=0,
+                    value_record_count=stats.value_record_count,
+                    value_bytes=stats.value_bytes,
+                )
             return []
-        prepared = [_prepare_item(item) for item in items]
+        txid: str | None = None
+        try:
+            prepared = [_prepare_item(item) for item in items]
+        except Exception as exc:
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.store.put",
+                    operation="store.put",
+                    status="error",
+                    started=started,
+                    error=exc,
+                    store_id=str(self.manifest.store_id),
+                    backend=self.manifest.index.backend,
+                    item_count=len(items),
+                )
+            raise
         txid = f"txn-{uuid4().hex}"
         log_path = self.path / self.manifest.value_logs[0].path
         previous_size = log_path.stat().st_size
@@ -152,8 +192,8 @@ class LocalStore:
                 "previous_record_count": previous_count,
             },
         )
-        written_offsets: list[tuple[int, int]] = []
         try:
+            written_offsets: list[tuple[int, int]] = []
             for item in prepared:
                 written_offsets.append(append_value_record(log_path, item))
             self.index.add_batch(
@@ -185,24 +225,117 @@ class LocalStore:
                 },
             )
         except Exception as exc:
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.store.put",
+                    operation="store.put",
+                    status="error",
+                    started=started,
+                    error=exc,
+                    store_id=str(self.manifest.store_id),
+                    backend=self.manifest.index.backend,
+                    transaction_id=txid,
+                    item_count=len(items),
+                )
             raise TransactionError("failed to commit value-log transaction") from exc
-        return [item.content_id or content_id(item) for item in prepared]
+        cids = [item.content_id or content_id(item) for item in prepared]
+        if started is not None:
+            stats = self.stats()
+            content_id_prefixes = _content_id_prefixes(cids, self.observability)
+            emit_event(
+                self.observability,
+                event="mneme.store.commit",
+                operation="store.commit",
+                status="ok",
+                started=started,
+                store_id=str(self.manifest.store_id),
+                backend=self.manifest.index.backend,
+                transaction_id=txid,
+                item_count=len(cids),
+                value_record_count=stats.value_record_count,
+                value_bytes=stats.value_bytes,
+                content_id_prefixes=content_id_prefixes,
+            )
+            emit_event(
+                self.observability,
+                event="mneme.store.put",
+                operation="store.put",
+                status="ok",
+                started=started,
+                store_id=str(self.manifest.store_id),
+                backend=self.manifest.index.backend,
+                transaction_id=txid,
+                item_count=len(cids),
+                value_record_count=stats.value_record_count,
+                value_bytes=stats.value_bytes,
+                content_id_prefixes=content_id_prefixes,
+            )
+        return cids
 
     def query(self, spec: QuerySpec) -> Retrieval:
         """Query the in-memory index and load values from the value log cache."""
 
+        started = start_event_timer(self.observability)
         index_fp = (
             self.manifest.active_fingerprints[0]
             if len(self.manifest.active_fingerprints) == 1
             else None
         )
-        results = search_index(self.index, spec, index_fingerprint=index_fp)
         try:
+            results = search_index(self.index, spec, index_fingerprint=index_fp)
             items = tuple(self._items[cid] for cid, _ in results)
         except KeyError as exc:
-            raise StoreCorruptionError(
-                "index contains id missing from value log"
-            ) from exc
+            error = StoreCorruptionError("index contains id missing from value log")
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.store.query",
+                    operation="store.query",
+                    status="error",
+                    started=started,
+                    error=error,
+                    store_id=str(self.manifest.store_id),
+                    backend=self.manifest.index.backend,
+                    k=spec.k,
+                    fingerprint_match=_fingerprint_match(spec, index_fp),
+                )
+            raise error from exc
+        except Exception as exc:
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.store.query",
+                    operation="store.query",
+                    status="error",
+                    started=started,
+                    error=exc,
+                    store_id=str(self.manifest.store_id),
+                    backend=self.manifest.index.backend,
+                    k=spec.k,
+                    fingerprint_match=_fingerprint_match(spec, index_fp),
+                )
+            raise
+        if started is not None:
+            distances = tuple(distance for _, distance in results)
+            emit_event(
+                self.observability,
+                event="mneme.store.query",
+                operation="store.query",
+                status="ok",
+                started=started,
+                store_id=str(self.manifest.store_id),
+                backend=self.manifest.index.backend,
+                k=spec.k,
+                hit_count=len(results),
+                distance_min=distance_min(distances),
+                distance_mean=distance_mean(distances),
+                fingerprint_match=_fingerprint_match(spec, index_fp),
+                content_id_prefixes=_content_id_prefixes(
+                    [cid for cid, _ in results],
+                    self.observability,
+                ),
+            )
         return Retrieval(
             items=items,
             distances=tuple(distance for _, distance in results),
@@ -218,6 +351,7 @@ def init_store(
     retention_policy: dict[str, Any] | None = None,
     store_id: UUID | None = None,
     exist_ok: bool = False,
+    observability: ObservabilityConfig | None = None,
 ) -> LocalStore:
     """Create a local store layout and schema-versioned manifest."""
 
@@ -249,21 +383,31 @@ def init_store(
         root / _INDEX_BACKEND_FILE,
         {"backend": manifest.index.backend, "params": dict(manifest.index.params)},
     )
-    return _store_from_manifest(root, manifest)
+    return _store_from_manifest(root, manifest, observability=observability)
 
 
-def open_store(path: str | Path, *, create: bool = False) -> LocalStore:
+def open_store(
+    path: str | Path,
+    *,
+    create: bool = False,
+    observability: ObservabilityConfig | None = None,
+) -> LocalStore:
     """Open a local store, optionally initializing it when absent."""
 
     root = Path(path)
     manifest_path = root / _MANIFEST_FILE
     if not manifest_path.exists():
         if create:
-            return init_store(root)
+            return init_store(root, observability=observability)
         raise StoreError(f"store manifest not found at {manifest_path}")
     manifest = load_manifest(root)
     manifest, recovery_events = _recover_interrupted_transactions(root, manifest)
-    return _store_from_manifest(root, manifest, recovery_events=recovery_events)
+    return _store_from_manifest(
+        root,
+        manifest,
+        recovery_events=recovery_events,
+        observability=observability,
+    )
 
 
 def load_manifest(path: str | Path) -> StoreManifest:
@@ -302,8 +446,9 @@ def _store_from_manifest(
     manifest: StoreManifest,
     *,
     recovery_events: tuple[StoreRecoveryEvent, ...] = (),
+    observability: ObservabilityConfig | None = None,
 ) -> LocalStore:
-    index = FlatIndex()
+    index = FlatIndex(observability=observability)
     items: dict[Cid, MemoryItem] = {}
     for value_log in manifest.value_logs:
         log_path = root / value_log.path
@@ -319,6 +464,7 @@ def _store_from_manifest(
         index=index,
         _items=items,
         recovery_events=recovery_events,
+        observability=observability,
     )
 
 
@@ -327,6 +473,27 @@ def _prepare_item(item: MemoryItem) -> MemoryItem:
     if item.content_id is not None and item.content_id != prepared.content_id:
         raise ValidationError("content_id does not match canonical item bytes")
     return prepared
+
+
+def _content_id_prefixes(
+    cids: list[Cid],
+    observability: ObservabilityConfig | None,
+) -> list[str]:
+    prefixes = [
+        prefix
+        for cid in cids
+        if (prefix := content_id_prefix(cid, observability)) is not None
+    ]
+    return prefixes
+
+
+def _fingerprint_match(
+    spec: QuerySpec,
+    index_fingerprint: EncoderFingerprint | None,
+) -> bool | None:
+    if spec.encoder_fp is None or index_fingerprint is None:
+        return None
+    return spec.encoder_fp == index_fingerprint
 
 
 def _manifest_after_commit(
