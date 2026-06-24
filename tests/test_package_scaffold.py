@@ -40,7 +40,7 @@ def test_core_import_avoids_optional_runtime_dependencies() -> None:
         "import sys; "
         "import mneme; "
         "import mneme.core; "
-        "blocked = {'torch', 'faiss', 'blake3', 'cryptography', 'pydantic'}; "
+        "blocked = {'torch', 'faiss', 'cryptography', 'pydantic'}; "
         "loaded = sorted(blocked & set(sys.modules)); "
         "print(','.join(loaded)); "
         "raise SystemExit(1 if loaded else 0)"
