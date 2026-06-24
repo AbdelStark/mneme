@@ -1,0 +1,39 @@
+*.pyc
+__pycache__/
+*.egg-info/
+.venv/
+.env
+.DS_Store
+
+# Test / coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+node_modules/
+dist/
+build/
+site/
+# The large-binary research-artifact release bundle (09 §5.4) is never committed; CI never downloads it.
+release-bundle/
+.artifacts/
+.runs/
+target/
+docs/papers/arxiv/
+data/raw/
+
+# Local automation and scratch workspaces
+.agents/harness/
+.tldr/
+.claude/
+
+# uv: we install via `uv pip install -e .[dev]` (not `uv sync`), so the lock is non-authoritative
+uv.lock
+
+# Local run outputs (train_local / CLI --run-dir default)
+runs/
+
+.agents/harness/goals/
