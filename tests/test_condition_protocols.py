@@ -8,7 +8,7 @@ from uuid import uuid4
 import numpy as np
 import pytest
 
-from mneme.condition import COND_CTX_SCHEMA, CondCtx, Conditioner
+from mneme.condition import COND_CTX_SCHEMA, CondCtx, Conditioner, InContextConditioner
 from mneme.core import (
     EncoderFingerprint,
     MemoryItem,
@@ -63,6 +63,7 @@ def _retrieval() -> Retrieval:
 def test_conditioner_protocol_is_importable_from_public_api() -> None:
     assert Conditioner.__name__ == "Conditioner"
     assert CondCtx.__name__ == "CondCtx"
+    assert InContextConditioner.__name__ == "InContextConditioner"
     assert COND_CTX_SCHEMA == "mneme.cond_ctx.v1"
 
 
