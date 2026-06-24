@@ -27,13 +27,14 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "blake3>=0.4",
   "numpy>=1.26",
 ]
 
 [project.optional-dependencies]
 index = ["faiss-cpu>=1.8"]
 ml = ["torch>=2.3"]
-receipts = ["blake3>=0.4", "cryptography>=42"]
+receipts = ["cryptography>=42"]
 remote = []
 docs = ["mkdocs>=1.6", "mkdocs-material>=9.5"]
 dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.5"]

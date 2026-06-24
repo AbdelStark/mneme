@@ -1,5 +1,6 @@
 """Core public API namespace."""
 
+from mneme.core._canonical import build_item, canonical_bytes, content_id
 from mneme.core._errors import (
     CliExitCode,
     DTypeError,
@@ -73,5 +74,8 @@ __all__ = [
     "Transition",
     "UnsupportedOperationError",
     "ValidationError",
+    "build_item",
+    "canonical_bytes",
+    "content_id",
     "cli_exit_code",
 ]
