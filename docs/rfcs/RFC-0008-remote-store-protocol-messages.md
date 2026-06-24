@@ -60,6 +60,40 @@ Array payload:
 
 Query request includes the same fields as `QuerySpec`: vector payload, k, metric, ef, filters, temporal decay, receipt flag, and encoder fingerprint. Query response includes item envelopes, distances, and optional receipt.
 
+Example query request:
+
+```json
+{
+  "schema_version": "mneme.query.request.v1",
+  "query": {
+    "schema_version": "mneme.query_spec.v1",
+    "vector": {
+      "dtype": "float32",
+      "shape": [2],
+      "byte_order": "little",
+      "encoding": "base64",
+      "data": "AACAPwAAAAA="
+    },
+    "k": 1,
+    "metric": "l2",
+    "ef": null,
+    "filters": null,
+    "temporal_decay": null,
+    "with_receipt": true,
+    "encoder_fp": null
+  }
+}
+```
+
+Example root response:
+
+```json
+{
+  "schema_version": "mneme.root.response.v1",
+  "root": "ecf590294a28f6b9b77f4c19ffcc3769448e494849021eab7be7faf58d73654a"
+}
+```
+
 Client validation:
 
 - reject unknown major schema version;
