@@ -35,7 +35,14 @@ from mneme.eval import (
     write_report_json,
 )
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
-from mneme.store import StoreStats, init_store, open_store, rebuild_index, verify_store
+from mneme.store import (
+    StoreStats,
+    commit_init_store,
+    init_store,
+    open_store,
+    rebuild_index,
+    verify_store,
+)
 
 QUERY_RESULT_SCHEMA = "mneme.query_result.v1"
 STORE_STATS_SCHEMA = "mneme.store_stats.v1"
@@ -96,6 +103,16 @@ def _build_parser() -> argparse.ArgumentParser:
     verify_parser = store_subparsers.add_parser("verify", help="verify a local store")
     verify_parser.add_argument("path", type=Path)
     verify_parser.set_defaults(command="store verify", handler=_handle_store_verify)
+
+    commit_init_parser = store_subparsers.add_parser(
+        "commit-init",
+        help="initialize commitment state for an existing local store",
+    )
+    commit_init_parser.add_argument("path", type=Path)
+    commit_init_parser.set_defaults(
+        command="store commit-init",
+        handler=_handle_store_commit_init,
+    )
 
     index_parser = subparsers.add_parser("index", help="local index operations")
     index_subparsers = index_parser.add_subparsers(
@@ -206,6 +223,10 @@ def _handle_store_stats(args: argparse.Namespace) -> JsonResult:
 
 def _handle_store_verify(args: argparse.Namespace) -> object:
     return verify_store(args.path)
+
+
+def _handle_store_commit_init(args: argparse.Namespace) -> object:
+    return commit_init_store(args.path)
 
 
 def _handle_index_rebuild(args: argparse.Namespace) -> object:

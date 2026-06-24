@@ -99,7 +99,7 @@ semantics.
 
 ## Migration / Rollout
 
-v0.3 adds commitment files to existing stores through an offline `mneme store commit-init PATH` command that scans value logs in append order. Stores without commitments continue to work but cannot satisfy `with_receipt=True`.
+v0.3 adds commitment files to existing stores through an offline `mneme store commit-init PATH` command that verifies the store, scans value logs in append order, records the commitment root in the manifest, and reports the item count and root. Stores without commitments continue to work but cannot satisfy `with_receipt=True`.
 
 ## Testing Strategy
 

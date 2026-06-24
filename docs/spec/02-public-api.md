@@ -403,6 +403,11 @@ value-log checksum/content-id/fingerprint, and index-reference validation; with
 `rebuild_index` rewrites non-destructive index metadata from value logs only,
 including `index/backend.json` and a `mneme.flat_index_snapshot.v1`
 `index/data.json` snapshot. It never deletes value logs.
+`commit_init_store` verifies an existing local store, scans value logs in append
+order, writes `receipts/commitment-mmr-v1.json`, updates manifest commitment
+fields, and returns a `mneme.store_commit_init.v1` report with item count, root,
+and sidecar path. Failed verification returns an `ok: false` report and does
+not write a commitment sidecar.
 `LocalStore.commit()` rebuilds an MMR commitment from value-log append order,
 persists `receipts/commitment-mmr-v1.json`, updates manifest commitment fields,
 and returns the root bytes. `LocalStore.prove(ids)` returns inclusion proofs for
@@ -419,6 +424,7 @@ membership and item integrity; they do not prove search optimality.
 mneme store init PATH
 mneme store stats PATH --json
 mneme store verify PATH
+mneme store commit-init PATH
 mneme index rebuild PATH
 mneme query PATH --vector VECTOR_FILE --k 16 --metric cosine --json
 mneme eval fixtures --out reports/fixtures.json
@@ -427,8 +433,9 @@ mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 
 Commands return exit code 0 on success, 2 for invalid user input, 3 for data validation failure, 4 for unavailable optional dependency, and 5 for internal errors.
 The implemented v0.1 module entry point is `python -m mneme.cli ...`.
-Store stats, verification, index rebuild, query, fixture-eval, profile-eval,
-recall-eval, and latency-eval commands print schema-versioned JSON reports.
+Store stats, verification, committed-store initialization, index rebuild, query,
+fixture-eval, profile-eval, recall-eval, and latency-eval commands print
+schema-versioned JSON reports.
 CLI error responses print
 `mneme.cli_error.v1` JSON with `ok: false`, typed `error_type`, and `errors`.
 `receipts verify` validates a retrieval receipt file against the supplied root
