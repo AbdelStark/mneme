@@ -50,6 +50,7 @@ include = [
   "/CHANGELOG.md",
   "/CONTRIBUTING.md",
   "/docs",
+  "/examples",
   "/LICENSE",
   "/README.md",
   "/pyproject.toml",

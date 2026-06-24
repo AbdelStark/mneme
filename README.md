@@ -95,6 +95,18 @@ Fixture evaluation report:
 python -m mneme.eval.fixtures --out .artifacts/fixtures.json
 ```
 
+Runnable examples:
+
+```bash
+python3 examples/local_corrector.py
+python3 examples/remote_shared_store.py
+python -m mneme.cli eval remote-conformance --out .artifacts/remote-conformance.json
+```
+
+See [examples/README.md](examples/README.md) for prerequisites, expected JSON
+success signals, generated report paths, and the SPEC/RFC links behind each
+example.
+
 Opt-in external benchmark dry-run:
 
 ```bash
@@ -142,6 +154,7 @@ link to `validate_query_response`, receipt verification steps, and the
 - [Testing strategy](docs/spec/07-testing-strategy.md)
 - [Release and versioning](docs/spec/09-release-and-versioning.md)
 - [Release checklist](docs/release/RELEASE_CHECKLIST.md)
+- [Examples](examples/README.md)
 - [Implementation roadmap](docs/roadmap/IMPLEMENTATION.md)
 
 ## Contributing

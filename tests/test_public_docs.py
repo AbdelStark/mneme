@@ -22,6 +22,7 @@ def test_readme_includes_install_usage_limitations_and_spec_links() -> None:
     assert "[Public API](docs/spec/02-public-api.md)" in readme
     assert "[Security](docs/spec/06-security.md)" in readme
     assert "[Release checklist](docs/release/RELEASE_CHECKLIST.md)" in readme
+    assert "[Examples](examples/README.md)" in readme
     assert "[CONTRIBUTING.md](CONTRIBUTING.md)" in readme
 
 
