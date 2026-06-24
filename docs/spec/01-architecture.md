@@ -73,6 +73,11 @@ Planner consumes z_pred
 - `offline_replay`: deterministic replay over a logged episode for evaluation and receipt verification.
 - `index_rebuild`: rebuild summary keys and index files after encoder or summarizer changes.
 
+Offline receipt replay reconstructs the logged query, returned items, receipt,
+conditioner configuration, parametric prediction, and current latent, then
+recomputes conditioning after receipt verification. It does not replay the full
+environment and does not prove exact nearest-neighbor selection.
+
 ## Invariants
 
 - INV-ARCH-001: Core types do not depend on optional runtime extras.

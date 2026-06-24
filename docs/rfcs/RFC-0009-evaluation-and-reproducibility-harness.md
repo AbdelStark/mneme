@@ -57,6 +57,7 @@ mneme eval profile --store STORE --out reports/profile.json
 mneme eval recall --store STORE --out reports/recall.json
 mneme eval latency --store STORE --out reports/latency.json
 mneme eval receipts --store STORE --out reports/receipts.json
+mneme eval replay --trace TRACE.json --out reports/replay.json
 mneme eval gate --out reports/gate.json
 ```
 
@@ -114,7 +115,7 @@ validation only.
 
 ## Migration / Rollout
 
-v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adapter comparison reports. v0.3 adds receipt overhead and replay reports. Receipt overhead reports compare receipt-disabled and receipt-enabled query latency, receipt build latency, verification latency, and proof size trends. Release docs may cite only reports checked into release artifacts or linked from release notes.
+v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adapter comparison reports. v0.3 adds receipt overhead and replay reports. Receipt overhead reports compare receipt-disabled and receipt-enabled query latency, receipt build latency, verification latency, and proof size trends. Receipt replay reports recompute a logged conditioning set after verifying item bytes and inclusion proofs; they do not replay the full environment or prove nearest-neighbor optimality. Release docs may cite only reports checked into release artifacts or linked from release notes.
 
 ## Testing Strategy
 
