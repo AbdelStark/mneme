@@ -32,6 +32,9 @@ Out of scope for v0.x:
 - Persisted stores are untrusted until manifest, schema, content ids, and optional commitments validate.
 - Optional backend indexes are treated as acceleration structures, not source of truth.
 - Remote-store responses are untrusted until schema, content id, fingerprint, and receipt validation pass.
+  Remote clients use `validate_query_response` before exposing retrieved items to
+  conditioners, and `raise_for_remote_error` maps remote failures to local typed
+  exceptions.
 
 ## Integrity Controls
 
@@ -65,6 +68,7 @@ Deferred:
 - Unknown schema major version: reject.
 - Metadata redaction failure in tests: fail CI.
 - Remote response with mismatched fingerprint: reject before conditioning.
+- Malformed remote error envelope: reject with the local schema or validation error.
 
 ## Resolved Bootstrap Decisions
 

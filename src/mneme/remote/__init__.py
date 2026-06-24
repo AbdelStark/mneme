@@ -26,6 +26,7 @@ from mneme.remote._messages import (
     StatsRequest,
     StatsResponse,
 )
+from mneme.remote._validation import raise_for_remote_error, validate_query_response
 
 __all__ = [
     "ERROR_SCHEMA",
@@ -52,4 +53,6 @@ __all__ = [
     "RootResponse",
     "StatsRequest",
     "StatsResponse",
+    "raise_for_remote_error",
+    "validate_query_response",
 ]

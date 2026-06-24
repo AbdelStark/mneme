@@ -121,6 +121,8 @@ from mneme.receipts import (
     verify_inclusion_proof,
     verify_retrieval_receipt,
 )
+from mneme.remote import ErrorMessage, QueryRequest, QueryResponse
+from mneme.remote import raise_for_remote_error, validate_query_response
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -417,6 +419,14 @@ are included in the current committed root. `verify_retrieval_receipt` verifies
 the receipt root, inclusion proofs, optional replay query parameters, and
 canonical item bytes when returned items are supplied. Receipts prove committed
 membership and item integrity; they do not prove search optimality.
+
+`mneme.remote` exposes schema-versioned message carriers for future transport
+adapters. `validate_query_response(response, request)` is the reference
+fail-closed client check before conditioning on remote query results: it
+validates the response schema, recomputes returned item content ids, rejects
+encoder fingerprint mismatches, and verifies receipts when requested.
+`raise_for_remote_error(error)` maps remote error envelopes onto local typed
+exceptions.
 
 ## Command-Line Surface
 
