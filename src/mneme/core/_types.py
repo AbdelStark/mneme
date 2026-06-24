@@ -13,6 +13,8 @@ from uuid import UUID
 import numpy as np
 import numpy.typing as npt
 
+from mneme.core._errors import QueryError
+
 Latent: TypeAlias = Any
 SummaryVec: TypeAlias = npt.NDArray[np.float32]
 Cid: TypeAlias = bytes
@@ -122,22 +124,31 @@ class QuerySpec:
 
     def __post_init__(self) -> None:
         _validate_schema_version(self.schema_version, QUERY_SPEC_SCHEMA)
-        _validate_summary_vec(self.vector, "vector")
-        _validate_positive_int(self.k, "k")
+        try:
+            _validate_summary_vec(self.vector, "vector")
+            _validate_positive_int(self.k, "k")
+        except (TypeError, ValueError) as exc:
+            raise QueryError(str(exc)) from exc
         if not isinstance(self.metric, Metric):
-            raise TypeError("metric must be a Metric")
+            raise QueryError("metric must be a Metric")
         if self.ef is not None and _is_invalid_ef(self.ef, self.k):
-            raise ValueError("ef must be None or an integer greater than or equal to k")
+            raise QueryError("ef must be None or an integer greater than or equal to k")
         if self.filters is not None:
-            object.__setattr__(self, "filters", _freeze_metadata(self.filters))
+            try:
+                object.__setattr__(self, "filters", _freeze_metadata(self.filters))
+            except (TypeError, ValueError) as exc:
+                raise QueryError(str(exc)) from exc
         if self.temporal_decay is not None:
-            _validate_non_negative_number(self.temporal_decay, "temporal_decay")
+            try:
+                _validate_non_negative_number(self.temporal_decay, "temporal_decay")
+            except (TypeError, ValueError) as exc:
+                raise QueryError(str(exc)) from exc
         if not isinstance(self.with_receipt, bool):
-            raise TypeError("with_receipt must be a bool")
+            raise QueryError("with_receipt must be a bool")
         if self.encoder_fp is not None and not isinstance(
             self.encoder_fp, EncoderFingerprint
         ):
-            raise TypeError("encoder_fp must be an EncoderFingerprint or None")
+            raise QueryError("encoder_fp must be an EncoderFingerprint or None")
 
 
 @dataclass(frozen=True)

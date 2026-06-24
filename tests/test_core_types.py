@@ -17,6 +17,7 @@ from mneme.core import (
     Latent,
     MemoryItem,
     Metric,
+    QueryError,
     QuerySpec,
     Retrieval,
     SummaryVec,
@@ -130,11 +131,11 @@ def test_invalid_schema_major_versions_are_rejected(
 
 
 def test_summary_vec_validation_rejects_invalid_dtype_shape_and_values() -> None:
-    with pytest.raises(TypeError, match="dtype float32"):
+    with pytest.raises(QueryError, match="dtype float32"):
         QuerySpec(vector=np.array([1.0], dtype=np.float64), k=1)
-    with pytest.raises(ValueError, match="one-dimensional"):
+    with pytest.raises(QueryError, match="one-dimensional"):
         QuerySpec(vector=np.array([[1.0]], dtype=np.float32), k=1)
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(QueryError, match="finite"):
         QuerySpec(vector=np.array([np.nan], dtype=np.float32), k=1)
 
 
@@ -159,13 +160,13 @@ def test_transition_validation_rejects_invalid_shape_dtype_uuid_and_step() -> No
 
 
 def test_query_validation_rejects_bad_k_ef_metric_and_temporal_decay() -> None:
-    with pytest.raises(ValueError, match="k must be >= 1"):
+    with pytest.raises(QueryError, match="k must be >= 1"):
         QuerySpec(vector=_key(), k=0)
-    with pytest.raises(ValueError, match="ef must be None"):
+    with pytest.raises(QueryError, match="ef must be None"):
         QuerySpec(vector=_key(), k=3, ef=2)
-    with pytest.raises(TypeError, match="metric must be a Metric"):
+    with pytest.raises(QueryError, match="metric must be a Metric"):
         QuerySpec(vector=_key(), k=1, metric="cosine")
-    with pytest.raises(ValueError, match="temporal_decay must be >= 0"):
+    with pytest.raises(QueryError, match="temporal_decay must be >= 0"):
         QuerySpec(vector=_key(), k=1, temporal_decay=-0.1)
 
 
