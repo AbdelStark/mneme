@@ -29,6 +29,28 @@ When touching evaluation or release evidence, also run:
 .venv/bin/python -m mneme.eval.fixtures --out .artifacts/fixtures.json
 ```
 
+## CI Reproduction
+
+Hosted CI runs on pull requests and pushes to `main`. To reproduce the hosted
+release gate locally from a clean checkout:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -e ".[dev]"
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+.venv/bin/pytest
+.venv/bin/mypy src/mneme
+rm -rf dist .artifacts/ci .ci-install
+.venv/bin/python -m build
+python3 -m venv .ci-install
+.ci-install/bin/python -m pip install --upgrade pip
+.ci-install/bin/python -m pip install dist/*.whl
+.ci-install/bin/python -c "import mneme; print(mneme.__version__)"
+.ci-install/bin/python -m mneme.cli eval fixtures --out .artifacts/ci/fixtures.json
+```
+
 ## Pull Request Discipline
 
 - Use one branch and one pull request per issue.
