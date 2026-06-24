@@ -98,6 +98,7 @@ import optional ML, index, receipt, or remote backends.
 
 ```python
 from mneme.encode import Encoder, MeanPoolSummarizer, Summarizer
+from mneme.encode import build_encoder_fingerprint, ensure_fingerprint_match
 
 class Encoder(Protocol):
     def encode(self, obs: object) -> Latent: ...
@@ -167,6 +168,12 @@ must not import optional ML backends such as torch.
 non-feature axes, returns a contiguous finite `float32` vector, and L2-normalizes
 by default for cosine keys. Deterministic projection is intentionally deferred
 until v0.2 or the first large-latent adapter that needs it.
+
+Encoder adapters should build fingerprints with `build_encoder_fingerprint`.
+The helper binds the summarizer id and summarizer config into
+`config_digest`, computes optional BLAKE3 weight digests, and requires
+`unweighted=True` when no weight digest exists. Stores and indexes should use
+`ensure_fingerprint_match` before comparing keys from different sources.
 
 ## Constructors
 
