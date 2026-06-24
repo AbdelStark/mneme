@@ -1,6 +1,37 @@
-"""Core public API namespace.
+"""Core public API namespace."""
 
-Issue #3 adds the schema-versioned public data types here.
-"""
+from mneme.core._types import (
+    ENCODER_FINGERPRINT_SCHEMA,
+    MEMORY_ITEM_SCHEMA,
+    QUERY_SPEC_SCHEMA,
+    RETRIEVAL_SCHEMA,
+    SUMMARY_VEC_SCHEMA,
+    TRANSITION_SCHEMA,
+    Cid,
+    EncoderFingerprint,
+    Latent,
+    MemoryItem,
+    Metric,
+    QuerySpec,
+    Retrieval,
+    SummaryVec,
+    Transition,
+)
 
-__all__: list[str] = []
+__all__ = [
+    "Cid",
+    "ENCODER_FINGERPRINT_SCHEMA",
+    "Latent",
+    "MEMORY_ITEM_SCHEMA",
+    "QUERY_SPEC_SCHEMA",
+    "RETRIEVAL_SCHEMA",
+    "SUMMARY_VEC_SCHEMA",
+    "TRANSITION_SCHEMA",
+    "EncoderFingerprint",
+    "MemoryItem",
+    "Metric",
+    "QuerySpec",
+    "Retrieval",
+    "SummaryVec",
+    "Transition",
+]
