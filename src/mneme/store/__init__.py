@@ -14,16 +14,32 @@ from mneme.store._manifest import (
     StoreManifest,
     ValueLogRef,
 )
+from mneme.store._verify import (
+    INDEX_DATA_SCHEMA,
+    INDEX_REBUILD_SCHEMA,
+    STORE_VERIFICATION_SCHEMA,
+    IndexRebuildReport,
+    StoreVerificationReport,
+    rebuild_index,
+    verify_store,
+)
 
 __all__ = [
+    "INDEX_DATA_SCHEMA",
+    "INDEX_REBUILD_SCHEMA",
     "STORE_MANIFEST_SCHEMA",
+    "STORE_VERIFICATION_SCHEMA",
     "CommitmentState",
     "IndexConfig",
+    "IndexRebuildReport",
     "LocalStore",
     "StoreManifest",
     "StoreStats",
+    "StoreVerificationReport",
     "ValueLogRef",
     "init_store",
     "load_manifest",
     "open_store",
+    "rebuild_index",
+    "verify_store",
 ]
