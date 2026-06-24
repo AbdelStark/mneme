@@ -103,6 +103,12 @@ Client validation:
 - verify receipt when requested;
 - map remote errors to local typed errors.
 
+The reference Python helper is
+`mneme.remote.validate_query_response(response, request)`. Transport adapters
+must run an equivalent check before passing returned items to conditioners.
+`mneme.remote.raise_for_remote_error(error)` converts remote error envelopes to
+the corresponding local typed exception.
+
 ## Alternatives Considered
 
 - Let each transport define its own JSON: fast initially, but fragments semantics.
