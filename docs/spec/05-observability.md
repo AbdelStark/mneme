@@ -112,6 +112,9 @@ Every evaluation command writes a JSON report with:
 Reports must be suitable for later README or paper claims. A result without the report is not public evidence.
 Fixture reports must include caveats stating that fixture evidence cannot prove
 external task success.
+The v0.1 fixture command is `python -m mneme.eval.fixtures --out REPORT.json`;
+it writes deterministic synthetic drift and gate metrics suitable for CI and
+README claim discipline, not external benchmark claims.
 
 ## Resolved Bootstrap Decisions
 
