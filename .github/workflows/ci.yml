@@ -53,6 +53,10 @@ jobs:
           .ci-install/bin/python -c "import mneme; print(mneme.__version__)"
           .ci-install/bin/python -m mneme.cli eval fixtures --out .artifacts/ci/fixtures.json
 
+      - name: Validate release artifacts against checklist
+        run: |
+          .ci-install/bin/python -m mneme.release.validate_artifacts --dist dist --fixture-report .artifacts/ci/fixtures.json --out .artifacts/ci/release-artifacts.json
+
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v4
         if: always()

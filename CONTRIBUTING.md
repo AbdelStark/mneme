@@ -49,6 +49,7 @@ python3 -m venv .ci-install
 .ci-install/bin/python -m pip install dist/*.whl
 .ci-install/bin/python -c "import mneme; print(mneme.__version__)"
 .ci-install/bin/python -m mneme.cli eval fixtures --out .artifacts/ci/fixtures.json
+.ci-install/bin/python -m mneme.release.validate_artifacts --dist dist --fixture-report .artifacts/ci/fixtures.json --out .artifacts/ci/release-artifacts.json
 ```
 
 ## Pull Request Discipline

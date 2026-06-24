@@ -47,9 +47,13 @@ Changelog = "https://github.com/AbdelStark/mneme/releases"
 
 [tool.hatch.build.targets.sdist]
 include = [
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/docs",
   "/LICENSE",
   "/README.md",
   "/pyproject.toml",
+  "/SECURITY.md",
   "/src",
   "/tests",
 ]

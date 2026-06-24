@@ -14,6 +14,7 @@ changes may occur before the first stable release.
 - Fixture-scale evaluation report command for deterministic drift and gate
   checks.
 - Structured operation events with default redaction rules.
+- Hosted CI gates, release checklist, and release artifact validation command.
 
 ### Security
 

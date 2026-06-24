@@ -16,6 +16,9 @@ def test_hosted_ci_workflow_runs_required_gates() -> None:
     assert ".ci-install/bin/python -m pip install dist/*.whl" in workflow
     assert ".ci-install/bin/python -c" in workflow
     assert "mneme.cli eval fixtures --out .artifacts/ci/fixtures.json" in workflow
+    assert "Validate release artifacts against checklist" in workflow
+    assert "mneme.release.validate_artifacts --dist dist" in workflow
+    assert "release-artifacts.json" in workflow
     assert "actions/upload-artifact@v4" in workflow
 
 
@@ -32,3 +35,5 @@ def test_contributing_documents_ci_reproduction_commands() -> None:
     assert ".ci-install/bin/python -m pip install dist/*.whl" in contributing
     assert ".ci-install/bin/python -c" in contributing
     assert "mneme.cli eval fixtures --out .artifacts/ci/fixtures.json" in contributing
+    assert "mneme.release.validate_artifacts --dist dist" in contributing
+    assert "release-artifacts.json" in contributing

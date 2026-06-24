@@ -21,6 +21,7 @@ def test_readme_includes_install_usage_limitations_and_spec_links() -> None:
     assert "python -m mneme.eval.fixtures --out .artifacts/fixtures.json" in readme
     assert "[Public API](docs/spec/02-public-api.md)" in readme
     assert "[Security](docs/spec/06-security.md)" in readme
+    assert "[Release checklist](docs/release/RELEASE_CHECKLIST.md)" in readme
     assert "[CONTRIBUTING.md](CONTRIBUTING.md)" in readme
 
 
