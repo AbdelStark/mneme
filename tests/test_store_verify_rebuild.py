@@ -18,8 +18,11 @@ from mneme.core import (
     StoreCorruptionError,
     Transition,
 )
+from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import (
+    COMMIT_INIT_SCHEMA,
     INDEX_DATA_SCHEMA,
+    commit_init_store,
     init_store,
     open_store,
     rebuild_index,
@@ -137,6 +140,83 @@ def test_index_rebuild_cli_returns_documented_success(tmp_path: Path) -> None:
     assert report["ok"] is True
     assert report["data_path"] == "index/data.json"
     assert (root / "index" / "data.json").is_file()
+
+
+def test_commit_init_upgrades_healthy_v0_1_store_and_preserves_ids(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    cids = store.put_batch([_item(1.0, step=1), _item(3.0, step=2)])
+    assert not store.stats().commitments_enabled
+
+    report = commit_init_store(root)
+    reopened = open_store(root)
+    spec = QuerySpec(
+        np.array([3.0, 0.0], dtype=np.float32),
+        k=1,
+        metric=Metric.L2,
+        with_receipt=True,
+    )
+    retrieval = reopened.query(spec)
+
+    assert report.schema_version == COMMIT_INIT_SCHEMA
+    assert report.ok
+    assert report.item_count == 2
+    assert report.root == reopened.root().hex()
+    assert report.commitment_path == "receipts/commitment-mmr-v1.json"
+    assert not report.already_initialized
+    assert reopened.commitment_state().leaf_ids == tuple(cids)
+    assert isinstance(retrieval.receipt, RetrievalReceipt)
+    assert verify_retrieval_receipt(
+        retrieval.receipt,
+        retrieval.items,
+        root=reopened.root(),
+        query=spec,
+    )
+
+
+def test_commit_init_refuses_corrupt_value_log_without_writing_sidecar(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    log_path = root / "values" / "log-000000.mnv"
+    payload = bytearray(log_path.read_bytes())
+    payload[-1] ^= 0x01
+    log_path.write_bytes(payload)
+
+    report = commit_init_store(root)
+
+    assert not report.ok
+    assert report.root is None
+    assert report.item_count == 0
+    assert any("checksum mismatch" in error for error in report.errors)
+    assert not (root / "receipts" / "commitment-mmr-v1.json").exists()
+    manifest_json = json.loads((root / "manifest.json").read_text())
+    assert manifest_json["commitment"] == {
+        "enabled": False,
+        "backend": None,
+        "root": None,
+        "files": [],
+    }
+
+
+def test_commit_init_cli_returns_upgrade_report(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put_batch([_item(1.0, step=1), _item(2.0, step=2)])
+
+    cli = _run_cli("store", "commit-init", root)
+
+    assert cli.returncode == int(CliExitCode.SUCCESS), cli.stdout + cli.stderr
+    report = json.loads(cli.stdout)
+    assert report["schema_version"] == COMMIT_INIT_SCHEMA
+    assert report["ok"] is True
+    assert report["item_count"] == 2
+    assert report["root"] == open_store(root).root().hex()
+    assert report["commitment_path"] == "receipts/commitment-mmr-v1.json"
 
 
 def test_cli_invalid_args_return_user_input_exit_code() -> None:

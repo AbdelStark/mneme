@@ -11,13 +11,19 @@ import numpy as np
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError, StoreError
 from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
-from mneme.store._local import _write_json_atomic, load_manifest
+from mneme.store._local import (
+    _COMMITMENT_FILE,
+    _write_json_atomic,
+    load_manifest,
+    open_store,
+)
 from mneme.store._manifest import StoreManifest, ValueLogRef
 from mneme.store._value_log import read_value_records
 
 STORE_VERIFICATION_SCHEMA: Final = "mneme.store_verification.v1"
 INDEX_REBUILD_SCHEMA: Final = "mneme.index_rebuild.v1"
 INDEX_DATA_SCHEMA: Final = "mneme.flat_index_snapshot.v1"
+COMMIT_INIT_SCHEMA: Final = "mneme.store_commit_init.v1"
 
 _INDEX_BACKEND_FILE: Final = "index/backend.json"
 _INDEX_DATA_FILE: Final = "index/data.json"
@@ -73,6 +79,34 @@ class IndexRebuildReport:
         }
 
 
+@dataclass(frozen=True)
+class CommitInitReport:
+    """Structured report returned by committed-store upgrade."""
+
+    ok: bool
+    store_id: str | None
+    item_count: int
+    root: str | None
+    commitment_path: str
+    already_initialized: bool
+    errors: tuple[str, ...]
+    schema_version: str = COMMIT_INIT_SCHEMA
+
+    def to_json(self) -> dict[str, Any]:
+        """Return a JSON-serializable report."""
+
+        return {
+            "schema_version": self.schema_version,
+            "ok": self.ok,
+            "store_id": self.store_id,
+            "item_count": self.item_count,
+            "root": self.root,
+            "commitment_path": self.commitment_path,
+            "already_initialized": self.already_initialized,
+            "errors": list(self.errors),
+        }
+
+
 def verify_store(
     path: str | Path,
     *,
@@ -116,6 +150,34 @@ def verify_store(
     if raise_on_error and not report.ok:
         raise StoreCorruptionError("; ".join(report.errors))
     return report
+
+
+def commit_init_store(path: str | Path) -> CommitInitReport:
+    """Upgrade a verified local store by initializing its commitment state."""
+
+    verification = verify_store(path)
+    if not verification.ok:
+        return CommitInitReport(
+            ok=False,
+            store_id=verification.store_id,
+            item_count=0,
+            root=None,
+            commitment_path=_COMMITMENT_FILE,
+            already_initialized=False,
+            errors=verification.errors,
+        )
+    store = open_store(path)
+    already_initialized = store.manifest.commitment.enabled
+    root = store.commit()
+    return CommitInitReport(
+        ok=True,
+        store_id=str(store.manifest.store_id),
+        item_count=verification.item_count,
+        root=root.hex(),
+        commitment_path=_COMMITMENT_FILE,
+        already_initialized=already_initialized,
+        errors=(),
+    )
 
 
 def _verify_store_report(root: Path) -> StoreVerificationReport:

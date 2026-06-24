@@ -52,6 +52,11 @@ store.
 `commit` and `prove`
 : Unsupported stores raise `UnsupportedOperationError`. Invalid proofs raise `ReceiptVerificationError`.
 
+`store commit-init`
+: Corrupt manifests, value logs, content ids, checksums, or index references
+  return a schema-versioned `ok: false` report and a data-validation exit. The
+  command does not write a commitment sidecar unless verification passes.
+
 `receipts verify`
 : Malformed receipt files and invalid roots raise `ReceiptVerificationError`.
   Validly parsed receipts that do not match the supplied root or proof set
@@ -78,6 +83,7 @@ CLI
 ```text
 mneme store verify PATH
 mneme store repair PATH --mode index-only
+mneme store commit-init PATH
 mneme index rebuild PATH
 mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 ```
