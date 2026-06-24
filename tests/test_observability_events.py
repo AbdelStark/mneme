@@ -26,6 +26,7 @@ from mneme.observability import (
     EVENT_SCHEMA_VERSION,
     REQUIRED_EVENT_NAMES,
     ObservabilityConfig,
+    emit_event,
     has_event_sink,
 )
 from mneme.store import init_store, verify_store
@@ -183,6 +184,107 @@ def test_structured_events_cover_store_condition_verify_and_eval(
     assert query_event["hit_count"] == len(retrieval.items)
     assert query_event["fingerprint_match"] is True
     assert "unsafe_note" not in json.dumps(sink.events, sort_keys=True)
+
+
+def test_event_redaction_removes_arrays_paths_secrets_and_unsafe_metadata() -> None:
+    sink = RecordingSink()
+    observability = ObservabilityConfig(event_sink=sink)
+
+    emit_event(
+        observability,
+        event="mneme.test.redaction",
+        operation="test.redaction",
+        status="ok",
+        started=None,
+        latent=np.array([9.0, 8.0], dtype=np.float32),
+        summary_vector=[1.0, 2.0],
+        action=np.array([0.25], dtype=np.float32),
+        observation={"pixels": [255, 0], "room": "private-lab"},
+        store_path=Path("/Users/abdel/private/store"),
+        secret_token="super-secret-token",
+        dataset_id="private-dataset-name",
+        metadata={
+            "unsafe_note": "leak-me",
+            "api_key": "secret-api-key",
+            "safe_label": "fixture",
+            "safe_path": "/Users/abdel/private/dataset",
+        },
+        raw_content_id=b"abcdef",
+    )
+
+    event = sink.events[-1]
+    assert event["latent"] == {
+        "redacted": "array",
+        "shape": [2],
+        "dtype": "float32",
+    }
+    assert event["summary_vector"] == {
+        "redacted": "array",
+        "shape": [2],
+        "dtype": "sequence",
+    }
+    assert event["action"] == {
+        "redacted": "array",
+        "shape": [1],
+        "dtype": "float32",
+    }
+    assert event["observation"] == "<redacted:observation>"
+    assert event["store_path"] == "<redacted:path>"
+    assert event["secret_token"] == "<redacted:secret>"
+    assert event["dataset_id"] == "<redacted:dataset>"
+    assert event["metadata"] == {
+        "safe_label": "fixture",
+        "safe_path": "<redacted:path>",
+    }
+    assert event["raw_content_id"] == {"redacted": "bytes", "length": 6}
+
+    dumped = json.dumps(event, sort_keys=True)
+    assert "super-secret-token" not in dumped
+    assert "secret-api-key" not in dumped
+    assert "leak-me" not in dumped
+    assert "private-dataset-name" not in dumped
+    assert "/Users/abdel" not in dumped
+    assert "9.0" not in dumped
+
+
+def test_content_id_prefixes_can_be_disabled(tmp_path: Path) -> None:
+    sink = RecordingSink()
+    observability = ObservabilityConfig(
+        event_sink=sink,
+        include_content_id_prefixes=False,
+    )
+    store = init_store(tmp_path / "store", observability=observability)
+
+    cid = store.put(_item(1.0))
+    store.query(QuerySpec(_vec([1.0, 0.0]), k=1, metric=Metric.L2))
+
+    dumped = json.dumps(sink.events, sort_keys=True)
+    assert cid[:6].hex() not in dumped
+    put_event = next(
+        event for event in sink.events if event["event"] == "mneme.store.put"
+    )
+    query_event = next(
+        event for event in sink.events if event["event"] == "mneme.store.query"
+    )
+    assert put_event["content_id_prefixes"] == []
+    assert query_event["content_id_prefixes"] == []
+
+
+def test_fixture_eval_events_do_not_log_raw_arrays() -> None:
+    sink = RecordingSink()
+    run_fixture_evaluation(
+        created_at="2026-06-24T00:00:00Z",
+        git_commit="abcdef0",
+        observability=ObservabilityConfig(event_sink=sink),
+    )
+
+    dumped = json.dumps(sink.events, sort_keys=True)
+    assert '"z_src":' not in dumped
+    assert '"z_next":' not in dumped
+    assert '"delta":' not in dumped
+    assert '"action":' not in dumped
+    assert "10.0, 10.0" not in dumped
+    assert "[1.0, 1.0]" not in dumped
 
 
 def test_error_events_include_typed_error_fields() -> None:

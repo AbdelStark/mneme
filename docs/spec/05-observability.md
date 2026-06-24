@@ -89,9 +89,14 @@ Default logs must not include:
 - full metadata values unless marked safe
 - secrets, tokens, local absolute paths, or private dataset names
 
+Event sanitization redacts arrays to shape and dtype summaries. Metadata is
+omitted by default except keys explicitly prefixed with `safe_`; those values are
+still passed through path, secret, and array redaction. Generic bytes are redacted
+unless a field is produced by the content-id prefix helper.
+
 Logs may include:
 
-- content id prefixes
+- content id prefixes when `include_content_id_prefixes=True`
 - shape, dtype, device
 - schema version
 - encoder fingerprint digests
