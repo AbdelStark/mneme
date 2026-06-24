@@ -51,6 +51,14 @@ class CrossAttnAdapter(torch.nn.Module):
     ) -> torch.Tensor: ...
 ```
 
+`predictor_hidden` has shape `(batch, predictor_tokens, hidden_dim)`.
+`retrieved_values` has shape `(batch, retrieved, latent_dim)` and is projected
+to hidden space before cross-attention. `attention_mask` has shape
+`(batch, retrieved)` and uses `True`/`1` for valid slots; invalid slots are
+converted to a PyTorch key-padding mask. Retrieved values and masks move to the
+`predictor_hidden` dtype and device. The output preserves
+`predictor_hidden` shape, dtype, and device.
+
 Wrapper conditioner:
 
 ```python
