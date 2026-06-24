@@ -120,6 +120,7 @@ contain real environment data. See [SECURITY.md](SECURITY.md) and
 - [Security](docs/spec/06-security.md)
 - [Testing strategy](docs/spec/07-testing-strategy.md)
 - [Release and versioning](docs/spec/09-release-and-versioning.md)
+- [Release checklist](docs/release/RELEASE_CHECKLIST.md)
 - [Implementation roadmap](docs/roadmap/IMPLEMENTATION.md)
 
 ## Contributing
