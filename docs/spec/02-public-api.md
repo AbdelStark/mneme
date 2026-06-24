@@ -97,6 +97,8 @@ import optional ML, index, receipt, or remote backends.
 ## Protocols
 
 ```python
+from mneme.encode import Encoder, Summarizer
+
 class Encoder(Protocol):
     def encode(self, obs: object) -> Latent: ...
     def fingerprint(self) -> EncoderFingerprint: ...
@@ -124,6 +126,42 @@ class MemoryStore(Protocol):
 class Conditioner(Protocol):
     def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
 ```
+
+Minimum custom adapter example:
+
+```python
+import numpy as np
+
+from mneme.core import EncoderFingerprint
+from mneme.encode import Encoder, Summarizer
+
+class MyEncoder:
+    def encode(self, obs: object) -> np.ndarray:
+        return np.asarray(obs, dtype=np.float32)
+
+    def fingerprint(self) -> EncoderFingerprint:
+        return EncoderFingerprint(
+            encoder_id="example.encoder",
+            summarizer_id="example.mean",
+            weights_digest=None,
+            config_digest="sha256:example",
+        )
+
+class MySummarizer:
+    @property
+    def id(self) -> str:
+        return "example.mean"
+
+    def summarize(self, z: object) -> np.ndarray:
+        array = np.asarray(z, dtype=np.float32)
+        return np.ascontiguousarray(array.reshape(-1).mean(keepdims=True))
+
+encoder: Encoder = MyEncoder()
+summarizer: Summarizer = MySummarizer()
+```
+
+Adapter implementations own model-specific imports. Importing `mneme.encode`
+must not import optional ML backends such as torch.
 
 ## Constructors
 
