@@ -21,6 +21,8 @@ changes may occur before the first stable release.
 - Local profile evaluation reports for recall, latency, and footprint evidence.
 - Optional `CrossAttnAdapter` trained memory module behind the `ml` extra.
 - Frozen-base adapter training harness with fixture-scale evaluation reports.
+- `InContextConditioner` retrieved-token baseline for compatible predictor
+  wrappers.
 
 ### Security
 

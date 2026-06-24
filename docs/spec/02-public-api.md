@@ -110,7 +110,7 @@ class Summarizer(Protocol):
     def summarize(self, z: Latent) -> SummaryVec: ...
 
 from mneme.index import FaissHnswIndex, FlatIndex, Index, planned_search_k, search_index
-from mneme.condition import CondCtx, Conditioner, KnnCorrector
+from mneme.condition import CondCtx, Conditioner, InContextConditioner, KnnCorrector
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -145,6 +145,21 @@ class KnnCorrector:
     alpha: float = 10.0
     delta0: float = 0.2
     mode: Literal["delta", "absolute"] = "delta"
+
+    def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
+
+class InContextPredictor(Protocol):
+    def predict_with_context(
+        self,
+        parametric: Latent,
+        retrieved_tokens: Sequence[Latent],
+        ctx: CondCtx,
+    ) -> Latent: ...
+
+@dataclass(frozen=True)
+class InContextConditioner:
+    predictor: InContextPredictor | Callable[[Latent, Sequence[Latent], CondCtx], Latent]
+    max_tokens: int | None = None
 
     def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
 
@@ -253,6 +268,14 @@ The default gate parameters are fixture baselines, not universal safety
 guarantees; deployment-safe fallback depends on calibrating nearest-neighbor
 distance distributions for the target encoder, summarizer, and task.
 
+`InContextConditioner` is a v0.2 comparison baseline for compatible predictor
+wrappers. It validates each retrieved `Transition.z_next` against the
+parametric prediction shape, passes those successor latents as appended context
+tokens to `predict_with_context(...)` or an equivalent callable, and preserves
+the empty-retrieval identity fallback. It is not the default conditioner:
+self-attention cost grows with `k`, and longer retrieved contexts can dilute the
+signal.
+
 `CrossAttnAdapter` is the v0.2 trained memory module behind the `ml` extra.
 `predictor_hidden` has shape `(batch, predictor_tokens, hidden_dim)`.
 `retrieved_values` has shape `(batch, retrieved, latent_dim)` and is projected
@@ -354,6 +377,8 @@ failure.
 - `KnnCorrector` preserves NumPy output dtype from `parametric`.
 - `KnnCorrector` restores torch outputs to the `parametric` tensor dtype and
   device.
+- `InContextConditioner` requires retrieved successor tokens and predictor
+  results to match the parametric prediction shape.
 - Torch inputs are detached, copied through CPU NumPy for deterministic
   fixture-scale weighting, and restored to the parametric device.
 - Torch conditioners run under inference mode unless explicitly training.

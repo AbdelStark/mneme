@@ -89,11 +89,39 @@ external benchmark or accuracy claim.
 
 Adapter insertion is implementation-specific because external predictors differ. Mneme provides adapter modules and reference wrappers rather than modifying foreign model code in place.
 
+In-context baseline:
+
+```python
+class InContextPredictor(Protocol):
+    def predict_with_context(
+        self,
+        parametric: Latent,
+        retrieved_tokens: Sequence[Latent],
+        ctx: CondCtx,
+    ) -> Latent: ...
+
+@dataclass(frozen=True)
+class InContextConditioner:
+    predictor: InContextPredictor
+    max_tokens: int | None = None
+
+    def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
+```
+
+The baseline extracts retrieved `Transition.z_next` values, validates that each
+token matches the parametric prediction shape, and delegates to a predictor
+wrapper that appends those values to its context. Empty retrievals return the
+parametric prediction unchanged. This path is for comparison reports and
+architecture compatibility checks; it is not the default because the predictor's
+self-attention cost grows with `k`.
+
 ## Alternatives Considered
 
 - Fine-tune the full predictor: may improve accuracy but breaks the frozen-model adoption path and complicates attribution.
 - LoRA-style predictor edits: lighter than full fine-tuning, but still mutates predictor behavior and was less aligned with the PRD's cross-attention design.
-- In-context retrieved tokens only: useful as a baseline, but attention cost scales poorly with k.
+- In-context retrieved tokens only: implemented as `InContextConditioner` for
+  compatible predictor wrappers. It is useful as a baseline, but attention cost
+  scales poorly with k.
 - Online memory-weight updates: deferred because the PRD identifies instability risk.
 
 ## Drawbacks
@@ -105,6 +133,8 @@ Adapter insertion is implementation-specific because external predictors differ.
 ## Migration / Rollout
 
 v0.2 ships adapter modules behind an ML extra and at least one reference wrapper. The v0.1 `KnnCorrector` remains the default baseline. Adapter checkpoints include config, schema version, base fingerprint, and training report link.
+The in-context baseline remains a comparison path for wrappers that can append
+retrieved value tokens without modifying predictor weights.
 
 ## Testing Strategy
 

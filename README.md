@@ -3,7 +3,8 @@
 Mneme is a pre-1.0 Python package for episodic memory infrastructure around
 latent world models. It focuses on the parts around a model: schema-versioned
 memory items, local persistence, exact retrieval, training-free conditioning,
-fixture-scale evaluation reports, and redacted structured events.
+in-context retrieved-token baselines, fixture-scale evaluation reports, and
+redacted structured events.
 
 Mneme is not a new world-model architecture and does not claim external task
 success, broad benchmark improvement, private retrieval, or encrypted storage.
@@ -106,7 +107,9 @@ contain real environment data. See [SECURITY.md](SECURITY.md) and
 - No encryption at rest.
 - No private retrieval.
 - No remote authentication.
-- No trained adapter implementation.
+- No trained adapter checkpoint loading or external trained-adapter report yet.
+- The in-context conditioner is a baseline for compatible predictor wrappers;
+  its attention cost scales with retrieved `k`.
 - No receipt proof implementation yet.
 - No external benchmark or drift-improvement claim without an external report.
 

@@ -1,5 +1,6 @@
 """Conditioning public contracts."""
 
+from mneme.condition._in_context import InContextConditioner, InContextPredictor
 from mneme.condition._knn import KnnCorrector, KnnMode
 from mneme.condition._protocols import (
     COND_CTX_SCHEMA,
@@ -7,4 +8,12 @@ from mneme.condition._protocols import (
     Conditioner,
 )
 
-__all__ = ["COND_CTX_SCHEMA", "CondCtx", "Conditioner", "KnnCorrector", "KnnMode"]
+__all__ = [
+    "COND_CTX_SCHEMA",
+    "CondCtx",
+    "Conditioner",
+    "InContextConditioner",
+    "InContextPredictor",
+    "KnnCorrector",
+    "KnnMode",
+]
