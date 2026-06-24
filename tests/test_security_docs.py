@@ -11,6 +11,10 @@ def test_security_docs_state_confidentiality_boundary_and_redaction_link() -> No
     assert "tests/test_observability_events.py" in security
     assert "rfc-0012-security-boundaries-and-privacy-tiers.md" in security
     assert "redacted" in security
+    assert "do not expose anonymous readable or writable stores" in security
+    assert "validate_query_response" in security
+    assert "verify_retrieval_receipt" in security
+    assert "operator-managed" in security
 
 
 def test_release_checklist_includes_security_boundary_review() -> None:
@@ -19,3 +23,26 @@ def test_release_checklist_includes_security_boundary_review() -> None:
     assert "security boundary review" in release
     assert "do not claim store" in release
     assert "redaction regression tests" in release
+
+
+def test_shared_store_checklist_covers_deployment_controls() -> None:
+    spec = Path("docs/spec/06-security.md").read_text(encoding="utf-8").lower()
+    rfc = (
+        Path("docs/rfcs/RFC-0012-security-boundaries-and-privacy-tiers.md")
+        .read_text(encoding="utf-8")
+        .lower()
+    )
+    remote = Path("docs/rfcs/RFC-0008-remote-store-protocol-messages.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "shared-store deployment checklist" in spec
+    assert "does not provide encrypted stores" in spec
+    assert "private retrieval" in spec
+    assert "validate_query_response" in spec
+    assert "verify_retrieval_receipt" in spec
+    assert "anonymous writable shared store" in spec
+    assert "root publication" in rfc
+    assert "log retention" in rfc
+    assert "shared-store deployment checklist" in remote
+    assert "validate_query_response" in remote

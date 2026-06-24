@@ -67,7 +67,7 @@ Security documentation must state that v0.x stores are not confidential unless d
 
 ## Migration / Rollout
 
-v0.1 ships validation, redaction, `.gitignore` protections for raw data and run outputs, and `SECURITY.md`. v0.3 adds receipt verification. v0.4 adds remote-store deployment guidance. Any confidentiality feature requires a separate RFC.
+v0.1 ships validation, redaction, `.gitignore` protections for raw data and run outputs, and `SECURITY.md`. v0.3 adds receipt verification. v0.4 adds remote-store deployment guidance. Shared-store documentation must require authenticated transport, operator-managed credentials, response validation before conditioning, receipt validation when requested, and operator-owned root publication plus log retention controls. Any confidentiality feature requires a separate RFC.
 
 ## Testing Strategy
 

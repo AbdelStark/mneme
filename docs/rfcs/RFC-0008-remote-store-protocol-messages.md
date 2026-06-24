@@ -125,6 +125,11 @@ the matching response schema or a `mneme.error.v1` envelope. The client treats
 non-2xx envelopes as local typed errors and still validates successful query
 responses before returning retrieved items.
 
+Remote/shared examples must link to the
+[shared-store deployment checklist](../spec/06-security.md#shared-store-deployment-checklist),
+`validate_query_response`, and receipt verification steps before showing
+conditioning against a remote response.
+
 ## Alternatives Considered
 
 - Let each transport define its own JSON: fast initially, but fragments semantics.
@@ -157,7 +162,7 @@ v0.4 adds remote message models and a conformance suite. The first transport ada
 ## Resolved Bootstrap Decisions
 
 - First supported transport: v0.4 implements HTTP JSON over an ASGI-compatible service boundary. The message schema remains transport-independent, but the first adapter uses request/response semantics that match `put`, `query`, `prove`, `root`, and `stats`.
-- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. `MemoryStoreASGIApp` can require a bearer token at the application boundary, but TLS, network policy, credential storage, and key rotation are operator responsibilities. Anonymous writable stores are not a supported deployment pattern.
+- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. `MemoryStoreASGIApp` can require a bearer token at the application boundary, but TLS, network policy, credential storage, root publication, log retention, backup controls, and key rotation are operator responsibilities. Anonymous writable stores are not a supported deployment pattern.
 
 ## References
 
