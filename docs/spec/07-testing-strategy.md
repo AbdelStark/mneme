@@ -55,6 +55,8 @@ Evaluation:
 - fixture drift report writes valid `mneme.eval_report.v1`;
 - gate behavior report includes in-distribution and out-of-distribution fixtures;
 - latency report includes p50 and p99;
+- remote conformance report compares local and HTTP remote put, query, prove,
+  root, stats, deterministic distances, and typed error mapping;
 - all reports include command, seed, package version, and caveats.
 
 CLI:

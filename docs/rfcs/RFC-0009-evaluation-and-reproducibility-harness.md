@@ -58,6 +58,7 @@ mneme eval recall --store STORE --out reports/recall.json
 mneme eval latency --store STORE --out reports/latency.json
 mneme eval receipts --store STORE --out reports/receipts.json
 mneme eval replay --trace TRACE.json --out reports/replay.json
+mneme eval remote-conformance --out reports/remote-conformance.json
 mneme eval gate --out reports/gate.json
 ```
 
@@ -69,6 +70,8 @@ Required v0.1 evidence:
 - approximate recall when approximate backend is installed;
 - query and conditioning latency with p50 and p99;
 - item count, key dimension, k, metric, backend, hardware, and footprint fields;
+- transport, scenario count, package version, and typed error-case coverage for
+  remote conformance reports;
 - caveat field stating fixture evidence cannot prove external task success.
 
 External benchmark reports are opt-in artifacts and must identify dataset, split, model checkpoint, hardware, and command.
@@ -115,7 +118,7 @@ validation only.
 
 ## Migration / Rollout
 
-v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adapter comparison reports. v0.3 adds receipt overhead and replay reports. Receipt overhead reports compare receipt-disabled and receipt-enabled query latency, receipt build latency, verification latency, and proof size trends. Receipt replay reports recompute a logged conditioning set after verifying item bytes and inclusion proofs; they do not replay the full environment or prove nearest-neighbor optimality. Release docs may cite only reports checked into release artifacts or linked from release notes.
+v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adapter comparison reports. v0.3 adds receipt overhead and replay reports. Receipt overhead reports compare receipt-disabled and receipt-enabled query latency, receipt build latency, verification latency, and proof size trends. Receipt replay reports recompute a logged conditioning set after verifying item bytes and inclusion proofs; they do not replay the full environment or prove nearest-neighbor optimality. v0.4 adds a fixture-scale remote conformance report for the first HTTP JSON transport; it compares local and remote store semantics but does not certify network deployment, authentication operations, load, or confidentiality. Release docs may cite only reports checked into release artifacts or linked from release notes.
 
 ## Testing Strategy
 
@@ -123,6 +126,8 @@ v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adap
 - Deterministic fixture report under fixed seed.
 - Failure test when required caveats are missing.
 - CLI tests for report output paths.
+- Remote conformance tests for local-vs-remote put, query, prove, root, stats,
+  and typed error mapping.
 - Golden report fixture with known metrics.
 
 ## Resolved Bootstrap Decisions
