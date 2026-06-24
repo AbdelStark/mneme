@@ -12,6 +12,7 @@ from mneme.eval._benchmark import (
     run_external_benchmark,
     write_external_benchmark_report,
 )
+from mneme.eval._cross_source import run_cross_source_transfer_evaluation
 from mneme.eval._fixtures import run_fixture_evaluation
 from mneme.eval._profile import run_profile_evaluation
 from mneme.eval._receipts import run_receipt_profile_evaluation
@@ -63,6 +64,7 @@ __all__ = [
     "parse_benchmark_modes",
     "replay_receipt_trace",
     "run_external_benchmark",
+    "run_cross_source_transfer_evaluation",
     "validate_report_json",
     "run_fixture_evaluation",
     "run_profile_evaluation",

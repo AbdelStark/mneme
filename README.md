@@ -101,6 +101,7 @@ Runnable examples:
 python3 examples/local_corrector.py
 python3 examples/remote_shared_store.py
 python -m mneme.cli eval remote-conformance --out .artifacts/remote-conformance.json
+python -m mneme.cli eval cross-source --out .artifacts/cross-source.json
 ```
 
 See [examples/README.md](examples/README.md) for prerequisites, expected JSON
@@ -116,6 +117,11 @@ python -m mneme.cli eval benchmark --dry-run --dataset dataset.json --checkpoint
 The benchmark command writes a valid `mneme.eval_report.v1` envelope for runner
 plumbing and claim review. The built-in dry-run runner is not benchmark
 evidence.
+
+The cross-source report is a synthetic fixture for pooled-memory evaluation. It
+records source identities, per-source retrieval receipts, no-memory and
+single-source baselines, pooled-memory metrics, and caveats; it is not evidence
+for general transfer, confidentiality, or private retrieval.
 
 ## Security And Privacy
 

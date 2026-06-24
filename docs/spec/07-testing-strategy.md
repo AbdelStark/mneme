@@ -57,6 +57,9 @@ Evaluation:
 - latency report includes p50 and p99;
 - remote conformance report compares local and HTTP remote put, query, prove,
   root, stats, deterministic distances, and typed error mapping;
+- cross-source transfer report includes at least two sources, one target
+  setting, no-pooling baseline, pooled-memory metric, per-source provenance
+  receipts, and caveats;
 - all reports include command, seed, package version, and caveats.
 
 CLI:
