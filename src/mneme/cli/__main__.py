@@ -23,7 +23,7 @@ from mneme.core import (
     cli_exit_code,
     content_id,
 )
-from mneme.eval import run_fixture_evaluation, write_report_json
+from mneme.eval import run_fixture_evaluation, run_profile_evaluation, write_report_json
 from mneme.store import StoreStats, init_store, open_store, rebuild_index, verify_store
 
 QUERY_RESULT_SCHEMA = "mneme.query_result.v1"
@@ -122,6 +122,25 @@ def _build_parser() -> argparse.ArgumentParser:
     fixtures_parser.add_argument("--seed", default=0, type=int)
     fixtures_parser.set_defaults(command="eval fixtures", handler=_handle_eval_fixtures)
 
+    profile_parser = eval_subparsers.add_parser(
+        "profile",
+        help="write local recall, latency, and footprint report",
+    )
+    _add_eval_profile_args(profile_parser)
+    profile_parser.set_defaults(command="eval profile", handler=_handle_eval_profile)
+    recall_parser = eval_subparsers.add_parser(
+        "recall",
+        help="write local recall profile report",
+    )
+    _add_eval_profile_args(recall_parser)
+    recall_parser.set_defaults(command="eval recall", handler=_handle_eval_profile)
+    latency_parser = eval_subparsers.add_parser(
+        "latency",
+        help="write local latency profile report",
+    )
+    _add_eval_profile_args(latency_parser)
+    latency_parser.set_defaults(command="eval latency", handler=_handle_eval_profile)
+
     receipts_parser = subparsers.add_parser("receipts", help="receipt commands")
     receipts_subparsers = receipts_parser.add_subparsers(
         dest="receipts_command",
@@ -200,6 +219,49 @@ def _handle_eval_fixtures(args: argparse.Namespace) -> object:
     return report
 
 
+def _handle_eval_profile(args: argparse.Namespace) -> object:
+    approx_backend = None if args.approx_backend == "none" else args.approx_backend
+    command = (
+        "mneme",
+        "eval",
+        str(args.eval_command),
+        "--store",
+        str(args.store),
+        "--out",
+        str(args.out),
+        "--k",
+        str(args.k),
+        "--metric",
+        str(args.metric),
+        "--queries",
+        str(args.queries),
+        "--warmup",
+        str(args.warmup),
+        "--measurements",
+        str(args.measurements),
+        "--approx-backend",
+        str(args.approx_backend),
+        "--seed",
+        str(args.seed),
+    )
+    report = run_profile_evaluation(
+        open_store(args.store),
+        k=args.k,
+        metric=Metric(args.metric),
+        query_count=args.queries,
+        warmup_count=args.warmup,
+        measurement_count=args.measurements,
+        approximate_backend=approx_backend,
+        seed=args.seed,
+        command=command,
+    )
+    try:
+        write_report_json(report, args.out)
+    except OSError as exc:
+        raise EvaluationError(f"failed to write profile report: {args.out}") from exc
+    return report
+
+
 def _handle_receipts_verify(args: argparse.Namespace) -> object:
     _ = args
     raise UnsupportedOperationError("receipt verification is not implemented in v0.1")
@@ -218,6 +280,26 @@ def _load_vector(path: Path) -> np.ndarray:
         return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
     except (TypeError, ValueError) as exc:
         raise QueryError("vector file must contain a numeric JSON array") from exc
+
+
+def _add_eval_profile_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--store", required=True, type=Path)
+    parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--k", default=4, type=int)
+    parser.add_argument(
+        "--metric",
+        default=Metric.L2.value,
+        choices=[metric.value for metric in Metric],
+    )
+    parser.add_argument("--queries", default=8, type=int)
+    parser.add_argument("--warmup", default=2, type=int)
+    parser.add_argument("--measurements", default=20, type=int)
+    parser.add_argument(
+        "--approx-backend",
+        default="faiss_hnsw",
+        help="approximate backend to compare, or 'none'",
+    )
+    parser.add_argument("--seed", default=0, type=int)
 
 
 def _stats_json(stats: StoreStats) -> dict[str, Any]:
