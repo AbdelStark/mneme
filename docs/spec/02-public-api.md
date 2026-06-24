@@ -217,6 +217,9 @@ latent, optional step, and JSON-safe metadata for one conditioning call.
 distance-softmax nonparametric estimate from retrieved `Transition` values,
 supports `delta` and `absolute` modes, and gates the memory estimate toward zero
 as nearest-neighbor distance grows.
+The default gate parameters are fixture baselines, not universal safety
+guarantees; deployment-safe fallback depends on calibrating nearest-neighbor
+distance distributions for the target encoder, summarizer, and task.
 
 ## Constructors
 

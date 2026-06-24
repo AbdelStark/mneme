@@ -1,0 +1,26 @@
+{
+  "schema_version": "mneme.gate_behavior_fixture.v1",
+  "corrector": {
+    "tau": 0.1,
+    "lambda_max": 0.5,
+    "alpha": 10.0,
+    "delta0": 0.2,
+    "mode": "delta"
+  },
+  "cases": [
+    {
+      "name": "near_neighbor_nonzero",
+      "nearest_distance": 0.0,
+      "expected_gate_min": 0.4,
+      "expected_gate_max": 0.5,
+      "notes": "Fixture near-neighbor case; verifies memory influence is nonzero."
+    },
+    {
+      "name": "far_neighbor_fallback",
+      "nearest_distance": 10.0,
+      "expected_gate_min": 0.0,
+      "expected_gate_max": 0.000001,
+      "notes": "Fixture far-neighbor case; verifies fallback approaches parametric prediction."
+    }
+  ]
+}
