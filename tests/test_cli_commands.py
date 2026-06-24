@@ -308,6 +308,33 @@ def test_eval_remote_conformance_cli_writes_and_prints_valid_report(
     assert printed.metrics["error_case_count"] == 2
 
 
+def test_eval_cross_source_cli_writes_and_prints_valid_report(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "reports" / "cross-source.json"
+
+    result = _run_cli(
+        "eval",
+        "cross-source",
+        "--out",
+        output,
+        "--seed",
+        "13",
+    )
+
+    assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr
+    printed = validate_report_json(_stdout_json(result))
+    written = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
+    assert printed == written
+    assert printed.seed == 13
+    assert printed.artifacts["report_kind"] == "cross-source-transfer"
+    assert printed.metrics["source_count"] == 2
+    assert (
+        printed.metrics["downstream_pooled_l2"]
+        < printed.metrics["downstream_in_source_l2"]
+    )
+
+
 def test_eval_benchmark_dry_run_cli_writes_valid_external_report(
     tmp_path: Path,
 ) -> None:

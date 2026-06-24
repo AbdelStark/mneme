@@ -31,6 +31,7 @@ from mneme.eval import (
     load_replay_trace_json,
     parse_benchmark_modes,
     replay_receipt_trace,
+    run_cross_source_transfer_evaluation,
     run_external_benchmark,
     run_fixture_evaluation,
     run_profile_evaluation,
@@ -203,6 +204,17 @@ def _build_parser() -> argparse.ArgumentParser:
     remote_conformance_parser.set_defaults(
         command="eval remote-conformance",
         handler=_handle_eval_remote_conformance,
+    )
+
+    cross_source_parser = eval_subparsers.add_parser(
+        "cross-source",
+        help="write fixture-scale cross-source transfer report",
+    )
+    cross_source_parser.add_argument("--out", required=True, type=Path)
+    cross_source_parser.add_argument("--seed", default=0, type=int)
+    cross_source_parser.set_defaults(
+        command="eval cross-source",
+        handler=_handle_eval_cross_source,
     )
 
     benchmark_parser = eval_subparsers.add_parser(
@@ -420,6 +432,26 @@ def _handle_eval_remote_conformance(args: argparse.Namespace) -> object:
     except OSError as exc:
         raise EvaluationError(
             f"failed to write remote conformance report: {args.out}"
+        ) from exc
+    return report
+
+
+def _handle_eval_cross_source(args: argparse.Namespace) -> object:
+    command = (
+        "mneme",
+        "eval",
+        "cross-source",
+        "--out",
+        str(args.out),
+        "--seed",
+        str(args.seed),
+    )
+    report = run_cross_source_transfer_evaluation(seed=args.seed, command=command)
+    try:
+        write_report_json(report, args.out)
+    except OSError as exc:
+        raise EvaluationError(
+            f"failed to write cross-source transfer report: {args.out}"
         ) from exc
     return report
 

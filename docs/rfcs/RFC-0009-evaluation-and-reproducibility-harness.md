@@ -7,7 +7,7 @@
 
 ## Summary
 
-Mneme evaluations produce schema-versioned reports that distinguish fixture-scale validation from external benchmark evidence. v0.1 must report drift fixtures, gate behavior, exact-vs-approximate recall, and latency. Later milestones add adapter comparisons, receipt overhead, and remote-store conformance.
+Mneme evaluations produce schema-versioned reports that distinguish fixture-scale validation from external benchmark evidence. v0.1 must report drift fixtures, gate behavior, exact-vs-approximate recall, and latency. Later milestones add adapter comparisons, receipt overhead, remote-store conformance, and cross-source transfer fixtures.
 
 ## Motivation
 
@@ -59,6 +59,7 @@ mneme eval latency --store STORE --out reports/latency.json
 mneme eval receipts --store STORE --out reports/receipts.json
 mneme eval replay --trace TRACE.json --out reports/replay.json
 mneme eval remote-conformance --out reports/remote-conformance.json
+mneme eval cross-source --out reports/cross-source.json
 mneme eval gate --out reports/gate.json
 ```
 
@@ -72,6 +73,9 @@ Required v0.1 evidence:
 - item count, key dimension, k, metric, backend, hardware, and footprint fields;
 - transport, scenario count, package version, and typed error-case coverage for
   remote conformance reports;
+- source identities, target fixture, no-memory baseline, single-source
+  baseline, pooled-memory metric, per-source receipt verification, provenance,
+  and caveats for cross-source transfer reports;
 - caveat field stating fixture evidence cannot prove external task success.
 
 External benchmark reports are opt-in artifacts and must identify dataset, split, model checkpoint, hardware, and command.
@@ -118,7 +122,7 @@ validation only.
 
 ## Migration / Rollout
 
-v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adapter comparison reports. v0.3 adds receipt overhead and replay reports. Receipt overhead reports compare receipt-disabled and receipt-enabled query latency, receipt build latency, verification latency, and proof size trends. Receipt replay reports recompute a logged conditioning set after verifying item bytes and inclusion proofs; they do not replay the full environment or prove nearest-neighbor optimality. v0.4 adds a fixture-scale remote conformance report for the first HTTP JSON transport; it compares local and remote store semantics but does not certify network deployment, authentication operations, load, or confidentiality. Release docs may cite only reports checked into release artifacts or linked from release notes.
+v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adapter comparison reports. v0.3 adds receipt overhead and replay reports. Receipt overhead reports compare receipt-disabled and receipt-enabled query latency, receipt build latency, verification latency, and proof size trends. Receipt replay reports recompute a logged conditioning set after verifying item bytes and inclusion proofs; they do not replay the full environment or prove nearest-neighbor optimality. v0.4 adds a fixture-scale remote conformance report for the first HTTP JSON transport; it compares local and remote store semantics but does not certify network deployment, authentication operations, load, or confidentiality. v0.5 adds a fixture-scale cross-source transfer report under RFC-0013; it records source identities, per-source receipts, baselines, pooled-memory metrics, and caveats, but does not claim general transfer, confidentiality, private retrieval, consent compliance, or federation support. Release docs may cite only reports checked into release artifacts or linked from release notes.
 
 ## Testing Strategy
 
@@ -128,6 +132,8 @@ v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adap
 - CLI tests for report output paths.
 - Remote conformance tests for local-vs-remote put, query, prove, root, stats,
   and typed error mapping.
+- Cross-source transfer tests for at least two sources, target metric,
+  no-pooling baseline, receipt-backed provenance, and caveats.
 - Golden report fixture with known metrics.
 
 ## Resolved Bootstrap Decisions
@@ -138,4 +144,5 @@ v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adap
 
 - [Testing Strategy](../spec/07-testing-strategy.md)
 - [Performance Budget](../spec/08-performance-budget.md)
+- [RFC-0013](RFC-0013-cross-source-memory-provenance.md)
 - [PRD Section 13](../../prd.md#13-evaluation-plan)
