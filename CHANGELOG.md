@@ -17,6 +17,7 @@ changes may occur before the first stable release.
 - Hosted CI gates, release checklist, and release artifact validation command.
 - Optional FAISS HNSW approximate index backend behind the `index` extra.
 - Count and event-time age retention policies with manifest tombstones.
+- Torch-compatible `KnnCorrector` latent handling with NumPy parity coverage.
 
 ### Security
 

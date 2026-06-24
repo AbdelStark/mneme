@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import math
+from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 
@@ -26,6 +27,16 @@ from mneme.observability import (
 )
 
 KnnMode = Literal["delta", "absolute"]
+LatentBackend = Literal["numpy", "torch"]
+
+
+@dataclass(frozen=True)
+class _LatentView:
+    array: np.ndarray
+    original: object
+    backend: LatentBackend
+    dtype: object
+    device: object | None
 
 
 @dataclass(frozen=True)
@@ -69,18 +80,25 @@ class KnnCorrector:
                         output_finite=_latent_is_finite(parametric),
                     )
                 return parametric
-            parametric_array = _require_array(parametric, "parametric")
-            distances = _require_distances(retrieval)
-            weights = _softmax(-distances / self.tau)
-            if self.mode == "delta":
-                z_knn = self._delta_prediction(
-                    parametric_array, retrieval, ctx, weights
+            parametric_view = _require_latent(parametric, "parametric")
+            with _inference_mode(parametric_view):
+                parametric_array = parametric_view.array
+                distances = _require_distances(retrieval)
+                weights = _softmax(-distances / self.tau)
+                if self.mode == "delta":
+                    z_knn = self._delta_prediction(
+                        parametric_view, retrieval, ctx, weights
+                    )
+                else:
+                    z_knn = self._absolute_prediction(
+                        parametric_view, retrieval, weights
+                    )
+                gate = self.gate(float(distances.min()))
+                blended = (1.0 - gate) * parametric_array + gate * z_knn
+                result_array = np.ascontiguousarray(
+                    blended, dtype=parametric_array.dtype
                 )
-            else:
-                z_knn = self._absolute_prediction(parametric_array, retrieval, weights)
-            gate = self.gate(float(distances.min()))
-            blended = (1.0 - gate) * parametric_array + gate * z_knn
-            result = np.ascontiguousarray(blended, dtype=parametric_array.dtype)
+                result = _restore_backend(result_array, parametric_view)
         except Exception as exc:
             if started is not None:
                 emit_event(
@@ -121,29 +139,29 @@ class KnnCorrector:
 
     def _delta_prediction(
         self,
-        parametric: np.ndarray,
+        parametric: _LatentView,
         retrieval: Retrieval,
         ctx: CondCtx,
         weights: np.ndarray,
     ) -> np.ndarray:
         if ctx.current_latent is None:
             raise ValidationError("delta mode requires CondCtx.current_latent")
-        current = _require_array(ctx.current_latent, "ctx.current_latent")
-        _require_same_shape(current, parametric, "ctx.current_latent")
+        current = _require_latent(ctx.current_latent, "ctx.current_latent").array
+        _require_same_shape(current, parametric.array, "ctx.current_latent")
         deltas = [
-            _transition_array(item.value, "delta", parametric)
+            _transition_array(item.value, "delta", parametric.array)
             for item in retrieval.items
         ]
         return cast(np.ndarray, current + _weighted_sum(deltas, weights))
 
     def _absolute_prediction(
         self,
-        parametric: np.ndarray,
+        parametric: _LatentView,
         retrieval: Retrieval,
         weights: np.ndarray,
     ) -> np.ndarray:
         successors = [
-            _transition_array(item.value, "z_next", parametric)
+            _transition_array(item.value, "z_next", parametric.array)
             for item in retrieval.items
         ]
         return _weighted_sum(successors, weights)
@@ -156,14 +174,36 @@ def _transition_array(
 ) -> np.ndarray:
     if not isinstance(value, Transition):
         raise ValidationError("retrieval values must be Transition instances")
-    array = _require_array(getattr(value, field_name), f"transition.{field_name}")
+    array = _require_latent(
+        getattr(value, field_name), f"transition.{field_name}"
+    ).array
     _require_same_shape(array, parametric, f"transition.{field_name}")
     return array
 
 
-def _require_array(value: object, field_name: str) -> np.ndarray:
-    if not isinstance(value, np.ndarray):
-        raise DTypeError(f"{field_name} must be a numpy.ndarray")
+def _require_latent(value: object, field_name: str) -> _LatentView:
+    if isinstance(value, np.ndarray):
+        array = _require_numpy_array(value, field_name)
+        return _LatentView(
+            array=np.asarray(array),
+            original=value,
+            backend="numpy",
+            dtype=value.dtype,
+            device=None,
+        )
+    if _is_torch_tensor(value):
+        array = _tensor_to_numpy(value, field_name)
+        return _LatentView(
+            array=array,
+            original=value,
+            backend="torch",
+            dtype=getattr(value, "dtype", None),
+            device=getattr(value, "device", None),
+        )
+    raise DTypeError(f"{field_name} must be a numpy.ndarray or torch.Tensor")
+
+
+def _require_numpy_array(value: np.ndarray, field_name: str) -> np.ndarray:
     if not np.issubdtype(value.dtype, np.floating):
         raise DTypeError(f"{field_name} must have a floating dtype")
     if value.shape == ():
@@ -173,6 +213,58 @@ def _require_array(value: object, field_name: str) -> np.ndarray:
     if not bool(np.isfinite(value).all()):
         raise ValidationError(f"{field_name} must contain only finite values")
     return np.asarray(value)
+
+
+def _is_torch_tensor(value: object) -> bool:
+    if type(value).__module__.split(".", 1)[0] != "torch":
+        return False
+    return all(
+        hasattr(value, attr)
+        for attr in ("detach", "cpu", "numpy", "shape", "dtype", "to")
+    )
+
+
+def _tensor_to_numpy(value: object, field_name: str) -> np.ndarray:
+    dtype = str(getattr(value, "dtype", ""))
+    if "float" not in dtype:
+        raise DTypeError(f"{field_name} must have a floating dtype")
+    current = cast(Any, value)
+    current = current.detach()
+    current = current.cpu()
+    converted = current.numpy()
+    if not isinstance(converted, np.ndarray):
+        raise DTypeError(f"{field_name} tensor did not convert to numpy.ndarray")
+    return np.ascontiguousarray(_require_numpy_array(converted, field_name))
+
+
+def _restore_backend(array: np.ndarray, template: _LatentView) -> Latent:
+    if template.backend == "numpy":
+        return np.ascontiguousarray(array, dtype=cast(np.dtype[Any], template.dtype))
+    new_tensor = getattr(template.original, "new_tensor", None)
+    if callable(new_tensor):
+        result = new_tensor(array)
+    else:
+        torch = _import_torch()
+        result = torch.as_tensor(array)
+    to = getattr(result, "to", None)
+    if callable(to):
+        return to(dtype=template.dtype, device=template.device)
+    return result
+
+
+def _inference_mode(template: _LatentView) -> Any:
+    if template.backend != "torch":
+        return nullcontext()
+    inference_mode = getattr(_import_torch(), "inference_mode", None)
+    if callable(inference_mode):
+        return inference_mode()
+    return nullcontext()
+
+
+def _import_torch() -> Any:
+    import importlib
+
+    return importlib.import_module("torch")
 
 
 def _require_same_shape(
@@ -245,9 +337,11 @@ def _require_probability(value: object, field_name: str) -> None:
 
 
 def _latent_is_finite(value: object) -> bool | None:
-    if not isinstance(value, np.ndarray):
+    try:
+        view = _require_latent(value, "latent")
+    except Exception:
         return None
-    return bool(np.isfinite(value).all())
+    return bool(np.isfinite(view.array).all())
 
 
 def _safe_empty_retrieval(retrieval: object) -> bool | None:
