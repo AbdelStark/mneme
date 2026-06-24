@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from math import log
+from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
@@ -15,6 +17,8 @@ from mneme.core import (
     Transition,
     ValidationError,
 )
+
+_FIXTURE_PATH = Path("tests/fixtures/condition/gate_behavior_cases.json")
 
 
 def _fingerprint() -> EncoderFingerprint:
@@ -122,6 +126,63 @@ def test_invalid_retrieval_distances_raise_typed_error() -> None:
             retrieval,
             CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
         )
+
+
+def test_distance_gate_near_and_far_cases() -> None:
+    corrector = KnnCorrector()
+
+    near_gate = corrector.gate(0.0)
+    far_gate = corrector.gate(10.0)
+
+    assert near_gate > 0.1
+    assert near_gate <= corrector.lambda_max
+    assert far_gate < 1e-6
+
+
+def test_gate_rejects_non_finite_distances() -> None:
+    corrector = KnnCorrector()
+
+    with pytest.raises(ValidationError, match="nearest_distance"):
+        corrector.gate(float("nan"))
+    with pytest.raises(ValidationError, match="nearest_distance"):
+        corrector.gate(float("inf"))
+
+
+def test_non_finite_parametric_and_transition_values_raise_validation_error() -> None:
+    corrector = KnnCorrector()
+
+    with pytest.raises(ValidationError, match="parametric"):
+        corrector.condition(
+            np.array([float("nan"), 0.0], dtype=np.float32),
+            _retrieval(),
+            CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
+        )
+
+    retrieval = Retrieval(
+        items=(
+            _item(
+                np.array([float("nan"), 0.0], dtype=np.float32),
+                np.array([1.0, 0.0], dtype=np.float32),
+            ),
+        ),
+        distances=(0.0,),
+    )
+    with pytest.raises(ValidationError, match="transition.delta"):
+        corrector.condition(
+            np.array([1.0, 0.0], dtype=np.float32),
+            retrieval,
+            CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
+        )
+
+
+def test_gate_behavior_fixture_cases_are_consumable() -> None:
+    fixture = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))
+    corrector = KnnCorrector(**fixture["corrector"])
+
+    assert fixture["schema_version"] == "mneme.gate_behavior_fixture.v1"
+    for case in fixture["cases"]:
+        gate = corrector.gate(case["nearest_distance"])
+        assert case["expected_gate_min"] <= gate <= case["expected_gate_max"]
 
 
 def test_invalid_retrieval_value_shape_raises_typed_error() -> None:

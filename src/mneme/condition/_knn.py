@@ -53,9 +53,15 @@ class KnnCorrector:
             z_knn = self._delta_prediction(parametric_array, retrieval, ctx, weights)
         else:
             z_knn = self._absolute_prediction(parametric_array, retrieval, weights)
-        gate = self.lambda_max * _sigmoid(self.alpha * (self.delta0 - distances.min()))
+        gate = self.gate(float(distances.min()))
         blended = (1.0 - gate) * parametric_array + gate * z_knn
         return np.ascontiguousarray(blended, dtype=parametric_array.dtype)
+
+    def gate(self, nearest_distance: float) -> float:
+        """Return the memory interpolation weight for a nearest-neighbor distance."""
+
+        distance = _require_non_negative_finite(nearest_distance, "nearest_distance")
+        return self.lambda_max * _sigmoid(self.alpha * (self.delta0 - distance))
 
     def _delta_prediction(
         self,
@@ -169,10 +175,11 @@ def _require_positive_finite(value: object, field_name: str) -> None:
         raise ValidationError(f"{field_name} must be positive")
 
 
-def _require_non_negative_finite(value: object, field_name: str) -> None:
+def _require_non_negative_finite(value: object, field_name: str) -> float:
     converted = _require_finite(value, field_name)
     if converted < 0.0:
         raise ValidationError(f"{field_name} must be non-negative")
+    return converted
 
 
 def _require_probability(value: object, field_name: str) -> None:
