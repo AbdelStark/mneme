@@ -79,6 +79,14 @@ Training:
 - use train, calibration, and validation splits recorded in the report;
 - log base predictor, corrector, in-context, and adapter metrics in one comparison report.
 
+The fixture-scale harness exposed as `train_frozen_base_adapter` requires the
+`ml` extra, a callable frozen base model, a callable adapter, a loss function or
+`torch.nn.MSELoss`, and non-empty `train`, `calibration`, and `validation`
+splits of `AdapterTrainingBatch`. It emits `mneme.eval_report.v1` with split
+counts, seed, train/calibration/validation losses, caveats, and an explicit
+`base_gradients_absent` metric. It is a contract and smoke-test harness, not an
+external benchmark or accuracy claim.
+
 Adapter insertion is implementation-specific because external predictors differ. Mneme provides adapter modules and reference wrappers rather than modifying foreign model code in place.
 
 ## Alternatives Considered

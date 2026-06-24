@@ -164,6 +164,13 @@ class CrossAttnAdapter(torch.nn.Module):
         retrieved_values: torch.Tensor,
         attention_mask: torch.Tensor | None = None,
     ) -> torch.Tensor: ...
+
+@dataclass(frozen=True)
+class AdapterTrainingBatch:
+    predictor_input: object
+    retrieved_values: object
+    target_hidden: object
+    attention_mask: object | None = None
 ```
 
 Minimum custom adapter example:
@@ -254,6 +261,16 @@ shape `(batch, retrieved)` and uses `True`/`1` for valid retrieved slots; masked
 slots are not attended. Retrieved values and masks are moved to the
 `predictor_hidden` dtype and device before attention. The module returns
 `(batch, predictor_tokens, hidden_dim)` and does not own base predictor weights.
+
+`train_frozen_base_adapter` is the fixture-scale offline training harness for
+adapter-only training. It requires torch from the `ml` extra, a callable frozen
+base model whose `parameters()` can be frozen, a callable adapter with
+trainable `parameters()`, and non-empty `train`, `calibration`, and
+`validation` splits of `AdapterTrainingBatch`. The harness freezes and clears
+base parameters before training, runs the base model under `torch.no_grad()`,
+steps only adapter optimizer parameters, asserts base gradients remain absent
+after backward, and returns `mneme.eval_report.v1` with split counts, seed,
+loss metrics, caveats, and a `base_gradients_absent` metric.
 
 ## Constructors
 
