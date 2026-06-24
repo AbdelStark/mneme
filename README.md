@@ -107,7 +107,8 @@ contain real environment data. See [SECURITY.md](SECURITY.md) and
 - No encryption at rest.
 - No private retrieval.
 - No remote authentication.
-- No trained adapter checkpoint loading or external trained-adapter report yet.
+- No production trained-adapter checkpoint or external trained-adapter report
+  yet.
 - The in-context conditioner is a baseline for compatible predictor wrappers;
   its attention cost scales with retrieved `k`.
 - No receipt proof implementation yet.

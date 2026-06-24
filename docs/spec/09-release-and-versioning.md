@@ -43,6 +43,24 @@ Initial constraints:
 - `pydantic>=2` only if schema validation uses it; otherwise avoid it in core
 - `pytest`, `ruff`, and a type checker in dev extras
 
+## Adapter Checkpoint Artifacts
+
+Adapter checkpoints use a JSON sidecar named `adapter.json` plus a relative
+weights file reference. The sidecar schema is `mneme.adapter_checkpoint.v1` and
+must include:
+
+- `adapter_kind`;
+- JSON-compatible `adapter_config`;
+- `base_fingerprint`;
+- `training_report_uri`;
+- `weights_file`;
+- `package_version`.
+
+Loaders must validate the sidecar before exposing the checkpoint, reject missing
+required fields, reject absolute or parent-traversing weight paths, require the
+weights file by default, and fail closed when the expected base fingerprint does
+not match the sidecar.
+
 ## Release Gates
 
 Every release candidate must pass:
