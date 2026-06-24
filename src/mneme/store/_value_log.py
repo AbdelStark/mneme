@@ -53,8 +53,27 @@ def append_value_record(path: Path, item: MemoryItem) -> tuple[int, int]:
 def read_value_records(path: Path) -> Iterator[MemoryItem]:
     """Yield validated MemoryItems from a value log."""
 
+    for item, _, _ in read_value_records_with_offsets(path):
+        yield item
+
+
+def read_value_records_with_offsets(
+    path: Path,
+    *,
+    start_offset: int = 0,
+) -> Iterator[tuple[MemoryItem, int, int]]:
+    """Yield validated MemoryItems with `(start, end)` offsets."""
+
+    if start_offset < 0:
+        raise StoreCorruptionError("value log start offset must be non-negative")
     with path.open("rb") as handle:
+        handle.seek(0, 2)
+        size = handle.tell()
+        if start_offset > size:
+            raise StoreCorruptionError("value log start offset is beyond end of file")
+        handle.seek(start_offset)
         while True:
+            start = handle.tell()
             header = handle.read(_HEADER_SIZE)
             if not header:
                 return
@@ -67,7 +86,8 @@ def read_value_records(path: Path) -> Iterator[MemoryItem]:
                 raise StoreCorruptionError("value log has a partial record payload")
             if blake3(payload).digest(length=_CHECKSUM_SIZE) != expected_checksum:
                 raise StoreCorruptionError("value log record checksum mismatch")
-            yield _decode_record(payload)
+            end = handle.tell()
+            yield _decode_record(payload), start, end
 
 
 def _encode_record(item: MemoryItem) -> bytes:
@@ -252,4 +272,9 @@ def _optional_float(value: object, field_name: str) -> float | None:
     return float(value)
 
 
-__all__ = ["VALUE_RECORD_SCHEMA", "append_value_record", "read_value_records"]
+__all__ = [
+    "VALUE_RECORD_SCHEMA",
+    "append_value_record",
+    "read_value_records",
+    "read_value_records_with_offsets",
+]

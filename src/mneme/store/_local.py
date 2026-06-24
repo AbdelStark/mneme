@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import time
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 from uuid import UUID, uuid4
 
 from mneme.core import (
@@ -30,12 +32,18 @@ from mneme.store._manifest import (
     StoreManifest,
     ValueLogRef,
 )
-from mneme.store._value_log import append_value_record, read_value_records
+from mneme.store._value_log import (
+    append_value_record,
+    read_value_records,
+    read_value_records_with_offsets,
+)
 
 _MANIFEST_FILE = "manifest.json"
 _VALUE_LOG = "values/log-000000.mnv"
 _INDEX_BACKEND_FILE = "index/backend.json"
 _LAYOUT_DIRS = ("values", "index", "transactions", "receipts")
+_TRANSACTION_SCHEMA: Final = "mneme.transaction.v1"
+_STORE_RECOVERY_EVENT_SCHEMA: Final = "mneme.store_recovery_event.v1"
 
 
 @dataclass(frozen=True)
@@ -54,6 +62,42 @@ class StoreStats:
     commitments_enabled: bool
 
 
+@dataclass(frozen=True)
+class StoreRecoveryEvent:
+    """Structured event emitted when open-store recovery changes state."""
+
+    event: str
+    store_id: str
+    operation: str
+    status: str
+    transaction_id: str
+    value_log: str
+    previous_size_bytes: int
+    recovered_size_bytes: int
+    previous_record_count: int
+    recovered_record_count: int
+    duration_ms: float
+    schema_version: str = _STORE_RECOVERY_EVENT_SCHEMA
+
+    def to_json(self) -> dict[str, Any]:
+        """Return a JSON-serializable recovery event."""
+
+        return {
+            "event": self.event,
+            "schema_version": self.schema_version,
+            "store_id": self.store_id,
+            "operation": self.operation,
+            "duration_ms": self.duration_ms,
+            "status": self.status,
+            "transaction_id": self.transaction_id,
+            "value_log": self.value_log,
+            "previous_size_bytes": self.previous_size_bytes,
+            "recovered_size_bytes": self.recovered_size_bytes,
+            "previous_record_count": self.previous_record_count,
+            "recovered_record_count": self.recovered_record_count,
+        }
+
+
 @dataclass
 class LocalStore:
     """Local store handle for manifest, write, and query operations."""
@@ -62,6 +106,7 @@ class LocalStore:
     manifest: StoreManifest
     index: FlatIndex
     _items: dict[Cid, MemoryItem]
+    recovery_events: tuple[StoreRecoveryEvent, ...] = ()
 
     def stats(self) -> StoreStats:
         value_record_count = sum(log.record_count for log in self.manifest.value_logs)
@@ -217,8 +262,8 @@ def open_store(path: str | Path, *, create: bool = False) -> LocalStore:
             return init_store(root)
         raise StoreError(f"store manifest not found at {manifest_path}")
     manifest = load_manifest(root)
-    _detect_interrupted_transactions(root)
-    return _store_from_manifest(root, manifest)
+    manifest, recovery_events = _recover_interrupted_transactions(root, manifest)
+    return _store_from_manifest(root, manifest, recovery_events=recovery_events)
 
 
 def load_manifest(path: str | Path) -> StoreManifest:
@@ -252,7 +297,12 @@ def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
-def _store_from_manifest(root: Path, manifest: StoreManifest) -> LocalStore:
+def _store_from_manifest(
+    root: Path,
+    manifest: StoreManifest,
+    *,
+    recovery_events: tuple[StoreRecoveryEvent, ...] = (),
+) -> LocalStore:
     index = FlatIndex()
     items: dict[Cid, MemoryItem] = {}
     for value_log in manifest.value_logs:
@@ -263,7 +313,13 @@ def _store_from_manifest(root: Path, manifest: StoreManifest) -> LocalStore:
             cid = item.content_id or content_id(item)
             items[cid] = item
             index.add(cid, item.key)
-    return LocalStore(path=root, manifest=manifest, index=index, _items=items)
+    return LocalStore(
+        path=root,
+        manifest=manifest,
+        index=index,
+        _items=items,
+        recovery_events=recovery_events,
+    )
 
 
 def _prepare_item(item: MemoryItem) -> MemoryItem:
@@ -303,17 +359,278 @@ def _write_transaction(root: Path, txid: str, data: dict[str, Any]) -> None:
     _write_json_atomic(root / "transactions" / f"{txid}.json", data)
 
 
-def _detect_interrupted_transactions(root: Path) -> None:
+@dataclass(frozen=True)
+class _PendingTransaction:
+    path: Path
+    transaction_id: str
+    item_count: int
+    value_log: str
+    previous_size_bytes: int
+    previous_record_count: int
+
+
+def _recover_interrupted_transactions(
+    root: Path,
+    manifest: StoreManifest,
+) -> tuple[StoreManifest, tuple[StoreRecoveryEvent, ...]]:
     transactions = root / "transactions"
     if not transactions.exists():
-        return
-    for path in transactions.glob("txn-*.json"):
+        return manifest, ()
+    current = manifest
+    events: list[StoreRecoveryEvent] = []
+    for path in sorted(transactions.glob("txn-*.json")):
+        pending = _load_pending_transaction(path)
+        if pending is None:
+            continue
+        current, event = _recover_pending_transaction(root, current, pending)
+        events.append(event)
+    return current, tuple(events)
+
+
+def _load_pending_transaction(path: Path) -> _PendingTransaction | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise StoreCorruptionError(
+            f"transaction file is malformed JSON: {path.name}"
+        ) from exc
+    if not isinstance(data, Mapping):
+        raise StoreCorruptionError(f"transaction file must be an object: {path.name}")
+    schema_version = data.get("schema_version")
+    if schema_version != _TRANSACTION_SCHEMA:
+        raise StoreCorruptionError("unsupported transaction schema")
+    state = _require_transaction_string(data.get("state"), "transaction state")
+    if state in {"committed", "rolled_back"}:
+        return None
+    if state != "intent":
+        raise StoreCorruptionError(f"unsupported transaction state: {state}")
+    transaction_id = _require_transaction_string(
+        data.get("transaction_id"),
+        "transaction_id",
+    )
+    if transaction_id != path.stem:
+        raise StoreCorruptionError("transaction_id does not match file name")
+    return _PendingTransaction(
+        path=path,
+        transaction_id=transaction_id,
+        item_count=_require_positive_transaction_int(
+            data.get("item_count"), "item_count"
+        ),
+        value_log=_require_transaction_string(data.get("value_log"), "value_log"),
+        previous_size_bytes=_require_non_negative_transaction_int(
+            data.get("previous_size_bytes"),
+            "previous_size_bytes",
+        ),
+        previous_record_count=_require_non_negative_transaction_int(
+            data.get("previous_record_count"),
+            "previous_record_count",
+        ),
+    )
+
+
+def _recover_pending_transaction(
+    root: Path,
+    manifest: StoreManifest,
+    transaction: _PendingTransaction,
+) -> tuple[StoreManifest, StoreRecoveryEvent]:
+    started = time.perf_counter()
+    if transaction.value_log != manifest.value_logs[0].path:
+        raise StoreCorruptionError("pending transaction targets unknown value log")
+    log_path = root / transaction.value_log
+    if not log_path.exists():
+        raise StoreCorruptionError(f"value log missing: {transaction.value_log}")
+    actual_size = log_path.stat().st_size
+    if actual_size < transaction.previous_size_bytes:
+        raise StoreCorruptionError("value log is shorter than transaction offset")
+
+    appended: list[tuple[MemoryItem, int, int]] = []
+    read_error: StoreCorruptionError | None = None
+    try:
+        appended = list(
+            read_value_records_with_offsets(
+                log_path,
+                start_offset=transaction.previous_size_bytes,
+            )
+        )
+    except StoreCorruptionError as exc:
+        read_error = exc
+
+    manifest_log = manifest.value_logs[0]
+    manifest_already_completed = (
+        manifest.last_completed_transaction == transaction.transaction_id
+        and manifest_log.size_bytes == actual_size
+        and manifest_log.record_count
+        == transaction.previous_record_count + transaction.item_count
+    )
+    if (
+        manifest.last_completed_transaction == transaction.transaction_id
+        and not manifest_already_completed
+    ):
+        raise StoreCorruptionError(
+            "manifest completed transaction but offsets do not match"
+        )
+    if manifest_already_completed and (
+        read_error is not None or len(appended) != transaction.item_count
+    ):
+        raise StoreCorruptionError("completed transaction value log is invalid")
+    if (
+        read_error is None
+        and len(appended) == transaction.item_count
+        and (
+            actual_size > transaction.previous_size_bytes or manifest_already_completed
+        )
+    ):
+        completed = _complete_recovered_transaction(
+            root,
+            manifest,
+            transaction,
+            appended,
+            actual_size,
+        )
+        return completed, _recovery_event(
+            manifest=completed,
+            transaction=transaction,
+            status="completed",
+            recovered_size_bytes=actual_size,
+            recovered_record_count=transaction.item_count,
+            started=started,
+        )
+    if read_error is None and len(appended) > transaction.item_count:
+        raise StoreCorruptionError("transaction appended more records than declared")
+    _truncate_value_log(log_path, transaction.previous_size_bytes)
+    _write_transaction_state(
+        transaction.path,
+        transaction,
+        state="rolled_back",
+        written_offsets=[],
+    )
+    return manifest, _recovery_event(
+        manifest=manifest,
+        transaction=transaction,
+        status="rolled_back",
+        recovered_size_bytes=transaction.previous_size_bytes,
+        recovered_record_count=0,
+        started=started,
+    )
+
+
+def _complete_recovered_transaction(
+    root: Path,
+    manifest: StoreManifest,
+    transaction: _PendingTransaction,
+    appended: list[tuple[MemoryItem, int, int]],
+    actual_size: int,
+) -> StoreManifest:
+    if manifest.last_completed_transaction == transaction.transaction_id:
+        completed = manifest
+    else:
+        manifest_log = manifest.value_logs[0]
+        if manifest_log.size_bytes != transaction.previous_size_bytes:
+            raise StoreCorruptionError(
+                "manifest size does not match transaction offset"
+            )
+        if manifest_log.record_count != transaction.previous_record_count:
+            raise StoreCorruptionError(
+                "manifest record count does not match transaction offset"
+            )
+        completed = _manifest_after_commit(
+            manifest,
+            txid=transaction.transaction_id,
+            items=[item for item, _, _ in appended],
+            log_size=actual_size,
+        )
+        _write_json_atomic(root / _MANIFEST_FILE, completed.to_json())
+    _write_transaction_state(
+        transaction.path,
+        transaction,
+        state="committed",
+        written_offsets=[(start, end) for _, start, end in appended],
+    )
+    return completed
+
+
+def _truncate_value_log(path: Path, size: int) -> None:
+    with path.open("r+b") as handle:
+        handle.truncate(size)
+        handle.flush()
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            raise TransactionError(f"transaction file is malformed: {path}") from exc
-        if data.get("state") != "committed":
-            raise TransactionError(f"interrupted transaction detected: {path.name}")
+            import os
+
+            os.fsync(handle.fileno())
+        except OSError:
+            pass
 
 
-__all__ = ["LocalStore", "StoreStats", "init_store", "load_manifest", "open_store"]
+def _write_transaction_state(
+    path: Path,
+    transaction: _PendingTransaction,
+    *,
+    state: str,
+    written_offsets: list[tuple[int, int]],
+) -> None:
+    data: dict[str, Any] = {
+        "schema_version": _TRANSACTION_SCHEMA,
+        "transaction_id": transaction.transaction_id,
+        "state": state,
+        "item_count": transaction.item_count,
+        "value_log": transaction.value_log,
+        "previous_size_bytes": transaction.previous_size_bytes,
+        "previous_record_count": transaction.previous_record_count,
+    }
+    if written_offsets:
+        data["written_offsets"] = [
+            {"start": start, "end": end} for start, end in written_offsets
+        ]
+    _write_json_atomic(path, data)
+
+
+def _recovery_event(
+    *,
+    manifest: StoreManifest,
+    transaction: _PendingTransaction,
+    status: str,
+    recovered_size_bytes: int,
+    recovered_record_count: int,
+    started: float,
+) -> StoreRecoveryEvent:
+    return StoreRecoveryEvent(
+        event="mneme.store.recover",
+        store_id=str(manifest.store_id),
+        operation="store.recover",
+        status=status,
+        transaction_id=transaction.transaction_id,
+        value_log=transaction.value_log,
+        previous_size_bytes=transaction.previous_size_bytes,
+        recovered_size_bytes=recovered_size_bytes,
+        previous_record_count=transaction.previous_record_count,
+        recovered_record_count=recovered_record_count,
+        duration_ms=(time.perf_counter() - started) * 1000.0,
+    )
+
+
+def _require_transaction_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise StoreCorruptionError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _require_non_negative_transaction_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise StoreCorruptionError(f"{field_name} must be a non-negative integer")
+    return value
+
+
+def _require_positive_transaction_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise StoreCorruptionError(f"{field_name} must be a positive integer")
+    return value
+
+
+__all__ = [
+    "LocalStore",
+    "StoreRecoveryEvent",
+    "StoreStats",
+    "init_store",
+    "load_manifest",
+    "open_store",
+]

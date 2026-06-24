@@ -2,6 +2,7 @@
 
 from mneme.store._local import (
     LocalStore,
+    StoreRecoveryEvent,
     StoreStats,
     init_store,
     load_manifest,
@@ -33,6 +34,7 @@ __all__ = [
     "IndexConfig",
     "IndexRebuildReport",
     "LocalStore",
+    "StoreRecoveryEvent",
     "StoreManifest",
     "StoreStats",
     "StoreVerificationReport",
