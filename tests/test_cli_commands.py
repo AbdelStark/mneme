@@ -173,6 +173,80 @@ def test_eval_fixtures_cli_reports_typed_write_error(tmp_path: Path) -> None:
     assert error["error_type"] == "EvaluationError"
 
 
+def test_eval_profile_cli_writes_and_prints_valid_report(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    output = tmp_path / "reports" / "profile.json"
+    store = init_store(root)
+    store.put_batch([_item(float(index), step=index) for index in range(3)])
+
+    result = _run_cli(
+        "eval",
+        "profile",
+        "--store",
+        root,
+        "--out",
+        output,
+        "--k",
+        "2",
+        "--metric",
+        "l2",
+        "--queries",
+        "2",
+        "--warmup",
+        "0",
+        "--measurements",
+        "2",
+        "--approx-backend",
+        "none",
+    )
+
+    assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr
+    printed = validate_report_json(_stdout_json(result))
+    written = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
+    assert printed == written
+    assert printed.metrics["flat_recall_at_k"] == 1.0
+    assert printed.metrics["query_latency_p50_ms"] >= 0.0
+    assert printed.metrics["conditioning_latency_p50_ms"] >= 0.0
+    assert printed.metrics["memory_footprint_bytes_per_item"] > 0.0
+
+
+def test_eval_recall_and_latency_aliases_emit_profile_reports(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put_batch([_item(float(index), step=index) for index in range(3)])
+
+    for command in ("recall", "latency"):
+        output = tmp_path / "reports" / f"{command}.json"
+        result = _run_cli(
+            "eval",
+            command,
+            "--store",
+            root,
+            "--out",
+            output,
+            "--k",
+            "2",
+            "--metric",
+            "l2",
+            "--queries",
+            "2",
+            "--warmup",
+            "0",
+            "--measurements",
+            "1",
+            "--approx-backend",
+            "none",
+        )
+
+        assert result.returncode == int(CliExitCode.SUCCESS), (
+            result.stdout + result.stderr
+        )
+        report = validate_report_json(_stdout_json(result))
+        assert report.command[:3] == ("mneme", "eval", command)
+        assert report.metrics["flat_recall_at_k"] == 1.0
+        assert report.metrics["query_latency_p50_ms"] >= 0.0
+
+
 def test_receipts_verify_cli_reports_documented_placeholder(tmp_path: Path) -> None:
     receipt = tmp_path / "receipt.json"
     receipt.write_text("{}", encoding="utf-8")

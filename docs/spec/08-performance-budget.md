@@ -22,6 +22,18 @@ These are targets to validate, not achieved results.
 | index rebuild | report items/sec | report items/sec | rebuild report |
 
 No public release may claim a production control rate unless a report identifies hardware, store size, k, backend, and workload.
+Use generated evaluation reports for performance claims; do not cite ad hoc
+terminal timings without the report envelope.
+
+The v0.1 local profile command is:
+
+```bash
+python -m mneme.cli eval profile --store STORE --out reports/profile.json
+```
+
+It writes `mneme.eval_report.v1` with FlatIndex recall ground truth, query and
+conditioning latency percentiles, footprint fields, hardware fields, and caveats
+for exact-only runs when an approximate backend is unavailable.
 
 ## Memory Budget
 

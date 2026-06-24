@@ -53,6 +53,7 @@ Required v0.1 commands:
 
 ```text
 mneme eval fixtures --out reports/fixtures.json
+mneme eval profile --store STORE --out reports/profile.json
 mneme eval recall --store STORE --out reports/recall.json
 mneme eval latency --store STORE --out reports/latency.json
 mneme eval gate --out reports/gate.json
@@ -65,6 +66,7 @@ Required v0.1 evidence:
 - exact flat recall baseline;
 - approximate recall when approximate backend is installed;
 - query and conditioning latency with p50 and p99;
+- item count, key dimension, k, metric, backend, hardware, and footprint fields;
 - caveat field stating fixture evidence cannot prove external task success.
 
 External benchmark reports are opt-in artifacts and must identify dataset, split, model checkpoint, hardware, and command.
