@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import asdict
@@ -121,10 +122,17 @@ def _decode_record(payload: bytes) -> MemoryItem:
     item_data = data.get("item")
     if not isinstance(item_data, Mapping):
         raise StoreCorruptionError("value record item must be an object")
+    if item_data.get("value_kind") != "transition":
+        raise StoreCorruptionError("unsupported value record value_kind")
     encoder_fp = _fingerprint_from_json(item_data.get("encoder_fp"))
     value = _transition_from_json(item_data.get("value"))
+    content_id_text = _require_string(data.get("content_id"), "content_id")
+    try:
+        cid = bytes.fromhex(content_id_text)
+    except ValueError as exc:
+        raise StoreCorruptionError("content_id must be hex bytes") from exc
     item = MemoryItem(
-        content_id=bytes.fromhex(_require_string(data.get("content_id"), "content_id")),
+        content_id=cid,
         key=_array_from_json(item_data.get("key")),
         value=value,
         meta=_require_mapping(item_data.get("meta"), "meta"),
@@ -155,18 +163,25 @@ def _transition_from_json(data: object) -> Transition:
     mapping = _require_mapping(data, "transition")
     from uuid import UUID
 
-    return Transition(
-        z_src=_array_from_json(mapping.get("z_src")),
-        action=_array_from_json(mapping.get("action")),
-        z_next=_array_from_json(mapping.get("z_next")),
-        delta=_array_from_json(mapping.get("delta")),
-        t=_require_int(mapping.get("t"), "transition t"),
-        episode_id=UUID(_require_string(mapping.get("episode_id"), "episode_id")),
-        reward=_optional_float(mapping.get("reward"), "reward"),
-        schema_version=_require_string(
-            mapping.get("schema_version"), "transition schema_version"
-        ),
-    )
+    try:
+        episode_id = UUID(_require_string(mapping.get("episode_id"), "episode_id"))
+    except ValueError as exc:
+        raise StoreCorruptionError("episode_id must be a UUID string") from exc
+    try:
+        return Transition(
+            z_src=_array_from_json(mapping.get("z_src")),
+            action=_array_from_json(mapping.get("action")),
+            z_next=_array_from_json(mapping.get("z_next")),
+            delta=_array_from_json(mapping.get("delta")),
+            t=_require_int(mapping.get("t"), "transition t"),
+            episode_id=episode_id,
+            reward=_optional_float(mapping.get("reward"), "reward"),
+            schema_version=_require_string(
+                mapping.get("schema_version"), "transition schema_version"
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        raise StoreCorruptionError("invalid transition payload") from exc
 
 
 def _fingerprint_from_json(data: object) -> EncoderFingerprint:
@@ -174,13 +189,22 @@ def _fingerprint_from_json(data: object) -> EncoderFingerprint:
     weights_digest = mapping.get("weights_digest")
     if weights_digest is not None and not isinstance(weights_digest, str):
         raise StoreCorruptionError("weights_digest must be a string or null")
-    return EncoderFingerprint(
-        encoder_id=_require_string(mapping.get("encoder_id"), "encoder_id"),
-        summarizer_id=_require_string(mapping.get("summarizer_id"), "summarizer_id"),
-        weights_digest=weights_digest,
-        config_digest=_require_string(mapping.get("config_digest"), "config_digest"),
-        schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
-    )
+    try:
+        return EncoderFingerprint(
+            encoder_id=_require_string(mapping.get("encoder_id"), "encoder_id"),
+            summarizer_id=_require_string(
+                mapping.get("summarizer_id"), "summarizer_id"
+            ),
+            weights_digest=weights_digest,
+            config_digest=_require_string(
+                mapping.get("config_digest"), "config_digest"
+            ),
+            schema_version=_require_string(
+                mapping.get("schema_version"), "schema_version"
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        raise StoreCorruptionError("invalid encoder fingerprint") from exc
 
 
 def _array_to_json(value: object) -> dict[str, Any]:
@@ -199,13 +223,24 @@ def _array_to_json(value: object) -> dict[str, Any]:
 
 def _array_from_json(data: object) -> np.ndarray:
     mapping = _require_mapping(data, "array")
-    dtype = np.dtype(_require_string(mapping.get("dtype"), "array dtype"))
+    try:
+        dtype = np.dtype(_require_string(mapping.get("dtype"), "array dtype"))
+    except (TypeError, ValueError) as exc:
+        raise StoreCorruptionError("array dtype is unsupported") from exc
+    if not np.issubdtype(dtype, np.number):
+        raise StoreCorruptionError("array dtype must be numeric")
     shape_data = mapping.get("shape")
     if not isinstance(shape_data, list) or not all(
         isinstance(dim, int) and dim >= 0 for dim in shape_data
     ):
         raise StoreCorruptionError("array shape must be a list of non-negative ints")
-    raw = base64.b64decode(_require_string(mapping.get("data"), "array data"))
+    try:
+        raw = base64.b64decode(
+            _require_string(mapping.get("data"), "array data"),
+            validate=True,
+        )
+    except binascii.Error as exc:
+        raise StoreCorruptionError("array data must be base64") from exc
     try:
         return np.frombuffer(raw, dtype=dtype).reshape(tuple(shape_data)).copy()
     except ValueError as exc:

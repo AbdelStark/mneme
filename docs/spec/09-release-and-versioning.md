@@ -55,6 +55,8 @@ Every release candidate must pass:
 - documentation link check;
 - changelog update;
 - security and license file presence.
+- security boundary review confirming public docs do not claim store
+  confidentiality by default and link the redaction regression tests.
 
 ## Changelog Discipline
 

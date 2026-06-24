@@ -134,6 +134,30 @@ def test_manifest_with_missing_required_fields_is_corrupt(tmp_path) -> None:
         open_store(root)
 
 
+def test_manifest_rejects_value_log_path_traversal(tmp_path) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    manifest_path = root / "manifest.json"
+    manifest_json = json.loads(manifest_path.read_text())
+    manifest_json["value_logs"][0]["path"] = "../outside.mnv"
+    manifest_path.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+    with pytest.raises(StoreCorruptionError, match="relative store path"):
+        open_store(root)
+
+
+def test_manifest_rejects_commitment_file_path_traversal(tmp_path) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    manifest_path = root / "manifest.json"
+    manifest_json = json.loads(manifest_path.read_text())
+    manifest_json["commitment"]["files"] = ["/tmp/root.sig"]
+    manifest_path.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+    with pytest.raises(StoreCorruptionError, match="relative store path"):
+        open_store(root)
+
+
 def test_init_store_refuses_existing_manifest_without_exist_ok(tmp_path) -> None:
     root = tmp_path / "store"
     init_store(root)

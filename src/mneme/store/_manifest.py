@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
+from pathlib import PurePosixPath
 from typing import Any, Final
 from uuid import UUID
 
@@ -11,6 +12,34 @@ from mneme.core import EncoderFingerprint, SchemaVersionError, StoreCorruptionEr
 
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
 _SUPPORTED_MAJOR: Final = 1
+
+
+def _require_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise StoreCorruptionError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _require_store_relative_path(value: object, field_name: str) -> str:
+    path = _require_string(value, field_name)
+    parsed = PurePosixPath(path)
+    if (
+        parsed.is_absolute()
+        or ".." in parsed.parts
+        or "\\" in path
+        or ":" in path
+        or path.startswith("~")
+    ):
+        raise StoreCorruptionError(f"{field_name} must be a relative store path")
+    return parsed.as_posix()
+
+
+def _require_non_negative_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise StoreCorruptionError(f"{field_name} must be an integer")
+    if value < 0:
+        raise StoreCorruptionError(f"{field_name} must be >= 0")
+    return value
 
 
 @dataclass(frozen=True)
@@ -21,10 +50,19 @@ class ValueLogRef:
     size_bytes: int = 0
     record_count: int = 0
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "path",
+            _require_store_relative_path(self.path, "value log path"),
+        )
+        _require_non_negative_int(self.size_bytes, "value log size_bytes")
+        _require_non_negative_int(self.record_count, "value log record_count")
+
     @classmethod
     def from_json(cls, data: object) -> ValueLogRef:
         mapping = _require_mapping(data, "value log")
-        path = _require_string(mapping.get("path"), "value log path")
+        path = _require_store_relative_path(mapping.get("path"), "value log path")
         size_bytes = _require_non_negative_int(
             mapping.get("size_bytes"), "value log size_bytes"
         )
@@ -58,6 +96,26 @@ class CommitmentState:
     root: str | None = None
     files: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise StoreCorruptionError("commitment enabled must be a bool")
+        if self.backend is not None and not isinstance(self.backend, str):
+            raise StoreCorruptionError("commitment backend must be a string or null")
+        if self.root is not None and not isinstance(self.root, str):
+            raise StoreCorruptionError("commitment root must be a string or null")
+        if isinstance(self.files, str | bytes | bytearray) or not isinstance(
+            self.files, Sequence
+        ):
+            raise StoreCorruptionError("commitment files must be a sequence")
+        object.__setattr__(
+            self,
+            "files",
+            tuple(
+                _require_store_relative_path(item, "commitment file")
+                for item in self.files
+            ),
+        )
+
     @classmethod
     def from_json(cls, data: object) -> CommitmentState:
         mapping = _require_mapping(data, "commitment")
@@ -75,7 +133,14 @@ class CommitmentState:
             isinstance(item, str) for item in files
         ):
             raise StoreCorruptionError("commitment files must be a list of strings")
-        return cls(enabled=enabled, backend=backend, root=root, files=tuple(files))
+        return cls(
+            enabled=enabled,
+            backend=backend,
+            root=root,
+            files=tuple(
+                _require_store_relative_path(item, "commitment file") for item in files
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -202,15 +267,24 @@ def validate_manifest_schema(schema_version: str) -> None:
 
 def _fingerprint_from_json(data: object) -> EncoderFingerprint:
     mapping = _require_mapping(data, "encoder fingerprint")
-    return EncoderFingerprint(
-        encoder_id=_require_string(mapping.get("encoder_id"), "encoder_id"),
-        summarizer_id=_require_string(mapping.get("summarizer_id"), "summarizer_id"),
-        weights_digest=_optional_string(
-            mapping.get("weights_digest"), "weights_digest"
-        ),
-        config_digest=_require_string(mapping.get("config_digest"), "config_digest"),
-        schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
-    )
+    try:
+        return EncoderFingerprint(
+            encoder_id=_require_string(mapping.get("encoder_id"), "encoder_id"),
+            summarizer_id=_require_string(
+                mapping.get("summarizer_id"), "summarizer_id"
+            ),
+            weights_digest=_optional_string(
+                mapping.get("weights_digest"), "weights_digest"
+            ),
+            config_digest=_require_string(
+                mapping.get("config_digest"), "config_digest"
+            ),
+            schema_version=_require_string(
+                mapping.get("schema_version"), "schema_version"
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        raise StoreCorruptionError("invalid encoder fingerprint") from exc
 
 
 def _require_mapping(data: object, field_name: str) -> Mapping[str, Any]:
@@ -247,25 +321,11 @@ def _validate_json_value(value: object, field_name: str) -> None:
     raise StoreCorruptionError(f"{field_name} contains unsupported JSON value")
 
 
-def _require_string(value: object, field_name: str) -> str:
-    if not isinstance(value, str) or not value:
-        raise StoreCorruptionError(f"{field_name} must be a non-empty string")
-    return value
-
-
 def _optional_string(value: object, field_name: str) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str) or not value:
         raise StoreCorruptionError(f"{field_name} must be a non-empty string or null")
-    return value
-
-
-def _require_non_negative_int(value: object, field_name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise StoreCorruptionError(f"{field_name} must be an integer")
-    if value < 0:
-        raise StoreCorruptionError(f"{field_name} must be >= 0")
     return value
 
 
