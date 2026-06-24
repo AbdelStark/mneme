@@ -10,6 +10,7 @@ from typing import Any, Final
 import numpy as np
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError, StoreError
+from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
 from mneme.store._local import _write_json_atomic, load_manifest
 from mneme.store._manifest import StoreManifest, ValueLogRef
 from mneme.store._value_log import read_value_records
@@ -76,10 +77,50 @@ def verify_store(
     path: str | Path,
     *,
     raise_on_error: bool = False,
+    observability: ObservabilityConfig | None = None,
 ) -> StoreVerificationReport:
     """Verify manifest, value logs, content ids, checksums, and index refs."""
 
     root = Path(path)
+    started = start_event_timer(observability)
+    try:
+        report = _verify_store_report(root)
+    except Exception as exc:
+        if started is not None:
+            emit_event(
+                observability,
+                event="mneme.store.verify",
+                operation="store.verify",
+                status="error",
+                started=started,
+                error=exc,
+                store_id=None,
+                backend=None,
+                item_count=0,
+                error_count=1,
+            )
+        raise
+    if started is not None:
+        emit_event(
+            observability,
+            event="mneme.store.verify",
+            operation="store.verify",
+            status="ok" if report.ok else "error",
+            started=started,
+            store_id=report.store_id,
+            backend=report.index_backend,
+            item_count=report.item_count,
+            value_log_count=report.value_log_count,
+            error_count=len(report.errors),
+        )
+    if raise_on_error and not report.ok:
+        raise StoreCorruptionError("; ".join(report.errors))
+    return report
+
+
+def _verify_store_report(root: Path) -> StoreVerificationReport:
+    """Verify a store and return a report without raising for report errors."""
+
     errors: list[str] = []
     manifest = _load_manifest_for_report(root, errors)
     if manifest is None:
@@ -88,7 +129,6 @@ def verify_store(
             item_count=0,
             value_log_count=0,
             errors=errors,
-            raise_on_error=raise_on_error,
         )
 
     items, value_log_errors = _load_items_from_value_logs(root, manifest)
@@ -103,7 +143,6 @@ def verify_store(
         item_count=len(items),
         value_log_count=len(manifest.value_logs),
         errors=errors,
-        raise_on_error=raise_on_error,
     )
 
 
@@ -359,9 +398,8 @@ def _verification_report(
     item_count: int,
     value_log_count: int,
     errors: list[str],
-    raise_on_error: bool,
 ) -> StoreVerificationReport:
-    report = StoreVerificationReport(
+    return StoreVerificationReport(
         ok=not errors,
         store_id=str(manifest.store_id) if manifest is not None else None,
         item_count=item_count,
@@ -369,9 +407,6 @@ def _verification_report(
         index_backend=manifest.index.backend if manifest is not None else None,
         errors=tuple(errors),
     )
-    if raise_on_error and not report.ok:
-        raise StoreCorruptionError("; ".join(report.errors))
-    return report
 
 
 __all__ = [
