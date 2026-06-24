@@ -151,6 +151,18 @@ mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 
 Commands return exit code 0 on success, 2 for invalid user input, 3 for data validation failure, 4 for unavailable optional dependency, and 5 for internal errors.
 
+CLI implementations translate public errors with:
+
+```python
+from mneme.core import CliExitCode, cli_exit_code
+```
+
+`cli_exit_code(None)` returns `CliExitCode.SUCCESS`. `QueryError` and
+`UnsupportedOperationError` map to invalid user input, validation and
+verification failures map to data validation failure, `OptionalDependencyError`
+maps to unavailable optional dependency, and other errors map to internal
+failure.
+
 ## Numerical Contracts
 
 - Summary vectors are one-dimensional, contiguous, CPU `float32` arrays.
