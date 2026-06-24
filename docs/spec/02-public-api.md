@@ -269,8 +269,12 @@ mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 ```
 
 Commands return exit code 0 on success, 2 for invalid user input, 3 for data validation failure, 4 for unavailable optional dependency, and 5 for internal errors.
-The implemented v0.1 module entry points are `python -m mneme.cli store verify PATH`
-and `python -m mneme.cli index rebuild PATH`; both print JSON reports.
+The implemented v0.1 module entry point is `python -m mneme.cli ...`.
+Store stats, verification, index rebuild, query, and fixture-eval commands
+print schema-versioned JSON reports. CLI error responses print
+`mneme.cli_error.v1` JSON with `ok: false`, typed `error_type`, and `errors`.
+`receipts verify` is wired as the documented command shape but returns
+`UnsupportedOperationError` until the receipt implementation lands.
 
 CLI implementations translate public errors with:
 
