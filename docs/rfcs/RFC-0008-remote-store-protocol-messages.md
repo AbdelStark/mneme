@@ -109,6 +109,22 @@ must run an equivalent check before passing returned items to conditioners.
 `mneme.remote.raise_for_remote_error(error)` converts remote error envelopes to
 the corresponding local typed exception.
 
+## HTTP JSON Adapter
+
+`RemoteHttpClient` is the first concrete adapter. It posts the message payloads
+to fixed paths:
+
+- `POST /put` with `mneme.put.request.v1`;
+- `POST /query` with `mneme.query.request.v1`;
+- `POST /prove` with `mneme.prove.request.v1`;
+- `POST /root` with `mneme.root.request.v1`;
+- `POST /stats` with `mneme.stats.request.v1`.
+
+`MemoryStoreASGIApp` wraps a local `MemoryStore`-compatible object and returns
+the matching response schema or a `mneme.error.v1` envelope. The client treats
+non-2xx envelopes as local typed errors and still validates successful query
+responses before returning retrieved items.
+
 ## Alternatives Considered
 
 - Let each transport define its own JSON: fast initially, but fragments semantics.
@@ -137,7 +153,7 @@ v0.4 adds remote message models and a conformance suite. The first transport ada
 ## Resolved Bootstrap Decisions
 
 - First supported transport: v0.4 implements HTTP JSON over an ASGI-compatible service boundary. The message schema remains transport-independent, but the first adapter uses request/response semantics that match `put`, `query`, `prove`, `root`, and `stats`.
-- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. Anonymous writable stores are not a supported deployment pattern.
+- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. `MemoryStoreASGIApp` can require a bearer token at the application boundary, but TLS, network policy, credential storage, and key rotation are operator responsibilities. Anonymous writable stores are not a supported deployment pattern.
 
 ## References
 

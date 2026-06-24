@@ -40,6 +40,7 @@ Initial constraints:
 - `faiss-cpu>=1.8` behind an index extra
 - `blake3>=0.4` behind receipts or core serialization if selected for content ids
 - `cryptography>=42` behind receipt signing if selected
+- `uvicorn>=0.30` behind the remote extra for serving the ASGI HTTP adapter
 - `pydantic>=2` only if schema validation uses it; otherwise avoid it in core
 - `pytest`, `ruff`, and a type checker in dev extras
 

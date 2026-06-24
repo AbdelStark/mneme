@@ -35,6 +35,9 @@ Out of scope for v0.x:
   Remote clients use `validate_query_response` before exposing retrieved items to
   conditioners, and `raise_for_remote_error` maps remote failures to local typed
   exceptions.
+- The first HTTP JSON adapter supports bearer-token checks at the ASGI wrapper
+  boundary, but deployment must still provide authenticated transport. Bearer
+  tokens do not add confidentiality on an unauthenticated plaintext channel.
 
 ## Integrity Controls
 
@@ -69,6 +72,7 @@ Deferred:
 - Metadata redaction failure in tests: fail CI.
 - Remote response with mismatched fingerprint: reject before conditioning.
 - Malformed remote error envelope: reject with the local schema or validation error.
+- Missing or invalid remote bearer token: reject before dispatching to the store.
 
 ## Resolved Bootstrap Decisions
 

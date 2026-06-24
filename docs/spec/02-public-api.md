@@ -122,6 +122,7 @@ from mneme.receipts import (
     verify_retrieval_receipt,
 )
 from mneme.remote import ErrorMessage, QueryRequest, QueryResponse
+from mneme.remote import MemoryStoreASGIApp, RemoteHttpClient, RemoteHttpConfig
 from mneme.remote import raise_for_remote_error, validate_query_response
 
 class Index(Protocol):
@@ -427,6 +428,15 @@ validates the response schema, recomputes returned item content ids, rejects
 encoder fingerprint mismatches, and verifies receipts when requested.
 `raise_for_remote_error(error)` maps remote error envelopes onto local typed
 exceptions.
+
+`RemoteHttpClient(RemoteHttpConfig(...))` is the first concrete transport
+adapter. It sends HTTP JSON messages for `put`, `query`, `prove`, `root`, and
+`stats`, and always applies `validate_query_response` before returning query
+results to callers. `MemoryStoreASGIApp(store, bearer_token=...)` exposes a
+local `MemoryStore`-compatible object through the same message schema for ASGI
+servers. Running the ASGI app with the bundled helper requires the `remote`
+extra, which provides `uvicorn`; missing serving dependencies raise
+`OptionalDependencyError(extra="remote", package="uvicorn")`.
 
 ## Command-Line Surface
 
