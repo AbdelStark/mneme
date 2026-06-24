@@ -121,7 +121,8 @@ contain real environment data. See [SECURITY.md](SECURITY.md) and
   yet.
 - The in-context conditioner is a baseline for compatible predictor wrappers;
   its attention cost scales with retrieved `k`.
-- No receipt proof implementation yet.
+- MMR commitment state exists, but retrieval receipt construction, signing, and
+  CLI verification are not complete yet.
 - No external benchmark or drift-improvement claim without an external report.
 
 ## Documentation

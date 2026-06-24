@@ -39,8 +39,13 @@ class CommitmentState:
     root: MerkleRoot
     item_count: int
     peaks: tuple[bytes, ...]
+    leaf_ids: tuple[Cid, ...]
     schema_version: str = "mneme.commitment.v1"
 ```
+
+The sidecar persists `leaf_ids` so local stores can produce inclusion proofs
+after reopening. `peaks` and `root` are recomputed from the leaf ids during load
+and fail closed if the sidecar is inconsistent.
 
 Receipt:
 
@@ -58,7 +63,7 @@ class RetrievalReceipt:
     signature: bytes | None = None
 ```
 
-The store appends content ids to a Merkle Mountain Range. `commit()` seals the current peak set and returns the root. `prove(ids)` returns inclusion proofs for ids present at the current root. `query(with_receipt=True)` snapshots the current root, builds proofs for returned ids, and attaches query parameters sufficient for deterministic replay.
+The store appends content ids to a Merkle Mountain Range. `commit()` seals the current peak set, persists a sidecar, updates manifest commitment fields, and returns the root. `prove(ids)` returns inclusion proofs for ids present at the current root. `query(with_receipt=True)` snapshots the current root, builds proofs for returned ids, and attaches query parameters sufficient for deterministic replay.
 
 Verification:
 

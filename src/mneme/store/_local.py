@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,10 +16,12 @@ from mneme.core import (
     EncoderFingerprint,
     MemoryItem,
     QuerySpec,
+    ReceiptVerificationError,
     Retrieval,
     StoreCorruptionError,
     StoreError,
     TransactionError,
+    UnsupportedOperationError,
     ValidationError,
     build_item,
     content_id,
@@ -33,12 +35,22 @@ from mneme.observability import (
     emit_event,
     start_event_timer,
 )
+from mneme.receipts import (
+    CommitmentState as MmrCommitmentState,
+)
+from mneme.receipts import (
+    InclusionProof,
+    load_commitment_state,
+    save_commitment_state,
+)
 from mneme.store._manifest import (
     STORE_MANIFEST_SCHEMA,
-    CommitmentState,
     IndexConfig,
     StoreManifest,
     ValueLogRef,
+)
+from mneme.store._manifest import (
+    CommitmentState as ManifestCommitmentState,
 )
 from mneme.store._value_log import (
     append_value_record,
@@ -49,6 +61,7 @@ from mneme.store._value_log import (
 _MANIFEST_FILE = "manifest.json"
 _VALUE_LOG = "values/log-000000.mnv"
 _INDEX_BACKEND_FILE = "index/backend.json"
+_COMMITMENT_FILE = "receipts/commitment-mmr-v1.json"
 _LAYOUT_DIRS = ("values", "index", "transactions", "receipts")
 _TRANSACTION_SCHEMA: Final = "mneme.transaction.v1"
 _STORE_RECOVERY_EVENT_SCHEMA: Final = "mneme.store_recovery_event.v1"
@@ -356,6 +369,86 @@ class LocalStore:
             distances=tuple(distance for _, distance in results),
         )
 
+    def commit(self) -> bytes:
+        """Commit current value-log append order and return the MMR root."""
+
+        started = start_event_timer(self.observability)
+        try:
+            state = MmrCommitmentState.from_cids(
+                _content_ids_in_value_log_order(self.path, self.manifest)
+            )
+            save_commitment_state(self.path / _COMMITMENT_FILE, state)
+            self.manifest = replace(
+                self.manifest,
+                updated_at=_utc_now(),
+                commitment=ManifestCommitmentState(
+                    enabled=True,
+                    backend=state.scheme,
+                    root=state.root_hex,
+                    files=(_COMMITMENT_FILE,),
+                ),
+            )
+            _write_json_atomic(self.path / _MANIFEST_FILE, self.manifest.to_json())
+        except Exception as exc:
+            if started is not None:
+                emit_event(
+                    self.observability,
+                    event="mneme.store.commit",
+                    operation="store.commit",
+                    status="error",
+                    started=started,
+                    error=exc,
+                    store_id=str(self.manifest.store_id),
+                    backend=self.manifest.index.backend,
+                )
+            raise
+        if started is not None:
+            emit_event(
+                self.observability,
+                event="mneme.store.commit",
+                operation="store.commit",
+                status="ok",
+                started=started,
+                store_id=str(self.manifest.store_id),
+                backend=self.manifest.index.backend,
+                commitment_backend=state.scheme,
+                commitment_root=state.root_hex,
+                item_count=state.item_count,
+            )
+        return state.root
+
+    def root(self) -> bytes:
+        """Return the last persisted commitment root."""
+
+        root_hex = self.manifest.commitment.root
+        if not self.manifest.commitment.enabled or root_hex is None:
+            raise UnsupportedOperationError("store commitments are not initialized")
+        try:
+            return bytes.fromhex(root_hex)
+        except ValueError as exc:
+            raise StoreCorruptionError("commitment root must be hex bytes") from exc
+
+    def commitment_state(self) -> MmrCommitmentState:
+        """Load the persisted commitment state sidecar."""
+
+        if not self.manifest.commitment.enabled:
+            raise UnsupportedOperationError("store commitments are not initialized")
+        if _COMMITMENT_FILE not in self.manifest.commitment.files:
+            raise StoreCorruptionError("commitment sidecar is not referenced")
+        state = load_commitment_state(self.path / _COMMITMENT_FILE)
+        root_hex = self.manifest.commitment.root
+        if root_hex is None or state.root_hex != root_hex:
+            raise ReceiptVerificationError("commitment sidecar root mismatch")
+        return state
+
+    def prove(self, ids: Sequence[Cid]) -> list[InclusionProof]:
+        """Return inclusion proofs for committed content ids."""
+
+        if isinstance(ids, bytes) or not isinstance(ids, Sequence):
+            raise ValidationError("ids must be a sequence of content ids")
+        state = self.commitment_state()
+        return [state.prove(cid) for cid in ids]
+
 
 def init_store(
     path: str | Path,
@@ -396,7 +489,12 @@ def init_store(
         index=IndexConfig(index_backend, index_params or {}),
         retention_policy=retention_policy or {"policy": "none", "tombstones": []},
         last_completed_transaction=None,
-        commitment=CommitmentState(enabled=False, backend=None, root=None, files=()),
+        commitment=ManifestCommitmentState(
+            enabled=False,
+            backend=None,
+            root=None,
+            files=(),
+        ),
     )
     _write_json_atomic(manifest_path, manifest.to_json())
     _write_json_atomic(
@@ -884,6 +982,17 @@ def _items_from_value_log(path: Path) -> dict[Cid, MemoryItem]:
     for item in read_value_records(path):
         items[item.content_id or content_id(item)] = item
     return items
+
+
+def _content_ids_in_value_log_order(
+    root: Path,
+    manifest: StoreManifest,
+) -> tuple[Cid, ...]:
+    cids: list[Cid] = []
+    for value_log in manifest.value_logs:
+        for item in read_value_records(root / value_log.path):
+            cids.append(item.content_id or content_id(item))
+    return tuple(cids)
 
 
 def _truncate_value_log(path: Path, size: int) -> None:

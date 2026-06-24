@@ -27,6 +27,8 @@ changes may occur before the first stable release.
   checkpoint loading.
 - Opt-in external benchmark runner protocol, dry-run runner, and benchmark
   report command.
+- Merkle Mountain Range commitment state with inclusion proofs and local-store
+  commit sidecar persistence.
 
 ### Security
 

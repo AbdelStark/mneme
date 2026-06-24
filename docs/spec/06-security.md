@@ -37,7 +37,8 @@ Out of scope for v0.x:
 
 - Content ids are computed over canonical memory item bytes.
 - Store manifests record file offsets and transaction state.
-- Commitment roots bind append order when commitments are enabled.
+- Commitment roots bind append order when commitments are enabled. The local
+  store persists the MMR sidecar under `receipts/commitment-mmr-v1.json`.
 - Receipts prove returned ids are committed members of the store root.
 - Encoder fingerprints prevent unsafe key comparison across model versions.
 
