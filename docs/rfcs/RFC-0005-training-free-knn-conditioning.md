@@ -61,7 +61,12 @@ lambda = lambda_max * sigmoid(alpha * (delta0 - d_min))
 z_pred = (1 - lambda) * parametric + lambda * z_knn
 ```
 
-The conditioner validates that retrieved values are transitions, shapes match, distances are finite, and required `ctx.current_latent` exists for delta mode. It returns the same backend as `parametric` where possible. Torch paths use inference mode and move retrieved values to the parametric device explicitly.
+The conditioner validates that retrieved values are transitions, shapes match,
+distances are finite, and required `ctx.current_latent` exists for delta mode.
+It returns the same backend as `parametric` where possible. NumPy outputs
+preserve the parametric dtype. Torch paths use inference mode, detach tensor
+inputs, copy retrieved tensors through CPU NumPy for deterministic fixture-scale
+weighting, and restore the output to the parametric tensor dtype and device.
 
 `CondCtx` includes:
 
@@ -100,6 +105,7 @@ v0.1 exposes the corrector as the default conditioner. Later releases may add le
 - Delta and absolute modes match hand-computed examples.
 - Non-finite distances fail.
 - Torch and NumPy paths produce equivalent values on simple fixtures.
+- Torch outputs preserve the parametric tensor dtype and device.
 - Fixture evaluation writes gate-behavior report.
 
 ## Resolved Bootstrap Decisions

@@ -304,8 +304,14 @@ failure.
 - Cosine search requires L2-normalized vectors within tolerance `1e-4`.
 - Returned distances are finite Python floats.
 - Conditioners return the same latent backend type as `parametric` when possible.
+- `KnnCorrector` preserves NumPy output dtype from `parametric`.
+- `KnnCorrector` restores torch outputs to the `parametric` tensor dtype and
+  device.
+- Torch inputs are detached, copied through CPU NumPy for deterministic
+  fixture-scale weighting, and restored to the parametric device.
 - Torch conditioners run under inference mode unless explicitly training.
-- Device movement is explicit and recorded in debug logs.
+- Device movement is explicit and recorded in debug logs when observability is
+  enabled.
 
 ## Deprecation Policy
 
