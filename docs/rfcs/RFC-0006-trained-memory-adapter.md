@@ -89,6 +89,38 @@ external benchmark or accuracy claim.
 
 Adapter insertion is implementation-specific because external predictors differ. Mneme provides adapter modules and reference wrappers rather than modifying foreign model code in place.
 
+Checkpoint metadata:
+
+```json
+{
+  "schema_version": "mneme.adapter_checkpoint.v1",
+  "adapter_kind": "cross_attention",
+  "adapter_config": {
+    "latent_dim": 128,
+    "hidden_dim": 512,
+    "num_heads": 8,
+    "num_layers": 2,
+    "dropout": 0.0
+  },
+  "base_fingerprint": {
+    "schema_version": "mneme.encoder_fingerprint.v1",
+    "encoder_id": "example.encoder",
+    "summarizer_id": "meanpool-v1",
+    "weights_digest": "blake3:...",
+    "config_digest": "blake3:..."
+  },
+  "training_report_uri": "reports/adapter-training.json",
+  "weights_file": "adapter.safetensors",
+  "package_version": "0.1.0.dev0"
+}
+```
+
+`load_adapter_checkpoint` validates this sidecar, resolves `weights_file`
+relative to the sidecar directory, rejects absolute or parent-traversing paths,
+requires the weights file by default, and fails closed with
+`FingerprintMismatchError` when the expected base fingerprint differs from the
+checkpoint metadata.
+
 In-context baseline:
 
 ```python
@@ -132,7 +164,7 @@ self-attention cost grows with `k`.
 
 ## Migration / Rollout
 
-v0.2 ships adapter modules behind an ML extra and at least one reference wrapper. The v0.1 `KnnCorrector` remains the default baseline. Adapter checkpoints include config, schema version, base fingerprint, and training report link.
+v0.2 ships adapter modules behind an ML extra and at least one reference wrapper. The v0.1 `KnnCorrector` remains the default baseline. Adapter checkpoints include config, schema version, base fingerprint, training report link, package version, and a relative safetensors-compatible weights file reference.
 The in-context baseline remains a comparison path for wrappers that can append
 retrieved value tokens without modifying predictor weights.
 

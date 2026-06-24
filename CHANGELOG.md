@@ -23,6 +23,8 @@ changes may occur before the first stable release.
 - Frozen-base adapter training harness with fixture-scale evaluation reports.
 - `InContextConditioner` retrieved-token baseline for compatible predictor
   wrappers.
+- Adapter checkpoint metadata sidecar validation and fingerprint-checked
+  checkpoint loading.
 
 ### Security
 

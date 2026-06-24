@@ -111,6 +111,7 @@ class Summarizer(Protocol):
 
 from mneme.index import FaissHnswIndex, FlatIndex, Index, planned_search_k, search_index
 from mneme.condition import CondCtx, Conditioner, InContextConditioner, KnnCorrector
+from mneme.adapter import AdapterCheckpointMetadata, load_adapter_checkpoint
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -186,6 +187,28 @@ class AdapterTrainingBatch:
     retrieved_values: object
     target_hidden: object
     attention_mask: object | None = None
+
+@dataclass(frozen=True)
+class AdapterCheckpointMetadata:
+    adapter_kind: str
+    adapter_config: Mapping[str, Any]
+    base_fingerprint: EncoderFingerprint
+    training_report_uri: str
+    weights_file: str = "adapter.safetensors"
+    package_version: str = mneme.__version__
+    schema_version: str = "mneme.adapter_checkpoint.v1"
+
+    def to_json(self) -> dict[str, object]: ...
+
+    @classmethod
+    def from_json(cls, value: Mapping[str, object]) -> AdapterCheckpointMetadata: ...
+
+def load_adapter_checkpoint(
+    path: Path | str,
+    *,
+    expected_base_fingerprint: EncoderFingerprint | None = None,
+    require_weights: bool = True,
+) -> AdapterCheckpoint: ...
 ```
 
 Minimum custom adapter example:
@@ -294,6 +317,15 @@ base parameters before training, runs the base model under `torch.no_grad()`,
 steps only adapter optimizer parameters, asserts base gradients remain absent
 after backward, and returns `mneme.eval_report.v1` with split counts, seed,
 loss metrics, caveats, and a `base_gradients_absent` metric.
+
+`AdapterCheckpointMetadata` is the JSON sidecar schema for adapter artifacts. It
+records `schema_version`, `adapter_kind`, JSON-compatible `adapter_config`,
+`base_fingerprint`, `training_report_uri`, `weights_file`, and
+`package_version`. `load_adapter_checkpoint` accepts either a checkpoint
+directory containing `adapter.json` or a metadata JSON path, validates the
+sidecar, rejects absolute or parent-traversing weight paths, checks that the
+weight file exists by default, and raises `FingerprintMismatchError` when
+`expected_base_fingerprint` does not match the sidecar.
 
 ## Constructors
 
