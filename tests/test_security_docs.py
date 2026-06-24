@@ -9,6 +9,7 @@ def test_security_docs_state_confidentiality_boundary_and_redaction_link() -> No
     assert "does not provide confidentiality by default" in security
     assert "persisted stores are untrusted" in security
     assert "tests/test_observability_events.py" in security
+    assert "rfc-0012-security-boundaries-and-privacy-tiers.md" in security
     assert "redacted" in security
 
 

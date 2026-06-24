@@ -5,7 +5,8 @@
 Mneme v0.x provides integrity and provenance controls for episodic memory. It
 does not provide confidentiality by default. Treat readable store directories,
 value logs, manifests, fixture reports, and run outputs as sensitive whenever
-they contain real environment data.
+they contain real environment data. This boundary follows
+[RFC-0012](docs/rfcs/RFC-0012-security-boundaries-and-privacy-tiers.md).
 
 Persisted stores are untrusted until Mneme validates the manifest schema, store
 paths, value-log checksums, content ids, encoder fingerprints, and typed payload
