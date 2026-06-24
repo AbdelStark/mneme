@@ -213,6 +213,9 @@ index, transaction, and commitment-reservation fields.
 `LocalStore.put` and `put_batch` append length-prefixed, checksummed value
 records under a transaction intent/commit file, update the manifest, and rebuild
 queryability from the value log on restart.
+`LocalStore.recovery_events` is a tuple of schema-versioned
+`StoreRecoveryEvent` objects produced by `open_store` when it completes or rolls
+back pending transactions.
 `verify_store` returns a schema-versioned JSON-ready report for manifest,
 value-log checksum/content-id/fingerprint, and index-reference validation; with
 `raise_on_error=True`, failed reports raise `StoreCorruptionError`.

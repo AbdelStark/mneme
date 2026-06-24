@@ -35,6 +35,14 @@ class EvaluationError(MnemeError): ...
 `put`
 : Validates schema, key shape, fingerprint, content id, and metadata. Raises `ValidationError` for invalid input, `TransactionError` for interrupted writes, and `StoreCorruptionError` for manifest/log mismatch.
 
+`open_store`
+: Recovers pending local write transactions before accepting reads or writes.
+A complete value-log append is committed into the manifest and in-memory index.
+An incomplete append is truncated to the previous manifest offset and marked
+rolled back. Malformed transaction files raise `StoreCorruptionError`. Recovery
+actions are exposed as structured `mneme.store.recover` events on the returned
+store.
+
 `query`
 : Validates query vector, metric, k, filters, fingerprint, and receipt support. Empty stores return an empty `Retrieval` unless the caller set a strict mode; invalid query parameters raise `QueryError`.
 
