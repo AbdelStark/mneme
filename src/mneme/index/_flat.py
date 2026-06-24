@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -24,7 +25,7 @@ class FlatIndex:
         self._validate_or_set_dim(vector)
         self._keys[cid] = np.ascontiguousarray(vector, dtype=np.float32)
 
-    def add_batch(self, items: list[tuple[Cid, SummaryVec]]) -> None:
+    def add_batch(self, items: Sequence[tuple[Cid, SummaryVec]]) -> None:
         for cid, key in items:
             self.add(cid, key)
 
