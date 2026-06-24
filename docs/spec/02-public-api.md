@@ -109,7 +109,7 @@ class Summarizer(Protocol):
     def id(self) -> str: ...
     def summarize(self, z: Latent) -> SummaryVec: ...
 
-from mneme.index import FlatIndex, Index, planned_search_k, search_index
+from mneme.index import FaissHnswIndex, FlatIndex, Index, planned_search_k, search_index
 from mneme.condition import CondCtx, Conditioner, KnnCorrector
 
 class Index(Protocol):
@@ -199,6 +199,11 @@ The helper binds the summarizer id and summarizer config into
 `FlatIndex` is the required exact reference backend. It performs NumPy flat
 search, returns stable results by breaking equal-distance ties with content-id
 bytes, and does not require optional index extras.
+`FaissHnswIndex` is the optional v0.1 approximate backend behind the `index`
+extra. Its manifest backend name is `faiss_hnsw`; missing FAISS support raises
+`OptionalDependencyError(extra="index", package="faiss-cpu")`. The backend
+returns portable Mneme distances: L2 distance, cosine distance, and negative
+inner-product score, matching the `Index` protocol.
 
 `search_index` applies shared `QuerySpec` semantics around an index backend:
 fail-closed fingerprint checks, deterministic over-fetch before store filters,

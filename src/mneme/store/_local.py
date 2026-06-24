@@ -24,7 +24,7 @@ from mneme.core import (
     build_item,
     content_id,
 )
-from mneme.index import FlatIndex, search_index
+from mneme.index import Index, create_index_backend, search_index
 from mneme.observability import (
     ObservabilityConfig,
     content_id_prefix,
@@ -112,7 +112,7 @@ class LocalStore:
 
     path: Path
     manifest: StoreManifest
-    index: FlatIndex
+    index: Index
     _items: dict[Cid, MemoryItem]
     recovery_events: tuple[StoreRecoveryEvent, ...] = ()
     observability: ObservabilityConfig | None = None
@@ -359,6 +359,11 @@ def init_store(
     manifest_path = root / _MANIFEST_FILE
     if manifest_path.exists() and not exist_ok:
         raise StoreError(f"store manifest already exists at {manifest_path}")
+    create_index_backend(
+        index_backend,
+        index_params or {},
+        observability=observability,
+    )
 
     root.mkdir(parents=True, exist_ok=True)
     for dirname in _LAYOUT_DIRS:
@@ -448,7 +453,11 @@ def _store_from_manifest(
     recovery_events: tuple[StoreRecoveryEvent, ...] = (),
     observability: ObservabilityConfig | None = None,
 ) -> LocalStore:
-    index = FlatIndex(observability=observability)
+    index = create_index_backend(
+        manifest.index.backend,
+        manifest.index.params,
+        observability=observability,
+    )
     items: dict[Cid, MemoryItem] = {}
     for value_log in manifest.value_logs:
         log_path = root / value_log.path
