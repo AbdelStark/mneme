@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any, Literal, Mapping, Protocol, Sequence
 from uuid import UUID
 
 import numpy as np
@@ -110,7 +110,7 @@ class Summarizer(Protocol):
     def summarize(self, z: Latent) -> SummaryVec: ...
 
 from mneme.index import FlatIndex, Index, planned_search_k, search_index
-from mneme.condition import CondCtx, Conditioner
+from mneme.condition import CondCtx, Conditioner, KnnCorrector
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -136,6 +136,16 @@ class CondCtx:
     schema_version: str = "mneme.cond_ctx.v1"
 
 class Conditioner(Protocol):
+    def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
+
+@dataclass(frozen=True)
+class KnnCorrector:
+    tau: float = 0.1
+    lambda_max: float = 0.5
+    alpha: float = 10.0
+    delta0: float = 0.2
+    mode: Literal["delta", "absolute"] = "delta"
+
     def condition(self, parametric: Latent, retrieval: Retrieval, ctx: CondCtx) -> Latent: ...
 ```
 
@@ -203,6 +213,10 @@ does not own or require gradients through a base model. Conditioners must return
 the parametric latent unchanged for empty retrievals unless they document a
 stricter typed failure mode. `CondCtx` carries the current latent, optional goal
 latent, optional step, and JSON-safe metadata for one conditioning call.
+`KnnCorrector` is the v0.1 training-free reference conditioner. It computes a
+distance-softmax nonparametric estimate from retrieved `Transition` values,
+supports `delta` and `absolute` modes, and gates the memory estimate toward zero
+as nearest-neighbor distance grows.
 
 ## Constructors
 
