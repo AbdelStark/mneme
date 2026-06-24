@@ -112,3 +112,6 @@ must state these controls before it is presented as supported:
   verify membership today; any remote/shared-store example that claims signed
   provenance must add and test a signing backend first.
 - v1.0 confidentiality requirement: built-in encryption at rest is not required for v1.0. v1.0 requires clear deployment guidance, redaction defaults, validation, and receipt integrity. Built-in encrypted stores require a separate post-v1.0 RFC because key management is a distinct design problem.
+- Final v1.0 security review: the release-facing checklist is
+  [SECURITY_REVIEW.md](../release/SECURITY_REVIEW.md). It records the evidence
+  matrix and defers built-in encryption at rest past v1.0 with rationale.
