@@ -35,7 +35,7 @@ dependencies = [
 index = ["faiss-cpu>=1.8"]
 ml = ["torch>=2.3"]
 receipts = ["cryptography>=42"]
-remote = []
+remote = ["uvicorn>=0.30"]
 docs = ["mkdocs>=1.6", "mkdocs-material>=9.5"]
 dev = ["build>=1.2", "mypy>=1.10", "pytest>=8.2", "ruff>=0.5"]
 

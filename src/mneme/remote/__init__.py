@@ -1,5 +1,14 @@
-"""Transport-independent remote store message schemas."""
+"""Remote store message schemas and HTTP JSON adapter."""
 
+from mneme.remote._http import (
+    HttpJsonRequester,
+    HttpJsonResponse,
+    MemoryStoreASGIApp,
+    RemoteHttpClient,
+    RemoteHttpConfig,
+    RemoteStoreBackend,
+    serve_asgi_app,
+)
 from mneme.remote._messages import (
     ERROR_SCHEMA,
     PROVE_REQUEST_SCHEMA,
@@ -30,6 +39,9 @@ from mneme.remote._validation import raise_for_remote_error, validate_query_resp
 
 __all__ = [
     "ERROR_SCHEMA",
+    "HttpJsonRequester",
+    "HttpJsonResponse",
+    "MemoryStoreASGIApp",
     "PROVE_REQUEST_SCHEMA",
     "PROVE_RESPONSE_SCHEMA",
     "PUT_REQUEST_SCHEMA",
@@ -49,10 +61,14 @@ __all__ = [
     "QueryRequest",
     "QueryResponse",
     "RemoteArray",
+    "RemoteHttpClient",
+    "RemoteHttpConfig",
+    "RemoteStoreBackend",
     "RootRequest",
     "RootResponse",
     "StatsRequest",
     "StatsResponse",
     "raise_for_remote_error",
+    "serve_asgi_app",
     "validate_query_response",
 ]
