@@ -113,6 +113,7 @@ from mneme.index import FaissHnswIndex, FlatIndex, Index, planned_search_k, sear
 from mneme.condition import CondCtx, Conditioner, InContextConditioner, KnnCorrector
 from mneme.adapter import AdapterCheckpointMetadata, load_adapter_checkpoint
 from mneme.eval import BenchmarkResult, BenchmarkRunner, BenchmarkSpec, DryRunBenchmarkRunner
+from mneme.receipts import CommitmentState, InclusionProof, verify_inclusion_proof
 
 class Index(Protocol):
     def add(self, cid: Cid, key: SummaryVec) -> None: ...
@@ -128,6 +129,15 @@ class MemoryStore(Protocol):
     def prove(self, ids: Sequence[Cid]) -> list[InclusionProof]: ...
     def root(self) -> MerkleRoot: ...
     def stats(self) -> StoreStats: ...
+
+@dataclass(frozen=True)
+class CommitmentState:
+    scheme: Literal["mmr-v1"]
+    root: bytes
+    item_count: int
+    peaks: tuple[bytes, ...]
+    leaf_ids: tuple[Cid, ...]
+    schema_version: str = "mneme.commitment.v1"
 
 @dataclass(frozen=True)
 class CondCtx:
@@ -386,6 +396,12 @@ value-log checksum/content-id/fingerprint, and index-reference validation; with
 `rebuild_index` rewrites non-destructive index metadata from value logs only,
 including `index/backend.json` and a `mneme.flat_index_snapshot.v1`
 `index/data.json` snapshot. It never deletes value logs.
+`LocalStore.commit()` rebuilds an MMR commitment from value-log append order,
+persists `receipts/commitment-mmr-v1.json`, updates manifest commitment fields,
+and returns the root bytes. `LocalStore.prove(ids)` returns inclusion proofs for
+committed content ids and raises `ReceiptVerificationError` for unknown ids.
+`verify_inclusion_proof` verifies a content id and proof against a root; it does
+not prove search optimality or build a full retrieval receipt.
 
 ## Command-Line Surface
 
