@@ -149,6 +149,10 @@ v0.4 adds remote message models and a conformance suite. The first transport ada
 - Local-vs-remote conformance tests for put, query, prove, root, and stats.
 - Remote error mapping tests.
 - Receipt verification tests over remote query responses.
+- `mneme eval remote-conformance --out reports/remote-conformance.json`
+  writes a fixture-scale `mneme.eval_report.v1` with transport metadata,
+  package version, deterministic local-vs-remote scenario checks, and typed
+  remote error-case coverage.
 
 ## Resolved Bootstrap Decisions
 

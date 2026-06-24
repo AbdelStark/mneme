@@ -283,6 +283,31 @@ def test_eval_receipts_cli_writes_and_prints_valid_report(tmp_path: Path) -> Non
     assert printed.metrics["receipt_proof_count_mean"] == 2.0
 
 
+def test_eval_remote_conformance_cli_writes_and_prints_valid_report(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "reports" / "remote-conformance.json"
+
+    result = _run_cli(
+        "eval",
+        "remote-conformance",
+        "--out",
+        output,
+        "--seed",
+        "9",
+    )
+
+    assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr
+    printed = validate_report_json(_stdout_json(result))
+    written = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
+    assert printed == written
+    assert printed.seed == 9
+    assert printed.artifacts["report_kind"] == "remote-conformance"
+    assert printed.artifacts["transport"] == "http-json-asgi"
+    assert printed.metrics["scenario_count"] == printed.metrics["passed_scenario_count"]
+    assert printed.metrics["error_case_count"] == 2
+
+
 def test_eval_benchmark_dry_run_cli_writes_valid_external_report(
     tmp_path: Path,
 ) -> None:

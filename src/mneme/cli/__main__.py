@@ -35,6 +35,7 @@ from mneme.eval import (
     run_fixture_evaluation,
     run_profile_evaluation,
     run_receipt_profile_evaluation,
+    run_remote_conformance_evaluation,
     write_replay_report_json,
     write_report_json,
 )
@@ -192,6 +193,17 @@ def _build_parser() -> argparse.ArgumentParser:
     replay_parser.add_argument("--out", required=True, type=Path)
     replay_parser.add_argument("--atol", default=1e-6, type=float)
     replay_parser.set_defaults(command="eval replay", handler=_handle_eval_replay)
+
+    remote_conformance_parser = eval_subparsers.add_parser(
+        "remote-conformance",
+        help="write fixture-scale local-vs-remote conformance report",
+    )
+    remote_conformance_parser.add_argument("--out", required=True, type=Path)
+    remote_conformance_parser.add_argument("--seed", default=0, type=int)
+    remote_conformance_parser.set_defaults(
+        command="eval remote-conformance",
+        handler=_handle_eval_remote_conformance,
+    )
 
     benchmark_parser = eval_subparsers.add_parser(
         "benchmark",
@@ -389,6 +401,26 @@ def _handle_eval_replay(args: argparse.Namespace) -> object:
         write_replay_report_json(report, args.out)
     except OSError as exc:
         raise EvaluationError(f"failed to write replay report: {args.out}") from exc
+    return report
+
+
+def _handle_eval_remote_conformance(args: argparse.Namespace) -> object:
+    command = (
+        "mneme",
+        "eval",
+        "remote-conformance",
+        "--out",
+        str(args.out),
+        "--seed",
+        str(args.seed),
+    )
+    report = run_remote_conformance_evaluation(seed=args.seed, command=command)
+    try:
+        write_report_json(report, args.out)
+    except OSError as exc:
+        raise EvaluationError(
+            f"failed to write remote conformance report: {args.out}"
+        ) from exc
     return report
 
 
