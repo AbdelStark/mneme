@@ -236,6 +236,8 @@ def _validate_latent(value: object, field_name: str) -> tuple[tuple[int, ...], s
     if isinstance(value, np.ndarray):
         if not np.issubdtype(value.dtype, np.number):
             raise TypeError(f"{field_name} must have a numeric dtype")
+        if not bool(np.isfinite(value).all()):
+            raise ValueError(f"{field_name} must contain only finite values")
         shape = tuple(int(dim) for dim in value.shape)
         _validate_shape(shape, field_name)
         return shape, str(value.dtype)

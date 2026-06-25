@@ -158,15 +158,17 @@ def test_non_finite_parametric_and_transition_values_raise_validation_error() ->
             CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
         )
 
-    retrieval = Retrieval(
-        items=(
-            _item(
-                np.array([float("nan"), 0.0], dtype=np.float32),
-                np.array([1.0, 0.0], dtype=np.float32),
-            ),
-        ),
-        distances=(0.0,),
+    corrupted_item = _item(
+        np.array([1.0, 0.0], dtype=np.float32),
+        np.array([1.0, 0.0], dtype=np.float32),
     )
+    object.__setattr__(
+        corrupted_item.value,
+        "delta",
+        np.array([float("nan"), 0.0], dtype=np.float32),
+    )
+    retrieval = Retrieval(items=(corrupted_item,), distances=(0.0,))
+
     with pytest.raises(ValidationError, match="transition.delta"):
         corrector.condition(
             np.array([1.0, 0.0], dtype=np.float32),

@@ -153,6 +153,8 @@ def test_transition_validation_rejects_invalid_shape_dtype_uuid_and_step() -> No
         Transition(**(valid | {"delta": np.array([[1.0]], dtype=np.float32)}))
     with pytest.raises(TypeError, match="numeric dtype"):
         Transition(**(valid | {"z_src": np.array(["bad"])}))
+    with pytest.raises(ValueError, match="z_src must contain only finite values"):
+        Transition(**(valid | {"z_src": np.array([float("nan")], dtype=np.float32)}))
     with pytest.raises(ValueError, match="t must be >= 0"):
         Transition(**(valid | {"t": -1}))
     with pytest.raises(TypeError, match="episode_id must be a UUID"):
