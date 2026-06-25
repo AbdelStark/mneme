@@ -117,6 +117,8 @@ def _decode_record(payload: bytes) -> MemoryItem:
         data = json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise StoreCorruptionError("value log record is not valid JSON") from exc
+    if not isinstance(data, Mapping):
+        raise StoreCorruptionError("value record must be an object")
     if data.get("schema_version") != VALUE_RECORD_SCHEMA:
         raise StoreCorruptionError("unsupported value record schema")
     item_data = data.get("item")
@@ -131,16 +133,19 @@ def _decode_record(payload: bytes) -> MemoryItem:
         cid = bytes.fromhex(content_id_text)
     except ValueError as exc:
         raise StoreCorruptionError("content_id must be hex bytes") from exc
-    item = MemoryItem(
-        content_id=cid,
-        key=_array_from_json(item_data.get("key")),
-        value=value,
-        meta=_require_mapping(item_data.get("meta"), "meta"),
-        encoder_fp=encoder_fp,
-        schema_version=_require_string(
-            item_data.get("schema_version"), "item schema_version"
-        ),
-    )
+    try:
+        item = MemoryItem(
+            content_id=cid,
+            key=_array_from_json(item_data.get("key")),
+            value=value,
+            meta=_require_mapping(item_data.get("meta"), "meta"),
+            encoder_fp=encoder_fp,
+            schema_version=_require_string(
+                item_data.get("schema_version"), "item schema_version"
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        raise StoreCorruptionError("invalid memory item payload") from exc
     if item.content_id != content_id(item):
         raise StoreCorruptionError("value record content_id does not match item bytes")
     return item
@@ -231,7 +236,8 @@ def _array_from_json(data: object) -> np.ndarray:
         raise StoreCorruptionError("array dtype must be numeric")
     shape_data = mapping.get("shape")
     if not isinstance(shape_data, list) or not all(
-        isinstance(dim, int) and dim >= 0 for dim in shape_data
+        isinstance(dim, int) and not isinstance(dim, bool) and dim >= 0
+        for dim in shape_data
     ):
         raise StoreCorruptionError("array shape must be a list of non-negative ints")
     try:

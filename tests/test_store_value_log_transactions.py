@@ -232,6 +232,15 @@ def test_value_log_invalid_content_id_hex_is_store_corruption(
         open_store(root)
 
 
+def test_value_log_non_object_record_is_store_corruption(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    _write_raw_value_record(root / "values" / "log-000000.mnv", ["not", "object"])
+
+    with pytest.raises(StoreCorruptionError, match="value record must be an object"):
+        open_store(root)
+
+
 def test_value_log_invalid_base64_array_data_is_store_corruption(
     tmp_path: Path,
 ) -> None:
@@ -242,6 +251,30 @@ def test_value_log_invalid_base64_array_data_is_store_corruption(
     _write_raw_value_record(root / "values" / "log-000000.mnv", record)
 
     with pytest.raises(StoreCorruptionError, match="array data must be base64"):
+        open_store(root)
+
+
+def test_value_log_boolean_array_shape_is_store_corruption(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00")
+    record["item"]["key"]["shape"] = [True, 2]
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(StoreCorruptionError, match="array shape"):
+        open_store(root)
+
+
+def test_value_log_invalid_memory_item_payload_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00")
+    record["item"]["key"] = _array_payload(np.array([[1.0, 0.0]], dtype=np.float32))
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(StoreCorruptionError, match="invalid memory item payload"):
         open_store(root)
 
 
@@ -260,7 +293,7 @@ def test_value_log_unsupported_value_kind_is_store_corruption(
         open_store(root)
 
 
-def _write_raw_value_record(path: Path, record: dict[str, object]) -> None:
+def _write_raw_value_record(path: Path, record: object) -> None:
     payload = json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
     header = len(payload).to_bytes(8, "big") + blake3(payload).digest(length=32)
     path.write_bytes(header + payload)
