@@ -114,7 +114,7 @@ def test_canonical_bytes_and_content_id_match_golden_fixture() -> None:
 def test_build_item_fills_content_id_and_content_id_field_is_excluded() -> None:
     item = _item()
     built = build_item(item.value, item.key, item.encoder_fp, item.meta)
-    poisoned = replace(built, content_id=b"not the real digest")
+    poisoned = replace(built, content_id=b"\xff" * 32)
 
     assert built.content_id == bytes.fromhex(EXPECTED_CONTENT_ID_HEX)
     assert content_id(built) == built.content_id

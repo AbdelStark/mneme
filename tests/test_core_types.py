@@ -189,6 +189,25 @@ def test_memory_item_metadata_rejects_reserved_and_non_json_values() -> None:
         )
 
 
+def test_memory_item_rejects_malformed_content_ids() -> None:
+    with pytest.raises(TypeError, match="content_id must be bytes"):
+        MemoryItem(
+            content_id="not-bytes",
+            key=_key(),
+            value=_transition(),
+            meta={},
+            encoder_fp=_fingerprint(),
+        )
+    with pytest.raises(ValueError, match="content_id must be 32 bytes"):
+        MemoryItem(
+            content_id=b"short",
+            key=_key(),
+            value=_transition(),
+            meta={},
+            encoder_fp=_fingerprint(),
+        )
+
+
 def test_retrieval_validation_rejects_length_mismatch_and_nonfinite_distance() -> None:
     item = _item()
 
