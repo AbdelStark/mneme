@@ -149,6 +149,16 @@ def test_receipt_replay_loader_rejects_nonstandard_json_constants(
         load_replay_trace_json(trace_path)
 
 
+def test_receipt_replay_loader_wraps_unreadable_trace_path(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace-dir.json"
+    trace_path.mkdir()
+
+    with pytest.raises(EvaluationError, match="replay trace could not be read"):
+        load_replay_trace_json(trace_path)
+
+
 def test_receipt_replay_loader_wraps_invalid_item_payloads(
     tmp_path: Path,
 ) -> None:

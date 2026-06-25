@@ -157,6 +157,10 @@ def load_benchmark_dataset_ref(path: str | Path) -> DatasetRef:
         raise EvaluationError(
             f"benchmark dataset file not found: {manifest_path}"
         ) from exc
+    except OSError as exc:
+        raise EvaluationError(
+            f"benchmark dataset file could not be read: {manifest_path}"
+        ) from exc
     except ValueError as exc:
         raise EvaluationError(
             f"benchmark dataset file is not valid JSON: {manifest_path}"

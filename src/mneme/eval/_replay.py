@@ -385,6 +385,8 @@ def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
         data = loads_strict_json(Path(path).read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise EvaluationError(f"replay trace not found: {path}") from exc
+    except OSError as exc:
+        raise EvaluationError(f"replay trace could not be read: {path}") from exc
     except ValueError as exc:
         raise EvaluationError("replay trace is not valid JSON") from exc
     return ReceiptReplayTrace.from_json(data)
