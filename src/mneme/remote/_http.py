@@ -179,6 +179,12 @@ class MemoryStoreASGIApp:
         *,
         bearer_token: str | None = None,
     ) -> None:
+        if bearer_token is not None and (
+            not isinstance(bearer_token, str) or not bearer_token
+        ):
+            raise ValidationError(
+                "remote HTTP bearer_token must be a non-empty string or None"
+            )
         self.store = store
         self.bearer_token = bearer_token
 

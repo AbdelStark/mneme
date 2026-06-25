@@ -163,6 +163,15 @@ def test_remote_http_bearer_token_required(tmp_path: Path) -> None:
     assert authorized.stats()["visible_record_count"] == 0
 
 
+def test_remote_http_asgi_app_validates_bearer_token(tmp_path: Path) -> None:
+    store = init_store(tmp_path / "store")
+
+    with pytest.raises(ValidationError, match="bearer_token"):
+        MemoryStoreASGIApp(store, bearer_token="")
+    with pytest.raises(ValidationError, match="bearer_token"):
+        MemoryStoreASGIApp(store, bearer_token=object())  # type: ignore[arg-type]
+
+
 def test_remote_http_malformed_server_response_fails_closed() -> None:
     def requester(
         method: str,
