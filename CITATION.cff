@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use Mneme in research or engineering reports, cite the project."
+title: "Mneme: Episodic Memory Infrastructure for Latent World Models"
+version: 0.1.0
+date-released: 2026-06-25
+authors:
+  - family-names: Bakhta
+    given-names: Abdelhamid
+repository-code: "https://github.com/AbdelStark/mneme"
+url: "https://abdelstark.github.io/mneme/"
+license: Apache-2.0
+keywords:
+  - episodic-memory
+  - latent-world-models
+  - retrieval
+  - python

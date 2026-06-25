@@ -28,12 +28,15 @@ REQUIRED_PROJECT_URLS: Final = (
 )
 REQUIRED_RUNTIME_DEPENDENCIES: Final = ("blake3>=0.4", "numpy>=1.26")
 REQUIRED_SDIST_FILES: Final = (
+    "CITATION.cff",
     "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "mkdocs.yml",
     "README.md",
     "SECURITY.md",
+    "SUPPORT.md",
     "docs/index.md",
     "docs/release/RELEASE_CHECKLIST.md",
     "docs/spec/09-release-and-versioning.md",

@@ -42,6 +42,9 @@ def test_uv_lock_and_docs_site_are_source_artifacts() -> None:
     sdist = pyproject["tool"]["hatch"]["build"]["targets"]["sdist"]
 
     assert Path("uv.lock").exists()
+    assert "/CITATION.cff" in sdist["include"]
+    assert "/CODE_OF_CONDUCT.md" in sdist["include"]
+    assert "/SUPPORT.md" in sdist["include"]
     assert "/uv.lock" in sdist["include"]
     assert "/mkdocs.yml" in sdist["include"]
     assert "/docs" in sdist["include"]

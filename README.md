@@ -208,3 +208,9 @@ Read [SECURITY.md](SECURITY.md) and the
 See [CONTRIBUTING.md](CONTRIBUTING.md). Public docs, examples, and reports must
 stay within the evidence produced by tests, fixture reports, and linked release
 artifacts.
+
+Project governance and citation metadata:
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Support](SUPPORT.md)
+- [Citation](CITATION.cff)

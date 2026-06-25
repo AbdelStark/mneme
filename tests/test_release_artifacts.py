@@ -112,12 +112,15 @@ def _write_fake_dist(tmp_path: Path, *, version: str) -> Path:
     with tarfile.open(sdist, "w:gz") as archive:
         _add_tar_text(archive, f"{root}/PKG-INFO", metadata)
         for name in (
+            "CITATION.cff",
             "CHANGELOG.md",
+            "CODE_OF_CONDUCT.md",
             "CONTRIBUTING.md",
             "LICENSE",
             "mkdocs.yml",
             "README.md",
             "SECURITY.md",
+            "SUPPORT.md",
             "docs/index.md",
             "docs/release/RELEASE_CHECKLIST.md",
             "docs/spec/09-release-and-versioning.md",

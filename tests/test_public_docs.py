@@ -26,6 +26,25 @@ def test_readme_includes_install_usage_limitations_and_spec_links() -> None:
     assert "[Release checklist](docs/release/RELEASE_CHECKLIST.md)" in readme
     assert "[Examples](examples/README.md)" in readme
     assert "[CONTRIBUTING.md](CONTRIBUTING.md)" in readme
+    assert "[Code of Conduct](CODE_OF_CONDUCT.md)" in readme
+    assert "[Support](SUPPORT.md)" in readme
+    assert "[Citation](CITATION.cff)" in readme
+
+
+def test_governance_docs_are_present_and_claim_bounded() -> None:
+    conduct = Path("CODE_OF_CONDUCT.md").read_text(encoding="utf-8")
+    support = Path("SUPPORT.md").read_text(encoding="utf-8")
+    citation = Path("CITATION.cff").read_text(encoding="utf-8")
+
+    assert "Expected Behavior" in conduct
+    assert "Unacceptable Behavior" in conduct
+    assert "private datasets" in conduct
+    assert "benchmark or production evidence" in conduct
+    assert "Use Issues For" in support
+    assert "Use Security Reporting For" in support
+    assert "does not provide private deployment consulting" in support
+    assert "cff-version: 1.2.0" in citation
+    assert "version: 0.1.0" in citation
 
 
 def test_contributing_lists_local_gates() -> None:
