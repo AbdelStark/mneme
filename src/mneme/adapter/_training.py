@@ -65,95 +65,101 @@ def train_frozen_base_adapter(
         raise EvaluationError("seed must be an integer")
     split_batches = _require_splits(batches)
     _manual_seed(torch, seed)
+    base_training = _training_mode(base_model)
+    adapter_training = _training_mode(adapter)
 
-    base_parameters = _parameters(base_model, "base_model")
-    adapter_parameters = _parameters(adapter, "adapter")
-    if not adapter_parameters:
-        raise EvaluationError("adapter must expose at least one parameter")
-    _freeze_base_parameters(base_parameters)
-    optimizer_obj = (
-        optimizer
-        if optimizer is not None
-        else torch.optim.AdamW(adapter_parameters, lr=learning_rate)
-    )
-    loss_callable = loss_fn if loss_fn is not None else torch.nn.MSELoss()
-
-    train_losses: list[float] = []
-    _call_optional(base_model, "eval")
-    _call_optional(adapter, "train")
-    for _epoch in range(epochs):
-        for batch in split_batches["train"]:
-            _call_required(optimizer_obj, "zero_grad")
-            with torch.no_grad():
-                predictor_hidden = _call_module(base_model, batch.predictor_input)
-            prediction = _call_module(
-                adapter,
-                predictor_hidden,
-                batch.retrieved_values,
-                batch.attention_mask,
-            )
-            loss = _call_module(loss_callable, prediction, batch.target_hidden)
-            _call_required(loss, "backward")
-            _assert_no_base_gradients(base_parameters)
-            _call_required(optimizer_obj, "step")
-            train_losses.append(_loss_to_float(loss))
-
-    _assert_no_base_gradients(base_parameters)
-    split_losses = {
-        split: _evaluate_split(
-            torch,
-            base_model=base_model,
-            adapter=adapter,
-            batches=split_batches[split],
-            loss_fn=loss_callable,
+    try:
+        base_parameters = _parameters(base_model, "base_model")
+        adapter_parameters = _parameters(adapter, "adapter")
+        if not adapter_parameters:
+            raise EvaluationError("adapter must expose at least one parameter")
+        _freeze_base_parameters(base_parameters)
+        optimizer_obj = (
+            optimizer
+            if optimizer is not None
+            else torch.optim.AdamW(adapter_parameters, lr=learning_rate)
         )
-        for split in _REQUIRED_SPLITS
-    }
-    metrics: dict[str, EvalMetric] = {
-        "epoch_count": epochs,
-        "train_batch_count": len(split_batches["train"]),
-        "calibration_batch_count": len(split_batches["calibration"]),
-        "validation_batch_count": len(split_batches["validation"]),
-        "optimizer_step_count": epochs * len(split_batches["train"]),
-        "adapter_parameter_count": len(adapter_parameters),
-        "base_parameter_count": len(base_parameters),
-        "base_gradients_absent": 1,
-        "last_train_loss": train_losses[-1],
-        "train_loss": split_losses["train"],
-        "calibration_loss": split_losses["calibration"],
-        "validation_loss": split_losses["validation"],
-    }
-    return EvalReport(
-        report_id="mneme-adapter-frozen-base-training-v1",
-        command=tuple(command),
-        package_version=__version__,
-        git_commit=_detect_git_commit() if git_commit is None else git_commit,
-        created_at=_utc_now() if created_at is None else created_at,
-        platform=_platform_summary(),
-        seed=seed,
-        dataset=DatasetRef(
-            dataset_id="adapter-training-fixture",
-            kind="fixture",
-            split="train-calibration-validation",
-            version="v1",
-            metadata={
-                "fixture_scale": True,
-                "synthetic": True,
-                "train_batch_count": len(split_batches["train"]),
-                "calibration_batch_count": len(split_batches["calibration"]),
-                "validation_batch_count": len(split_batches["validation"]),
+        loss_callable = loss_fn if loss_fn is not None else torch.nn.MSELoss()
+
+        train_losses: list[float] = []
+        _call_optional(base_model, "eval")
+        _call_optional(adapter, "train")
+        for _epoch in range(epochs):
+            for batch in split_batches["train"]:
+                _call_required(optimizer_obj, "zero_grad")
+                with torch.no_grad():
+                    predictor_hidden = _call_module(base_model, batch.predictor_input)
+                prediction = _call_module(
+                    adapter,
+                    predictor_hidden,
+                    batch.retrieved_values,
+                    batch.attention_mask,
+                )
+                loss = _call_module(loss_callable, prediction, batch.target_hidden)
+                _call_required(loss, "backward")
+                _assert_no_base_gradients(base_parameters)
+                _call_required(optimizer_obj, "step")
+                train_losses.append(_loss_to_float(loss))
+
+        _assert_no_base_gradients(base_parameters)
+        split_losses = {
+            split: _evaluate_split(
+                torch,
+                base_model=base_model,
+                adapter=adapter,
+                batches=split_batches[split],
+                loss_fn=loss_callable,
+            )
+            for split in _REQUIRED_SPLITS
+        }
+        metrics: dict[str, EvalMetric] = {
+            "epoch_count": epochs,
+            "train_batch_count": len(split_batches["train"]),
+            "calibration_batch_count": len(split_batches["calibration"]),
+            "validation_batch_count": len(split_batches["validation"]),
+            "optimizer_step_count": epochs * len(split_batches["train"]),
+            "adapter_parameter_count": len(adapter_parameters),
+            "base_parameter_count": len(base_parameters),
+            "base_gradients_absent": 1,
+            "last_train_loss": train_losses[-1],
+            "train_loss": split_losses["train"],
+            "calibration_loss": split_losses["calibration"],
+            "validation_loss": split_losses["validation"],
+        }
+        return EvalReport(
+            report_id="mneme-adapter-frozen-base-training-v1",
+            command=tuple(command),
+            package_version=__version__,
+            git_commit=_detect_git_commit() if git_commit is None else git_commit,
+            created_at=_utc_now() if created_at is None else created_at,
+            platform=_platform_summary(),
+            seed=seed,
+            dataset=DatasetRef(
+                dataset_id="adapter-training-fixture",
+                kind="fixture",
+                split="train-calibration-validation",
+                version="v1",
+                metadata={
+                    "fixture_scale": True,
+                    "synthetic": True,
+                    "train_batch_count": len(split_batches["train"]),
+                    "calibration_batch_count": len(split_batches["calibration"]),
+                    "validation_batch_count": len(split_batches["validation"]),
+                },
+            ),
+            metrics=metrics,
+            artifacts={
+                "report_kind": "adapter-training-fixture",
+                "base_model": type(base_model).__name__,
+                "adapter": type(adapter).__name__,
             },
-        ),
-        metrics=metrics,
-        artifacts={
-            "report_kind": "adapter-training-fixture",
-            "base_model": type(base_model).__name__,
-            "adapter": type(adapter).__name__,
-        },
-        caveats=(_TRAINING_CAVEAT,),
-        passed=metrics["base_gradients_absent"] == 1
-        and math.isfinite(float(metrics["validation_loss"])),
-    )
+            caveats=(_TRAINING_CAVEAT,),
+            passed=metrics["base_gradients_absent"] == 1
+            and math.isfinite(float(metrics["validation_loss"])),
+        )
+    finally:
+        _restore_training_mode(base_model, base_training)
+        _restore_training_mode(adapter, adapter_training)
 
 
 def _torch() -> Any:
@@ -283,13 +289,31 @@ def _call_required(target: object, method_name: str) -> Any:
     return method()
 
 
-def _call_optional(target: object, method_name: str) -> None:
+def _call_optional(target: object, method_name: str) -> bool:
     try:
         method = getattr(cast(Any, target), method_name)
     except AttributeError:
-        return
+        return False
     if callable(method):
         method()
+        return True
+    return False
+
+
+def _training_mode(target: object) -> bool | None:
+    mode = getattr(cast(Any, target), "training", None)
+    return mode if isinstance(mode, bool) else None
+
+
+def _restore_training_mode(target: object, training: bool | None) -> None:
+    if training is None:
+        return
+    if _call_optional(target, "train" if training else "eval"):
+        return
+    try:
+        cast(Any, target).training = training
+    except (AttributeError, TypeError):
+        return
 
 
 def _has_callable(target: object, method_name: str) -> bool:

@@ -173,6 +173,8 @@ def test_frozen_base_training_report_records_splits_and_metrics(
     decoded = validate_report_json(report.to_json())
 
     assert decoded == report
+    assert base.training is True
+    assert adapter.training is False
     assert base.parameter.requires_grad is False
     assert base.parameter.grad is None
     assert FakeAdamW.instances[0].parameters == adapter.parameters()
@@ -209,6 +211,31 @@ def test_frozen_base_training_fails_when_base_receives_gradient(
                 leak_base_gradient=True,
             ),
         )
+
+    assert base.training is True
+    assert adapter.training is False
+
+
+def test_frozen_base_training_preserves_initial_adapter_training_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_torch(monkeypatch)
+    base = FakeBaseModel()
+    adapter = FakeAdapter()
+    adapter.train()
+
+    train_frozen_base_adapter(
+        base_model=base,
+        adapter=adapter,
+        batches=_batches(),
+        loss_fn=FakeLossFn(
+            adapter_parameters=adapter.parameters(),
+            base_parameters=base.parameters(),
+        ),
+    )
+
+    assert base.training is True
+    assert adapter.training is True
 
 
 def test_frozen_base_training_requires_all_splits(
