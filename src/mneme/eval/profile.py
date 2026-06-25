@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import NoReturn, TextIO
 
 from mneme.core import Metric
-from mneme.eval._entrypoints import write_report_for_entrypoint
+from mneme.eval._entrypoints import run_eval_entrypoint, write_report_for_entrypoint
 from mneme.eval._profile import run_profile_evaluation
 from mneme.store import open_store
 
@@ -16,6 +16,10 @@ from mneme.store import open_store
 def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     """Write a local recall, latency, and footprint profile report."""
 
+    return run_eval_entrypoint(_run, argv, stdout=stdout)
+
+
+def _run(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     parser = argparse.ArgumentParser(prog="mneme eval profile")
     parser.add_argument("--store", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)

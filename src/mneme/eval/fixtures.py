@@ -7,13 +7,17 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import NoReturn, TextIO
 
-from mneme.eval._entrypoints import write_report_for_entrypoint
+from mneme.eval._entrypoints import run_eval_entrypoint, write_report_for_entrypoint
 from mneme.eval._fixtures import run_fixture_evaluation
 
 
 def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     """Write the deterministic fixture evaluation report."""
 
+    return run_eval_entrypoint(_run, argv, stdout=stdout)
+
+
+def _run(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     parser = argparse.ArgumentParser(prog="mneme eval fixtures")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--seed", default=0, type=int)

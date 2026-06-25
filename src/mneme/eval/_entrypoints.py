@@ -3,11 +3,41 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TextIO
+from typing import Protocol, TextIO
 
-from mneme.core import CliExitCode, EvaluationError
+from mneme.core import CliExitCode, EvaluationError, MnemeError, cli_exit_code
 from mneme.eval._reports import EvalReport, write_report_json
+
+
+class EvalEntrypoint(Protocol):
+    """Stream-injectable eval module entrypoint implementation."""
+
+    def __call__(
+        self,
+        argv: Sequence[str] | None,
+        *,
+        stdout: TextIO | None = None,
+    ) -> int: ...
+
+
+def run_eval_entrypoint(
+    handler: EvalEntrypoint,
+    argv: Sequence[str] | None = None,
+    *,
+    stdout: TextIO | None = None,
+) -> int:
+    """Run an eval module entrypoint with stable CLI-style error handling."""
+
+    try:
+        return handler(argv, stdout=stdout)
+    except MnemeError as exc:
+        _print_entrypoint_error(exc)
+        return cli_exit_code(exc)
+    except Exception as exc:
+        _print_entrypoint_error(exc)
+        return int(CliExitCode.INTERNAL)
 
 
 def write_report_for_entrypoint(
@@ -30,4 +60,8 @@ def write_report_for_entrypoint(
     return int(CliExitCode.SUCCESS)
 
 
-__all__ = ["write_report_for_entrypoint"]
+def _print_entrypoint_error(error: BaseException) -> None:
+    print(f"{type(error).__name__}: {error}", file=sys.stderr)
+
+
+__all__ = ["run_eval_entrypoint", "write_report_for_entrypoint"]

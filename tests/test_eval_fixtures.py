@@ -5,6 +5,7 @@ from pathlib import Path
 
 from _entrypoint_runner import run_entrypoint
 
+from mneme.core import CliExitCode
 from mneme.eval import run_fixture_evaluation, validate_report_json
 from mneme.eval.fixtures import main as fixtures_main
 
@@ -72,3 +73,19 @@ def test_fixture_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     assert report.seed == 42
     assert report.command[:4] == ("mneme", "eval", "fixtures", "--out")
     assert report.passed is True
+
+
+def test_fixture_eval_module_reports_typed_write_error(tmp_path: Path) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+
+    completed = run_entrypoint(
+        fixtures_main,
+        "--out",
+        blocked_parent / "fixtures.json",
+    )
+
+    assert completed.returncode == int(CliExitCode.INTERNAL)
+    assert completed.stdout == ""
+    assert "EvaluationError: failed to write fixture report" in completed.stderr
+    assert "Traceback" not in completed.stderr
