@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import math
 import urllib.error
 import urllib.request
 from collections.abc import Awaitable, Callable, Mapping, Sequence
@@ -58,10 +59,22 @@ class RemoteHttpConfig:
     timeout_seconds: float = 10.0
 
     def __post_init__(self) -> None:
-        if not self.base_url:
+        if not isinstance(self.base_url, str) or not self.base_url:
             raise ValidationError("remote HTTP base_url must be non-empty")
-        if self.timeout_seconds <= 0:
+        if self.bearer_token is not None and (
+            not isinstance(self.bearer_token, str) or not self.bearer_token
+        ):
+            raise ValidationError(
+                "remote HTTP bearer_token must be a non-empty string or None"
+            )
+        if (
+            isinstance(self.timeout_seconds, bool)
+            or not isinstance(self.timeout_seconds, int | float)
+            or not math.isfinite(float(self.timeout_seconds))
+            or self.timeout_seconds <= 0.0
+        ):
             raise ValidationError("remote HTTP timeout_seconds must be positive")
+        object.__setattr__(self, "timeout_seconds", float(self.timeout_seconds))
 
 
 @dataclass(frozen=True)

@@ -66,6 +66,37 @@ def test_remote_http_client_asgi_smoke_put_query_root_stats(tmp_path: Path) -> N
     assert retrieval.receipt is not None
 
 
+def test_remote_http_config_normalizes_and_validates_inputs() -> None:
+    config = RemoteHttpConfig(
+        "http://testserver",
+        bearer_token="secret",
+        timeout_seconds=5,
+    )
+
+    assert config.timeout_seconds == 5.0
+
+    invalid_cases = [
+        ({"base_url": ""}, "base_url"),
+        ({"base_url": object()}, "base_url"),
+        ({"base_url": "http://testserver", "bearer_token": ""}, "bearer_token"),
+        (
+            {"base_url": "http://testserver", "bearer_token": object()},
+            "bearer_token",
+        ),
+        ({"base_url": "http://testserver", "timeout_seconds": True}, "timeout"),
+        ({"base_url": "http://testserver", "timeout_seconds": "fast"}, "timeout"),
+        ({"base_url": "http://testserver", "timeout_seconds": 0}, "timeout"),
+        (
+            {"base_url": "http://testserver", "timeout_seconds": float("nan")},
+            "timeout",
+        ),
+    ]
+
+    for kwargs, match in invalid_cases:
+        with pytest.raises(ValidationError, match=match):
+            RemoteHttpConfig(**kwargs)
+
+
 def test_remote_http_client_validation_is_always_applied() -> None:
     item = _built_item(1.0, fingerprint=_fingerprint("right"))
     response = QueryResponse(Retrieval(items=(item,), distances=(0.0,))).to_json()
