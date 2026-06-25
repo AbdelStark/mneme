@@ -28,9 +28,11 @@ from mneme.core import (
     content_id,
 )
 from mneme.remote import (
+    QUERY_REQUEST_SCHEMA,
     HttpJsonResponse,
     MemoryStoreASGIApp,
     QueryResponse,
+    RemoteArray,
     RemoteHttpClient,
     RemoteHttpConfig,
     serve_asgi_app,
@@ -225,6 +227,41 @@ def test_remote_http_rejects_nonstandard_json_constants(tmp_path: Path) -> None:
     assert response.payload["schema_version"] == "mneme.error.v1"
     assert response.payload["error_type"] == "ValidationError"
     assert "valid JSON" in str(response.payload["message"])
+
+
+def test_remote_http_maps_query_errors_to_bad_request(tmp_path: Path) -> None:
+    app = MemoryStoreASGIApp(init_store(tmp_path / "store"))
+    payload = {
+        "schema_version": QUERY_REQUEST_SCHEMA,
+        "query": {
+            "schema_version": "mneme.query_spec.v1",
+            "vector": RemoteArray.from_array(
+                np.array([[1.0]], dtype=np.float32)
+            ).to_json(),
+            "k": 1,
+            "metric": "cosine",
+            "ef": None,
+            "filters": None,
+            "temporal_decay": None,
+            "with_receipt": False,
+            "encoder_fp": None,
+        },
+    }
+
+    response = asyncio.run(
+        _call_asgi_raw(
+            app,
+            "POST",
+            "/query",
+            json.dumps(payload, allow_nan=False).encode("utf-8"),
+            RemoteHttpConfig("http://testserver"),
+        )
+    )
+
+    assert response.status_code == 400
+    assert response.payload["schema_version"] == "mneme.error.v1"
+    assert response.payload["error_type"] == "QueryError"
+    assert "one-dimensional" in str(response.payload["message"])
 
 
 def test_stdlib_request_json_rejects_nonfinite_payload_before_network(

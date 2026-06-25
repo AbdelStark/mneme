@@ -17,6 +17,7 @@ from mneme.core import (
     MemoryItem,
     MnemeError,
     OptionalDependencyError,
+    QueryError,
     QuerySpec,
     ReceiptVerificationError,
     Retrieval,
@@ -423,7 +424,7 @@ def _retryable(exc: BaseException) -> bool:
 def _status_for_error(exc: BaseException) -> int:
     if isinstance(exc, FingerprintMismatchError | ReceiptVerificationError):
         return 409
-    if isinstance(exc, SchemaVersionError | ValidationError):
+    if isinstance(exc, QueryError | SchemaVersionError | ValidationError):
         return 400
     if isinstance(exc, UnsupportedOperationError):
         return 501
