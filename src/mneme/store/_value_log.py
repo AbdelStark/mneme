@@ -110,7 +110,12 @@ def _encode_record(item: MemoryItem) -> bytes:
             "encoder_fp": asdict(item.encoder_fp),
         },
     }
-    return json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return json.dumps(
+        data,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
 
 
 def _decode_record(payload: bytes) -> MemoryItem:
@@ -250,9 +255,12 @@ def _array_from_json(data: object) -> np.ndarray:
     except binascii.Error as exc:
         raise StoreCorruptionError("array data must be base64") from exc
     try:
-        return np.frombuffer(raw, dtype=dtype).reshape(tuple(shape_data)).copy()
+        array = np.frombuffer(raw, dtype=dtype).reshape(tuple(shape_data)).copy()
     except ValueError as exc:
         raise StoreCorruptionError("array data does not match dtype and shape") from exc
+    if not bool(np.isfinite(array).all()):
+        raise StoreCorruptionError("array must contain only finite values")
+    return array
 
 
 def _as_numpy_array(value: object) -> np.ndarray:
@@ -312,7 +320,10 @@ def _optional_float(value: object, field_name: str) -> float | None:
         return None
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise StoreCorruptionError(f"{field_name} must be a number or null")
-    return float(value)
+    numeric = float(value)
+    if not np.isfinite(numeric):
+        raise StoreCorruptionError(f"{field_name} must be finite")
+    return numeric
 
 
 __all__ = [
