@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import NoReturn, TextIO
 
 from mneme.core import CliExitCode
+from mneme.core._json import dumps_strict_json
 from mneme.release import validate_release_artifacts
 
 
@@ -29,7 +29,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
         args.dist,
         fixture_report=args.fixture_report,
     )
-    output = json.dumps(report.to_json(), sort_keys=True, indent=2) + "\n"
+    output = dumps_strict_json(report.to_json(), sort_keys=True, indent=2) + "\n"
     if args.out:
         target = Path(args.out)
         target.parent.mkdir(parents=True, exist_ok=True)

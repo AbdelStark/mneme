@@ -118,6 +118,14 @@ def test_load_checkpoint_rejects_missing_metadata_fields(tmp_path: Path) -> None
         load_adapter_checkpoint_metadata(tmp_path)
 
 
+def test_load_checkpoint_rejects_nonstandard_json_constants(tmp_path: Path) -> None:
+    sidecar = tmp_path / ADAPTER_CHECKPOINT_METADATA_FILE
+    sidecar.write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="not valid JSON"):
+        load_adapter_checkpoint_metadata(tmp_path)
+
+
 def test_load_checkpoint_rejects_unsupported_schema_and_bad_weight_paths(
     tmp_path: Path,
 ) -> None:

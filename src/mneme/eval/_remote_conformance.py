@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import platform as platform_module
 import subprocess
 import tempfile
@@ -27,6 +26,7 @@ from mneme.core import (
     Transition,
     content_id,
 )
+from mneme.core._json import dumps_strict_json, loads_strict_json
 from mneme.eval._reports import DatasetRef, EvalReport
 from mneme.remote import (
     HttpJsonRequester,
@@ -254,7 +254,7 @@ async def _call_asgi(
     payload: Mapping[str, object],
     config: RemoteHttpConfig,
 ) -> HttpJsonResponse:
-    body = json.dumps(payload).encode()
+    body = dumps_strict_json(payload).encode()
     sent = False
     messages: list[dict[str, object]] = []
     headers = [(b"content-type", b"application/json")]
@@ -288,7 +288,10 @@ async def _call_asgi(
     status = start.get("status")
     if not isinstance(status, int):
         raise EvaluationError("ASGI response status must be an integer")
-    return HttpJsonResponse(status, json.loads(response_body))
+    decoded = loads_strict_json(response_body)
+    if not isinstance(decoded, Mapping):
+        raise EvaluationError("ASGI response body must be a JSON object")
+    return HttpJsonResponse(status, decoded)
 
 
 def _utc_now() -> str:

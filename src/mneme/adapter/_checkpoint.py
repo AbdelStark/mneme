@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +16,7 @@ from mneme.core import (
     SchemaVersionError,
     ValidationError,
 )
+from mneme.core._json import dumps_strict_json, loads_strict_json
 
 ADAPTER_CHECKPOINT_SCHEMA: Final = "mneme.adapter_checkpoint.v1"
 ADAPTER_CHECKPOINT_METADATA_FILE: Final = "adapter.json"
@@ -124,7 +124,7 @@ def save_adapter_checkpoint_metadata(
     metadata_path = _metadata_path(path)
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text(
-        json.dumps(metadata.to_json(), indent=2, sort_keys=True) + "\n",
+        dumps_strict_json(metadata.to_json(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     return metadata_path
@@ -135,15 +135,17 @@ def load_adapter_checkpoint_metadata(path: str | Path) -> AdapterCheckpointMetad
 
     metadata_path = _metadata_path(path)
     try:
-        raw = json.loads(metadata_path.read_text(encoding="utf-8"))
+        raw = loads_strict_json(metadata_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ValidationError(
             f"adapter checkpoint metadata not found: {metadata_path}"
         ) from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise ValidationError(
             f"adapter checkpoint metadata is not valid JSON: {metadata_path}"
         ) from exc
+    if not isinstance(raw, Mapping):
+        raise ValidationError("adapter checkpoint metadata must be a mapping")
     return AdapterCheckpointMetadata.from_json(raw)
 
 

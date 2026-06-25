@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -26,6 +25,7 @@ from mneme.core import (
     build_item,
     content_id,
 )
+from mneme.core._json import dumps_strict_json, loads_strict_json
 from mneme.index import Index, create_index_backend, search_index
 from mneme.observability import (
     ObservabilityConfig,
@@ -559,10 +559,10 @@ def load_manifest(path: str | Path) -> StoreManifest:
         candidate if candidate.name == _MANIFEST_FILE else candidate / _MANIFEST_FILE
     )
     try:
-        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+        raw = loads_strict_json(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise StoreError(f"store manifest not found at {manifest_path}") from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise StoreCorruptionError(
             f"store manifest is malformed JSON: {manifest_path}"
         ) from exc
@@ -572,7 +572,8 @@ def load_manifest(path: str | Path) -> StoreManifest:
 def _write_json_atomic(path: Path, data: dict[str, Any]) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(
-        json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")) + "\n",
+        dumps_strict_json(data, sort_keys=True, indent=2, separators=(",", ": "))
+        + "\n",
         encoding="utf-8",
     )
     tmp.replace(path)
@@ -721,8 +722,8 @@ def _recover_interrupted_transactions(
 
 def _load_pending_transaction(path: Path) -> _PendingTransaction | None:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+        data = loads_strict_json(path.read_text(encoding="utf-8"))
+    except ValueError as exc:
         raise StoreCorruptionError(
             f"transaction file is malformed JSON: {path.name}"
         ) from exc

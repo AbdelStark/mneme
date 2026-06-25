@@ -151,6 +151,15 @@ def test_malformed_manifest_json_raises_store_corruption(tmp_path) -> None:
         open_store(root)
 
 
+def test_manifest_rejects_nonstandard_json_constants(tmp_path) -> None:
+    root = tmp_path / "store"
+    root.mkdir()
+    (root / "manifest.json").write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    with pytest.raises(StoreCorruptionError, match="malformed JSON"):
+        open_store(root)
+
+
 def test_manifest_with_missing_required_fields_is_corrupt(tmp_path) -> None:
     root = tmp_path / "store"
     root.mkdir()

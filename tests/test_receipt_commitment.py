@@ -142,6 +142,14 @@ def test_commitment_state_json_round_trips_and_validates(tmp_path: Path) -> None
         load_commitment_state(path)
 
 
+def test_commitment_state_rejects_nonstandard_json_constants(tmp_path: Path) -> None:
+    path = tmp_path / "commitment.json"
+    path.write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    with pytest.raises(ReceiptVerificationError, match="not valid JSON"):
+        load_commitment_state(path)
+
+
 def test_store_commit_persists_mmr_sidecar_and_proves_value_log_order(
     tmp_path: Path,
 ) -> None:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-import json
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
@@ -23,6 +22,7 @@ from mneme.core import (
     content_id,
 )
 from mneme.core._ids import cid_from_hex
+from mneme.core._json import dumps_strict_json, loads_strict_json
 
 VALUE_RECORD_SCHEMA: Final = "mneme.value_record.v1"
 _HEADER_SIZE: Final = 40
@@ -110,18 +110,17 @@ def _encode_record(item: MemoryItem) -> bytes:
             "encoder_fp": asdict(item.encoder_fp),
         },
     }
-    return json.dumps(
+    return dumps_strict_json(
         data,
         sort_keys=True,
         separators=(",", ":"),
-        allow_nan=False,
     ).encode("utf-8")
 
 
 def _decode_record(payload: bytes) -> MemoryItem:
     try:
-        data = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        data = loads_strict_json(payload.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
         raise StoreCorruptionError("value log record is not valid JSON") from exc
     if not isinstance(data, Mapping):
         raise StoreCorruptionError("value record must be an object")

@@ -294,14 +294,19 @@ def test_value_log_nonfinite_array_payload_is_store_corruption(
         open_store(root)
 
 
-def test_value_log_nonfinite_reward_is_store_corruption(tmp_path: Path) -> None:
+def test_value_log_nonstandard_reward_constant_is_store_corruption(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "store"
     init_store(root)
     record = _value_record(content_id="00" * 32)
     record["item"]["value"]["reward"] = float("inf")
     _write_raw_value_record(root / "values" / "log-000000.mnv", record)
 
-    with pytest.raises(StoreCorruptionError, match="reward must be finite"):
+    with pytest.raises(
+        StoreCorruptionError,
+        match="value log record is not valid JSON",
+    ):
         open_store(root)
 
 

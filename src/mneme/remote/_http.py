@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 import math
 import urllib.error
 import urllib.request
@@ -26,6 +25,7 @@ from mneme.core import (
     UnsupportedOperationError,
     ValidationError,
 )
+from mneme.core._json import dumps_strict_json, loads_strict_json
 from mneme.receipts import InclusionProof
 from mneme.remote._messages import (
     ErrorMessage,
@@ -327,10 +327,7 @@ async def _send_json(
 
 def _json_body(body: bytes) -> JsonObject:
     try:
-        value = json.loads(
-            body.decode("utf-8"),
-            parse_constant=_reject_json_constant,
-        )
+        value = loads_strict_json(body.decode("utf-8"))
     except (UnicodeDecodeError, ValueError) as exc:
         raise ValidationError("remote HTTP body must be valid JSON") from exc
     if not isinstance(value, dict):
@@ -340,15 +337,11 @@ def _json_body(body: bytes) -> JsonObject:
 
 def _json_bytes(payload: JsonObject) -> bytes:
     try:
-        return json.dumps(payload, allow_nan=False).encode("utf-8")
+        return dumps_strict_json(payload).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise ValidationError(
             "remote HTTP payload must be JSON-serializable with finite numbers"
         ) from exc
-
-
-def _reject_json_constant(value: str) -> object:
-    raise ValueError(f"invalid JSON constant: {value}")
 
 
 def _authorized(scope: AsgiScope, token: str) -> bool:

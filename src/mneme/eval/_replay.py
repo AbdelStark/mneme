@@ -24,6 +24,7 @@ from mneme.core import (
     content_id,
 )
 from mneme.core._ids import cid_from_hex
+from mneme.core._json import dumps_strict_json
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store._value_log import (
     _array_from_json,
@@ -465,7 +466,7 @@ def _write_json(path: str | Path, data: Mapping[str, object]) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        json.dumps(data, sort_keys=True, indent=2, allow_nan=False) + "\n",
+        dumps_strict_json(data, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
 

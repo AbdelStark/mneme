@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import tarfile
 import zipfile
 from dataclasses import dataclass
@@ -13,6 +12,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from mneme.core import ValidationError
+from mneme.core._json import loads_strict_json
 from mneme.eval import validate_report_json
 
 RELEASE_ARTIFACT_REPORT_SCHEMA: Final = "mneme.release_artifact_report.v1"
@@ -312,8 +312,10 @@ def _validate_fixture_report(
         errors.append("fixture report path is required")
         return
     try:
-        report = validate_report_json(json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, json.JSONDecodeError, ValidationError) as exc:
+        report = validate_report_json(
+            loads_strict_json(path.read_text(encoding="utf-8"))
+        )
+    except (OSError, ValueError, ValidationError) as exc:
         errors.append(f"fixture report is invalid: {exc}")
         return
     if not report.passed:

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import sys
 from dataclasses import dataclass
 from typing import Any, TextIO
 
 from mneme.core import CliExitCode
+from mneme.core._json import dumps_strict_json
 
 CLI_ERROR_SCHEMA = "mneme.cli_error.v1"
 
@@ -60,7 +60,7 @@ def print_json(data: object, stream: TextIO | None = None) -> None:
     """Print deterministic, pretty JSON to the provided stream."""
 
     target = sys.stdout if stream is None else stream
-    print(json.dumps(data, sort_keys=True, indent=2, allow_nan=False), file=target)
+    print(dumps_strict_json(data, sort_keys=True, indent=2), file=target)
 
 
 __all__ = [

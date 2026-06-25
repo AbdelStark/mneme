@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,6 +15,7 @@ from mneme.core import (
     SchemaVersionError,
     ValidationError,
 )
+from mneme.core._json import dumps_strict_json, loads_strict_json
 
 COMMITMENT_SCHEMA: Final = "mneme.commitment.v1"
 INCLUSION_PROOF_SCHEMA: Final = "mneme.inclusion_proof.v1"
@@ -269,7 +269,7 @@ def save_commitment_state(path: str | Path, state: CommitmentState) -> Path:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        json.dumps(state.to_json(), sort_keys=True, indent=2) + "\n",
+        dumps_strict_json(state.to_json(), sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
     return target
@@ -280,10 +280,10 @@ def load_commitment_state(path: str | Path) -> CommitmentState:
 
     target = Path(path)
     try:
-        data = json.loads(target.read_text(encoding="utf-8"))
+        data = loads_strict_json(target.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ReceiptVerificationError(f"commitment state not found: {target}") from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise ReceiptVerificationError(
             f"commitment state is not valid JSON: {target}"
         ) from exc

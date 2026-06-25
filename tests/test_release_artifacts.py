@@ -52,6 +52,23 @@ def test_release_artifact_validator_requires_fixture_report(tmp_path: Path) -> N
     assert any("fixture report is invalid" in error for error in report.errors)
 
 
+def test_release_artifact_validator_rejects_nonstandard_fixture_json(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(tmp_path, version=mneme.__version__)
+    fixture_report = tmp_path / "fixtures.json"
+    fixture_report.write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any("fixture report is invalid" in error for error in report.errors)
+
+
 def test_release_artifact_validator_rejects_generated_python_artifacts(
     tmp_path: Path,
 ) -> None:

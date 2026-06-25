@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -11,6 +10,7 @@ from types import MappingProxyType
 from typing import Any, Final, Literal, TypeAlias
 
 from mneme.core import SchemaVersionError, ValidationError
+from mneme.core._json import dumps_strict_json
 
 DATASET_REF_SCHEMA: Final = "mneme.dataset_ref.v1"
 EVAL_REPORT_SCHEMA: Final = "mneme.eval_report.v1"
@@ -193,7 +193,7 @@ def write_report_json(report: EvalReport, path: str | Path) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        json.dumps(report.to_json(), sort_keys=True, indent=2, allow_nan=False) + "\n",
+        dumps_strict_json(report.to_json(), sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
 
