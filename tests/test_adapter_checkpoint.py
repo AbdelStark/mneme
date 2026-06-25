@@ -158,6 +158,16 @@ def test_load_checkpoint_rejects_missing_metadata_fields(tmp_path: Path) -> None
         load_adapter_checkpoint_metadata(tmp_path)
 
 
+def test_checkpoint_metadata_rejects_malformed_base_fingerprint_fields() -> None:
+    payload = _metadata().to_json()
+    base_fingerprint = payload["base_fingerprint"]
+    assert isinstance(base_fingerprint, dict)
+    base_fingerprint["config_digest"] = None
+
+    with pytest.raises(ValidationError, match=r"base_fingerprint\.config_digest"):
+        AdapterCheckpointMetadata.from_json(payload)
+
+
 def test_load_checkpoint_rejects_nonstandard_json_constants(tmp_path: Path) -> None:
     sidecar = tmp_path / ADAPTER_CHECKPOINT_METADATA_FILE
     sidecar.write_text('{"schema_version": NaN}', encoding="utf-8")

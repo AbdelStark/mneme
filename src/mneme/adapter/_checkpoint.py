@@ -222,6 +222,14 @@ def _require_string_field(value: Mapping[str, object], field_name: str) -> str:
     return _require_non_empty_str(value[field_name], field_name)
 
 
+def _require_nested_string_field(
+    value: Mapping[str, object],
+    field_name: str,
+    parent_name: str,
+) -> str:
+    return _require_non_empty_str(value[field_name], f"{parent_name}.{field_name}")
+
+
 def _require_mapping_field(
     value: Mapping[str, object],
     field_name: str,
@@ -315,7 +323,11 @@ def _fingerprint_from_json(value: Mapping[str, object]) -> EncoderFingerprint:
         raise ValidationError(
             "base_fingerprint contains unsupported fields: " + ", ".join(unsupported)
         )
-    schema_version = _require_string_field(value, "schema_version")
+    schema_version = _require_nested_string_field(
+        value,
+        "schema_version",
+        "base_fingerprint",
+    )
     if schema_version != ENCODER_FINGERPRINT_SCHEMA:
         raise SchemaVersionError(
             f"unsupported EncoderFingerprint schema: {schema_version!r}"
@@ -328,10 +340,22 @@ def _fingerprint_from_json(value: Mapping[str, object]) -> EncoderFingerprint:
     try:
         return EncoderFingerprint(
             schema_version=schema_version,
-            encoder_id=_require_string_field(value, "encoder_id"),
-            summarizer_id=_require_string_field(value, "summarizer_id"),
+            encoder_id=_require_nested_string_field(
+                value,
+                "encoder_id",
+                "base_fingerprint",
+            ),
+            summarizer_id=_require_nested_string_field(
+                value,
+                "summarizer_id",
+                "base_fingerprint",
+            ),
             weights_digest=weights_digest,
-            config_digest=_require_string_field(value, "config_digest"),
+            config_digest=_require_nested_string_field(
+                value,
+                "config_digest",
+                "base_fingerprint",
+            ),
         )
     except (TypeError, ValueError) as exc:
         raise ValidationError(str(exc)) from exc
