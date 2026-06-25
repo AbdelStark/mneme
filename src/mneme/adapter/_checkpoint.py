@@ -52,7 +52,11 @@ class AdapterCheckpointMetadata:
         _require_non_empty_str(self.adapter_kind, "adapter_kind")
         _require_non_empty_str(self.training_report_uri, "training_report_uri")
         _require_non_empty_str(self.package_version, "package_version")
-        _require_relative_file(self.weights_file, "weights_file")
+        object.__setattr__(
+            self,
+            "weights_file",
+            _require_relative_file(self.weights_file, "weights_file"),
+        )
         if not isinstance(self.base_fingerprint, EncoderFingerprint):
             raise ValidationError("base_fingerprint must be an EncoderFingerprint")
         object.__setattr__(
@@ -214,10 +218,12 @@ def _require_mapping_field(
     return field_value
 
 
-def _require_relative_file(value: str, field_name: str) -> None:
-    path = Path(value)
+def _require_relative_file(value: object, field_name: str) -> str:
+    text = _require_non_empty_str(value, field_name)
+    path = Path(text)
     if path.is_absolute() or ".." in path.parts or not path.name:
         raise ValidationError(f"{field_name} must be a relative file path")
+    return text
 
 
 def _freeze_json_mapping(

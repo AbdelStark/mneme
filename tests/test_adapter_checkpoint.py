@@ -145,6 +145,37 @@ def test_load_checkpoint_rejects_unsupported_schema_and_bad_weight_paths(
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"adapter_kind": object()}, "adapter_kind must be a non-empty string"),
+        ({"adapter_config": []}, "adapter_config must be a mapping"),
+        ({"base_fingerprint": object()}, "base_fingerprint must be"),
+        (
+            {"training_report_uri": object()},
+            "training_report_uri must be a non-empty string",
+        ),
+        ({"weights_file": object()}, "weights_file must be a non-empty string"),
+        ({"weights_file": ""}, "weights_file must be a non-empty string"),
+        ({"package_version": object()}, "package_version must be a non-empty string"),
+    ),
+)
+def test_checkpoint_metadata_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {
+        "adapter_kind": "cross_attention",
+        "adapter_config": {"latent_dim": 3},
+        "base_fingerprint": _fingerprint(),
+        "training_report_uri": "reports/adapter-training.json",
+    }
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        AdapterCheckpointMetadata(**values)
+
+
 def test_load_checkpoint_rejects_missing_weights_file(tmp_path: Path) -> None:
     save_adapter_checkpoint_metadata(tmp_path, _metadata())
 
