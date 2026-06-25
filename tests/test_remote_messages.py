@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from uuid import uuid4
 
 import numpy as np
@@ -57,6 +58,37 @@ def test_remote_array_round_trip_preserves_dtype_shape_and_byte_order() -> None:
     assert restored.dtype == array.dtype
     assert restored.shape == array.shape
     np.testing.assert_array_equal(restored, array)
+
+
+def test_remote_array_rejects_boolean_shape_dimensions() -> None:
+    payload = RemoteArray.from_array(np.array([1.0], dtype=np.float32)).to_json()
+    payload["shape"] = [True]
+
+    with pytest.raises(ValidationError, match="array shape"):
+        RemoteArray.from_json(payload)
+
+
+def test_remote_array_rejects_nonnumeric_decoded_dtype() -> None:
+    payload = {
+        "dtype": "|S1",
+        "shape": [1],
+        "byte_order": "not_applicable",
+        "encoding": "base64",
+        "data": base64.b64encode(b"a").decode("ascii"),
+    }
+
+    with pytest.raises(ValidationError, match="array dtype must be numeric"):
+        RemoteArray.from_json(payload).to_array()
+
+
+def test_remote_array_rejects_nonfinite_decoded_values() -> None:
+    payload = RemoteArray.from_array(np.array([1.0], dtype=np.float32)).to_json()
+    payload["data"] = base64.b64encode(
+        np.array([np.nan], dtype=np.float32).tobytes(order="C")
+    ).decode("ascii")
+
+    with pytest.raises(ValidationError, match="array values must be finite"):
+        RemoteArray.from_json(payload).to_array()
 
 
 def test_remote_messages_round_trip_every_operation() -> None:

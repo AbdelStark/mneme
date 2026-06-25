@@ -56,6 +56,13 @@ class RemoteArray:
     data: str
     encoding: Literal["base64"] = "base64"
 
+    def __post_init__(self) -> None:
+        _require_string(self.dtype, "array dtype")
+        object.__setattr__(self, "shape", _array_shape(self.shape))
+        _byte_order_value(self.byte_order)
+        _encoding(self.encoding)
+        _require_string(self.data, "array data")
+
     @classmethod
     def from_array(cls, value: object) -> RemoteArray:
         """Encode a numeric array as explicit dtype/shape/base64 bytes."""
@@ -83,18 +90,21 @@ class RemoteArray:
             dtype = np.dtype(self.dtype)
         except TypeError as exc:
             raise ValidationError("array dtype is unsupported") from exc
+        if not np.issubdtype(dtype, np.number):
+            raise ValidationError("array dtype must be numeric")
         if _byte_order(dtype) != self.byte_order:
             raise ValidationError("array byte_order does not match dtype")
-        if any(dim < 0 for dim in self.shape):
-            raise ValidationError("array shape dimensions must be non-negative")
         try:
             raw = base64.b64decode(self.data, validate=True)
         except binascii.Error as exc:
             raise ValidationError("array data must be base64") from exc
         try:
-            return np.frombuffer(raw, dtype=dtype).reshape(self.shape).copy()
+            array = np.frombuffer(raw, dtype=dtype).reshape(self.shape).copy()
         except ValueError as exc:
             raise ValidationError("array data does not match dtype and shape") from exc
+        if not bool(np.isfinite(array).all()):
+            raise ValidationError("array values must be finite")
+        return array
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -108,14 +118,9 @@ class RemoteArray:
     @classmethod
     def from_json(cls, data: object) -> RemoteArray:
         mapping = _require_mapping(data, "array")
-        shape = mapping.get("shape")
-        if not isinstance(shape, list) or not all(
-            isinstance(dim, int) for dim in shape
-        ):
-            raise ValidationError("array shape must be a list of integers")
         return cls(
             dtype=_require_string(mapping.get("dtype"), "array dtype"),
-            shape=tuple(shape),
+            shape=_array_shape(mapping.get("shape")),
             byte_order=_byte_order_value(mapping.get("byte_order")),
             encoding=_encoding(mapping.get("encoding")),
             data=_require_string(mapping.get("data"), "array data"),
@@ -465,6 +470,19 @@ def _encoding(value: object) -> Literal["base64"]:
     if value == "base64":
         return "base64"
     raise ValidationError("array encoding must be base64")
+
+
+def _array_shape(value: object) -> tuple[int, ...]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise ValidationError("array shape must be a sequence of integers")
+    shape: list[int] = []
+    for dim in value:
+        if isinstance(dim, bool) or not isinstance(dim, int):
+            raise ValidationError("array shape must be a sequence of integers")
+        if dim < 0:
+            raise ValidationError("array shape dimensions must be non-negative")
+        shape.append(dim)
+    return tuple(shape)
 
 
 def _ids_from_json(data: object) -> tuple[Cid, ...]:
