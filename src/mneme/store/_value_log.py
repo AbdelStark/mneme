@@ -150,7 +150,7 @@ def _decode_record(payload: bytes) -> MemoryItem:
                 item_data.get("schema_version"), "item schema_version"
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, ValidationError) as exc:
         raise StoreCorruptionError("invalid memory item payload") from exc
     if item.content_id != content_id(item):
         raise StoreCorruptionError("value record content_id does not match item bytes")
@@ -191,7 +191,7 @@ def _transition_from_json(data: object) -> Transition:
                 mapping.get("schema_version"), "transition schema_version"
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, ValidationError) as exc:
         raise StoreCorruptionError("invalid transition payload") from exc
 
 
@@ -214,7 +214,7 @@ def _fingerprint_from_json(data: object) -> EncoderFingerprint:
                 mapping.get("schema_version"), "schema_version"
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, ValidationError) as exc:
         raise StoreCorruptionError("invalid encoder fingerprint") from exc
 
 

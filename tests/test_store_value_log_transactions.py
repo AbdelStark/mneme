@@ -468,6 +468,45 @@ def test_value_log_invalid_memory_item_payload_is_store_corruption(
         open_store(root)
 
 
+def test_value_log_unsupported_memory_item_schema_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00" * 32)
+    record["item"]["schema_version"] = "mneme.memory_item.v2"
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(StoreCorruptionError, match="invalid memory item payload"):
+        open_store(root)
+
+
+def test_value_log_unsupported_transition_schema_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00" * 32)
+    record["item"]["value"]["schema_version"] = "mneme.transition.v2"
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(StoreCorruptionError, match="invalid transition payload"):
+        open_store(root)
+
+
+def test_value_log_unsupported_encoder_fingerprint_schema_is_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00" * 32)
+    record["item"]["encoder_fp"]["schema_version"] = "mneme.encoder_fingerprint.v2"
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(StoreCorruptionError, match="invalid encoder fingerprint"):
+        open_store(root)
+
+
 def test_value_log_unsupported_value_kind_is_store_corruption(
     tmp_path: Path,
 ) -> None:
