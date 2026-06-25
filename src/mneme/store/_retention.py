@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError
+from mneme.core._ids import cid_from_hex
 from mneme.store._manifest import StoreManifest
 
 
@@ -65,17 +66,17 @@ def _retention_tombstones(policy: Mapping[str, Any]) -> dict[Cid, dict[str, Any]
     raw_tombstones = policy.get("tombstones", [])
     tombstones: dict[Cid, dict[str, Any]] = {}
     if not isinstance(raw_tombstones, list):
-        return tombstones
-    for raw in raw_tombstones:
+        raise StoreCorruptionError("retention_policy tombstones must be a list")
+    for index, raw in enumerate(raw_tombstones):
         if not isinstance(raw, Mapping):
-            continue
-        content_id_hex = raw.get("content_id")
-        if not isinstance(content_id_hex, str):
-            continue
-        try:
-            cid = bytes.fromhex(content_id_hex)
-        except ValueError:
-            continue
+            raise StoreCorruptionError(
+                f"retention_policy tombstones[{index}] must be an object"
+            )
+        cid = cid_from_hex(
+            raw.get("content_id"),
+            "tombstone content_id",
+            error_type=StoreCorruptionError,
+        )
         tombstones[cid] = dict(raw)
     return tombstones
 

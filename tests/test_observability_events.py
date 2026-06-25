@@ -44,6 +44,10 @@ def _vec(values: list[float]) -> np.ndarray:
     return np.asarray(values, dtype=np.float32)
 
 
+def _cid(rank: int) -> bytes:
+    return bytes([rank]) * 32
+
+
 def _fingerprint() -> EncoderFingerprint:
     return EncoderFingerprint(
         encoder_id="encoder.fixture",
@@ -99,10 +103,11 @@ def test_observability_config_and_required_event_names() -> None:
 def test_index_search_event_snapshot_contains_required_fields() -> None:
     sink = RecordingSink()
     index = FlatIndex(ObservabilityConfig(event_sink=sink))
-    index.add(b"a", _vec([1.0, 0.0]))
-    index.add(b"b", _vec([2.0, 0.0]))
+    cid_a = _cid(1)
+    index.add(cid_a, _vec([1.0, 0.0]))
+    index.add(_cid(2), _vec([2.0, 0.0]))
 
-    assert index.search(_vec([1.0, 0.0]), 1, metric=Metric.L2) == [(b"a", 0.0)]
+    assert index.search(_vec([1.0, 0.0]), 1, metric=Metric.L2) == [(cid_a, 0.0)]
 
     assert _strip_duration(sink.events[-1]) == {
         "event": "mneme.index.search",
@@ -291,7 +296,7 @@ def test_error_events_include_typed_error_fields() -> None:
     sink = RecordingSink()
     observability = ObservabilityConfig(event_sink=sink)
     index = FlatIndex(observability)
-    index.add(b"a", _vec([1.0, 0.0]))
+    index.add(_cid(1), _vec([1.0, 0.0]))
 
     with pytest.raises(QueryError, match="k must be >= 1"):
         index.search(_vec([1.0, 0.0]), 0, metric=Metric.L2)

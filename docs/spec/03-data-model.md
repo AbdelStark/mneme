@@ -106,6 +106,7 @@ Invariants:
 - INV-DATA-031: store append order is independent of content id.
 - INV-DATA-032: two byte-identical items have the same content id.
 - INV-DATA-033: metadata cannot override reserved fields such as `schema_version`, `content_id`, or `encoder_fp`.
+- INV-DATA-034: every `content_id` at public, persisted, and remote boundaries is a 32-byte BLAKE3 digest.
 
 ## QuerySpec
 

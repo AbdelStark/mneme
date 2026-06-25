@@ -14,6 +14,7 @@ import numpy as np
 import numpy.typing as npt
 
 from mneme.core._errors import QueryError
+from mneme.core._ids import require_cid_bytes
 
 Latent: TypeAlias = Any
 SummaryVec: TypeAlias = npt.NDArray[np.float32]
@@ -27,7 +28,6 @@ QUERY_SPEC_SCHEMA: Final = "mneme.query_spec.v1"
 RETRIEVAL_SCHEMA: Final = "mneme.retrieval.v1"
 
 _SUPPORTED_MAJOR: Final = 1
-_CID_SIZE: Final = 32
 _RESERVED_META_KEYS: Final = frozenset({"schema_version", "content_id", "encoder_fp"})
 
 
@@ -224,10 +224,12 @@ def _validate_action(value: object, field_name: str) -> None:
 
 
 def _validate_cid(value: object, field_name: str) -> None:
-    if not isinstance(value, bytes):
-        raise TypeError(f"{field_name} must be bytes")
-    if len(value) != _CID_SIZE:
-        raise ValueError(f"{field_name} must be {_CID_SIZE} bytes")
+    require_cid_bytes(
+        value,
+        field_name,
+        type_error=TypeError,
+        value_error=ValueError,
+    )
 
 
 def _validate_latent(value: object, field_name: str) -> tuple[tuple[int, ...], str]:

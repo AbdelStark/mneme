@@ -80,7 +80,7 @@ Canonical serialization uses a deterministic tagged binary format:
 schema_version || encoder_fp || key || value_kind || value || normalized_meta
 ```
 
-The `content_id` field itself is excluded from the digest. `build_item` fills it after validation.
+The `content_id` field itself is excluded from the digest. `build_item` fills it after validation. Content IDs are 32-byte BLAKE3 digests at public, persisted, and remote boundaries.
 
 Core validation rejects non-finite keys, unsupported dtypes, negative transition steps, invalid schema major versions, and metadata that cannot be normalized. Serialization functions are pure and do not read files, environment variables, or global state.
 

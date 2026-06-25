@@ -18,13 +18,20 @@ def _vec(values: list[float]) -> np.ndarray:
     return np.asarray(values, dtype=np.float32)
 
 
+def _cid(rank: int) -> bytes:
+    return bytes([rank]) * 32
+
+
 def test_faiss_hnsw_index_matches_flat_l2_order_with_fake_faiss(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _install_fake_faiss(monkeypatch)
     flat = FlatIndex()
     faiss_index = FaissHnswIndex(m=4, ef_construction=8, ef_search=5)
-    for cid, key in [(b"b", _vec([1.0, 0.0])), (b"a", _vec([0.0, 1.0]))]:
+    for cid, key in [
+        (_cid(2), _vec([1.0, 0.0])),
+        (_cid(1), _vec([0.0, 1.0])),
+    ]:
         flat.add(cid, key)
         faiss_index.add(cid, key)
 
@@ -43,14 +50,25 @@ def test_faiss_hnsw_index_maps_inner_product_and_cosine_distances(
 ) -> None:
     _install_fake_faiss(monkeypatch)
     index = FaissHnswIndex(m=4)
-    index.add(b"x", _vec([1.0, 0.0]))
-    index.add(b"y", _vec([0.0, 1.0]))
+    cid_x = _cid(1)
+    cid_y = _cid(2)
+    index.add(cid_x, _vec([1.0, 0.0]))
+    index.add(cid_y, _vec([0.0, 1.0]))
 
     inner = index.search(_vec([2.0, 0.0]), 2, metric=Metric.INNER_PRODUCT)
     cosine = index.search(_vec([1.0, 0.0]), 2, metric=Metric.COSINE)
 
-    assert inner == [(b"x", -2.0), (b"y", -0.0)]
-    assert cosine == [(b"x", 0.0), (b"y", 1.0)]
+    assert inner == [(cid_x, -2.0), (cid_y, -0.0)]
+    assert cosine == [(cid_x, 0.0), (cid_y, 1.0)]
+
+
+def test_faiss_hnsw_index_rejects_non_digest_content_ids(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_faiss(monkeypatch)
+
+    with pytest.raises(ValueError, match="cid must be 32 bytes"):
+        FaissHnswIndex(m=4).add(b"x", _vec([1.0, 0.0]))
 
 
 def test_faiss_hnsw_missing_dependency_raises_optional_dependency(

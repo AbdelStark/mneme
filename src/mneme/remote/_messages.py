@@ -21,6 +21,7 @@ from mneme.core import (
     ValidationError,
     content_id,
 )
+from mneme.core._ids import cid_from_hex, require_cid_bytes
 from mneme.receipts import InclusionProof, RetrievalReceipt
 from mneme.store import StoreStats
 from mneme.store._value_log import (
@@ -183,6 +184,9 @@ class PutResponse:
     ids: tuple[Cid, ...]
     schema_version: str = PUT_RESPONSE_SCHEMA
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "ids", _cid_sequence(self.ids, "ids"))
+
     def to_json(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
@@ -248,6 +252,9 @@ class ProveRequest:
     ids: tuple[Cid, ...]
     schema_version: str = PROVE_REQUEST_SCHEMA
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "ids", _cid_sequence(self.ids, "ids"))
+
     def to_json(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
@@ -295,6 +302,18 @@ class RootRequest:
 class RootResponse:
     root: bytes
     schema_version: str = ROOT_RESPONSE_SCHEMA
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "root",
+            require_cid_bytes(
+                self.root,
+                "root",
+                type_error=ValidationError,
+                value_error=ValidationError,
+            ),
+        )
 
     def to_json(self) -> dict[str, object]:
         return {"schema_version": self.schema_version, "root": self.root.hex()}
@@ -450,7 +469,22 @@ def _encoding(value: object) -> Literal["base64"]:
 
 def _ids_from_json(data: object) -> tuple[Cid, ...]:
     values = _require_sequence(data, "ids")
-    return tuple(_bytes_from_hex(item, "content id") for item in values)
+    return tuple(
+        cid_from_hex(item, "content id", error_type=ValidationError) for item in values
+    )
+
+
+def _cid_sequence(value: object, field_name: str) -> tuple[Cid, ...]:
+    values = _require_sequence(value, field_name)
+    return tuple(
+        require_cid_bytes(
+            item,
+            "content id",
+            type_error=ValidationError,
+            value_error=ValidationError,
+        )
+        for item in values
+    )
 
 
 def _receipt_to_json(value: object) -> dict[str, object]:
@@ -543,11 +577,7 @@ def _optional_fingerprint(value: object) -> EncoderFingerprint | None:
 
 
 def _bytes_from_hex(value: object, field_name: str) -> bytes:
-    text = _require_string(value, field_name)
-    try:
-        return bytes.fromhex(text)
-    except ValueError as exc:
-        raise ValidationError(f"{field_name} must be hex bytes") from exc
+    return cid_from_hex(value, field_name, error_type=ValidationError)
 
 
 __all__ = [

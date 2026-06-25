@@ -58,6 +58,10 @@ def _fingerprint(summarizer_id: str = "summary") -> EncoderFingerprint:
     return EncoderFingerprint("encoder", summarizer_id, None, "blake3:config")
 
 
+def _cid(rank: int) -> bytes:
+    return bytes([rank]) * 32
+
+
 def test_invalid_query_construction_raises_query_error() -> None:
     with pytest.raises(QueryError, match="k must be >= 1"):
         _query(k=0)
@@ -144,7 +148,8 @@ def test_query_fingerprint_mismatch_fails_closed() -> None:
 
 def test_search_index_with_flat_index_uses_query_spec() -> None:
     index = FlatIndex()
-    index.add(b"a", np.array([1.0, 0.0], dtype=np.float32))
-    index.add(b"b", np.array([0.0, 1.0], dtype=np.float32))
+    cid_a = _cid(1)
+    index.add(cid_a, np.array([1.0, 0.0], dtype=np.float32))
+    index.add(_cid(2), np.array([0.0, 1.0], dtype=np.float32))
 
-    assert search_index(index, _query(k=1)) == [(b"a", 0.0)]
+    assert search_index(index, _query(k=1)) == [(cid_a, 0.0)]

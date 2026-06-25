@@ -9,6 +9,7 @@ from typing import Any, Final
 from uuid import UUID
 
 from mneme.core import EncoderFingerprint, SchemaVersionError, StoreCorruptionError
+from mneme.core._ids import cid_from_hex
 
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
 _SUPPORTED_MAJOR: Final = 1
@@ -341,15 +342,13 @@ def _require_tombstones(value: object) -> list[dict[str, Any]]:
     tombstones: list[dict[str, Any]] = []
     for index, raw in enumerate(value):
         mapping = _require_mapping(raw, f"retention_policy tombstones[{index}]")
-        content_id = _require_string(mapping.get("content_id"), "tombstone content_id")
-        try:
-            bytes.fromhex(content_id)
-        except ValueError as exc:
-            raise StoreCorruptionError(
-                "tombstone content_id must be hex bytes"
-            ) from exc
+        cid = cid_from_hex(
+            mapping.get("content_id"),
+            "tombstone content_id",
+            error_type=StoreCorruptionError,
+        )
         tombstone: dict[str, Any] = {
-            "content_id": content_id,
+            "content_id": cid.hex(),
             "reason": _require_string(mapping.get("reason"), "tombstone reason"),
             "created_at": _require_string(
                 mapping.get("created_at"), "tombstone created_at"

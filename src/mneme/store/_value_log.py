@@ -22,6 +22,7 @@ from mneme.core import (
     build_item,
     content_id,
 )
+from mneme.core._ids import cid_from_hex
 
 VALUE_RECORD_SCHEMA: Final = "mneme.value_record.v1"
 _HEADER_SIZE: Final = 40
@@ -129,10 +130,11 @@ def _decode_record(payload: bytes) -> MemoryItem:
     encoder_fp = _fingerprint_from_json(item_data.get("encoder_fp"))
     value = _transition_from_json(item_data.get("value"))
     content_id_text = _require_string(data.get("content_id"), "content_id")
-    try:
-        cid = bytes.fromhex(content_id_text)
-    except ValueError as exc:
-        raise StoreCorruptionError("content_id must be hex bytes") from exc
+    cid = cid_from_hex(
+        content_id_text,
+        "content_id",
+        error_type=StoreCorruptionError,
+    )
     try:
         item = MemoryItem(
             content_id=cid,

@@ -18,6 +18,7 @@ from mneme.core import (
     ShapeError,
     SummaryVec,
 )
+from mneme.core._ids import require_cid_bytes
 from mneme.index._protocols import Index
 
 _COSINE_NORM_TOLERANCE = 1e-4
@@ -193,10 +194,7 @@ def _load_faiss() -> Any:
 
 
 def _validate_cid(cid: object) -> None:
-    if not isinstance(cid, bytes):
-        raise TypeError("cid must be bytes")
-    if not cid:
-        raise ValueError("cid must not be empty")
+    require_cid_bytes(cid, "cid", type_error=TypeError, value_error=ValueError)
 
 
 def _validate_vector(value: object, *, field_name: str) -> SummaryVec:

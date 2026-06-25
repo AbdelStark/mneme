@@ -14,49 +14,62 @@ def _vec(values: list[float]) -> np.ndarray:
     return np.asarray(values, dtype=np.float32)
 
 
+def _cid(rank: int) -> bytes:
+    return bytes([rank]) * 32
+
+
 def test_flat_index_l2_known_vectors() -> None:
     index = FlatIndex()
-    index.add(b"b", _vec([1.0, 0.0]))
-    index.add(b"a", _vec([0.0, 1.0]))
-    index.add(b"c", _vec([2.0, 0.0]))
+    cid_a = _cid(1)
+    cid_b = _cid(2)
+    cid_c = _cid(3)
+    index.add(cid_b, _vec([1.0, 0.0]))
+    index.add(cid_a, _vec([0.0, 1.0]))
+    index.add(cid_c, _vec([2.0, 0.0]))
 
     result = index.search(_vec([0.9, 0.1]), 2, metric=Metric.L2)
 
     assert isinstance(index, Index)
     assert len(index) == 3
-    assert [cid for cid, _ in result] == [b"b", b"c"]
+    assert [cid for cid, _ in result] == [cid_b, cid_c]
 
 
 def test_flat_index_cosine_known_vectors() -> None:
     index = FlatIndex()
-    index.add(b"x", _vec([1.0, 0.0]))
-    index.add(b"y", _vec([0.0, 1.0]))
+    cid_x = _cid(1)
+    cid_y = _cid(2)
+    index.add(cid_x, _vec([1.0, 0.0]))
+    index.add(cid_y, _vec([0.0, 1.0]))
 
     result = index.search(_vec([1.0, 0.0]), 2, metric=Metric.COSINE)
 
-    assert result[0] == (b"x", 0.0)
-    assert result[1][0] == b"y"
+    assert result[0] == (cid_x, 0.0)
+    assert result[1][0] == cid_y
     assert result[1][1] == pytest.approx(1.0)
 
 
 def test_flat_index_inner_product_orders_by_descending_score() -> None:
     index = FlatIndex()
-    index.add(b"low", _vec([1.0, 0.0]))
-    index.add(b"high", _vec([3.0, 0.0]))
+    cid_low = _cid(1)
+    cid_high = _cid(2)
+    index.add(cid_low, _vec([1.0, 0.0]))
+    index.add(cid_high, _vec([3.0, 0.0]))
 
     result = index.search(_vec([2.0, 0.0]), 2, metric=Metric.INNER_PRODUCT)
 
-    assert result == [(b"high", -6.0), (b"low", -2.0)]
+    assert result == [(cid_high, -6.0), (cid_low, -2.0)]
 
 
 def test_flat_index_ties_are_ordered_by_content_id_bytes() -> None:
     index = FlatIndex()
-    index.add(b"b", _vec([1.0, 0.0]))
-    index.add(b"a", _vec([1.0, 0.0]))
+    cid_a = _cid(1)
+    cid_b = _cid(2)
+    index.add(cid_b, _vec([1.0, 0.0]))
+    index.add(cid_a, _vec([1.0, 0.0]))
 
     result = index.search(_vec([1.0, 0.0]), 2, metric=Metric.L2)
 
-    assert [cid for cid, _ in result] == [b"a", b"b"]
+    assert [cid for cid, _ in result] == [cid_a, cid_b]
 
 
 def test_flat_index_empty_search_returns_empty_result() -> None:
@@ -65,13 +78,15 @@ def test_flat_index_empty_search_returns_empty_result() -> None:
 
 def test_flat_index_add_batch_and_replace_existing_id() -> None:
     index = FlatIndex()
-    index.add_batch([(b"a", _vec([1.0, 0.0])), (b"b", _vec([0.0, 1.0]))])
-    index.add(b"a", _vec([2.0, 0.0]))
+    cid_a = _cid(1)
+    cid_b = _cid(2)
+    index.add_batch([(cid_a, _vec([1.0, 0.0])), (cid_b, _vec([0.0, 1.0]))])
+    index.add(cid_a, _vec([2.0, 0.0]))
 
     result = index.search(_vec([2.0, 0.0]), 2, metric=Metric.L2)
 
     assert len(index) == 2
-    assert result[0] == (b"a", 0.0)
+    assert result[0] == (cid_a, 0.0)
 
 
 @pytest.mark.parametrize(
@@ -91,7 +106,7 @@ def test_flat_index_invalid_query_vectors_raise_typed_errors(
 
 def test_flat_index_rejects_bad_k_metric_ef_and_dimensions() -> None:
     index = FlatIndex()
-    index.add(b"a", _vec([1.0, 0.0]))
+    index.add(_cid(1), _vec([1.0, 0.0]))
 
     with pytest.raises(QueryError, match="k must be >= 1"):
         index.search(_vec([1.0, 0.0]), 0, metric=Metric.L2)
@@ -105,10 +120,15 @@ def test_flat_index_rejects_bad_k_metric_ef_and_dimensions() -> None:
 
 def test_flat_index_rejects_non_normalized_cosine_vectors() -> None:
     index = FlatIndex()
-    index.add(b"a", _vec([2.0, 0.0]))
+    index.add(_cid(1), _vec([2.0, 0.0]))
 
     with pytest.raises(QueryError, match="L2-normalized"):
         index.search(_vec([1.0, 0.0]), 1, metric=Metric.COSINE)
+
+
+def test_flat_index_rejects_non_digest_content_ids() -> None:
+    with pytest.raises(ValueError, match="cid must be 32 bytes"):
+        FlatIndex().add(b"a", _vec([1.0, 0.0]))
 
 
 def test_flat_index_import_does_not_load_optional_backends() -> None:

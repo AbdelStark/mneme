@@ -10,6 +10,7 @@ from typing import Any, Final
 import numpy as np
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError, StoreError
+from mneme.core._ids import cid_from_hex
 from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
 from mneme.store._local import (
     _COMMITMENT_FILE,
@@ -408,9 +409,14 @@ def _validate_index_data(
         if not isinstance(raw_item, dict):
             errors.append(f"index data item {index} must be an object")
             continue
-        cid = _cid_from_hex(raw_item.get("content_id"))
-        if cid is None:
-            errors.append(f"index data item {index} content_id must be hex bytes")
+        try:
+            cid = cid_from_hex(
+                raw_item.get("content_id"),
+                "content_id",
+                error_type=StoreCorruptionError,
+            )
+        except StoreCorruptionError as exc:
+            errors.append(f"index data item {index} {exc}")
             continue
         if cid in seen:
             errors.append(f"index data contains duplicate content_id: {cid.hex()}")
@@ -454,15 +460,6 @@ def _validate_index_key(
     if not bool(np.allclose(key, item.key, rtol=0.0, atol=0.0)):
         return [f"index key mismatch for {cid.hex()}"]
     return []
-
-
-def _cid_from_hex(value: object) -> Cid | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        return bytes.fromhex(value)
-    except ValueError:
-        return None
 
 
 def _key_to_json(value: np.ndarray) -> list[float]:

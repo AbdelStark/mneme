@@ -14,6 +14,7 @@ from mneme.core import (
     Retrieval,
     SchemaVersionError,
     Transition,
+    ValidationError,
     content_id,
 )
 from mneme.receipts import CommitmentState
@@ -133,6 +134,17 @@ def test_query_response_round_trips_receipt_payload() -> None:
     assert decoded.retrieval.receipt == receipt
     assert decoded.retrieval.items[0].content_id == cid
     assert decoded.retrieval.distances == (0.0,)
+
+
+def test_remote_messages_reject_non_digest_ids_and_roots() -> None:
+    with pytest.raises(ValidationError, match="content id must be 32 bytes"):
+        PutResponse((b"x",))
+    with pytest.raises(ValidationError, match="content id must be 32 bytes"):
+        ProveRequest.from_json({"schema_version": PROVE_REQUEST_SCHEMA, "ids": ["00"]})
+    with pytest.raises(ValidationError, match="root must be 32 bytes"):
+        RootResponse(b"x")
+    with pytest.raises(ValidationError, match="root must be 32 bytes"):
+        RootResponse.from_json({"schema_version": ROOT_RESPONSE_SCHEMA, "root": "00"})
 
 
 def test_unknown_major_message_schema_fails_closed() -> None:

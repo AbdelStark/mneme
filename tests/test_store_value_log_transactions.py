@@ -232,6 +232,18 @@ def test_value_log_invalid_content_id_hex_is_store_corruption(
         open_store(root)
 
 
+def test_value_log_short_content_id_is_store_corruption(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    _write_raw_value_record(
+        root / "values" / "log-000000.mnv",
+        _value_record(content_id="00"),
+    )
+
+    with pytest.raises(StoreCorruptionError, match="content_id must be 32 bytes"):
+        open_store(root)
+
+
 def test_value_log_non_object_record_is_store_corruption(tmp_path: Path) -> None:
     root = tmp_path / "store"
     init_store(root)
@@ -246,7 +258,7 @@ def test_value_log_invalid_base64_array_data_is_store_corruption(
 ) -> None:
     root = tmp_path / "store"
     init_store(root)
-    record = _value_record(content_id="00")
+    record = _value_record(content_id="00" * 32)
     record["item"]["key"]["data"] = "not base64!"
     _write_raw_value_record(root / "values" / "log-000000.mnv", record)
 
@@ -257,7 +269,7 @@ def test_value_log_invalid_base64_array_data_is_store_corruption(
 def test_value_log_boolean_array_shape_is_store_corruption(tmp_path: Path) -> None:
     root = tmp_path / "store"
     init_store(root)
-    record = _value_record(content_id="00")
+    record = _value_record(content_id="00" * 32)
     record["item"]["key"]["shape"] = [True, 2]
     _write_raw_value_record(root / "values" / "log-000000.mnv", record)
 
@@ -270,7 +282,7 @@ def test_value_log_invalid_memory_item_payload_is_store_corruption(
 ) -> None:
     root = tmp_path / "store"
     init_store(root)
-    record = _value_record(content_id="00")
+    record = _value_record(content_id="00" * 32)
     record["item"]["key"] = _array_payload(np.array([[1.0, 0.0]], dtype=np.float32))
     _write_raw_value_record(root / "values" / "log-000000.mnv", record)
 
@@ -283,7 +295,7 @@ def test_value_log_unsupported_value_kind_is_store_corruption(
 ) -> None:
     root = tmp_path / "store"
     init_store(root)
-    record = _value_record(content_id="00")
+    record = _value_record(content_id="00" * 32)
     record["item"]["value_kind"] = "frame"
     _write_raw_value_record(root / "values" / "log-000000.mnv", record)
 
