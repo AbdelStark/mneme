@@ -42,7 +42,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Run tests
-        run: uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75
+        run: uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80
 
       - name: Type check public package
         run: uv run mypy src/mneme

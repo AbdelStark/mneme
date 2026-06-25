@@ -8,7 +8,9 @@ All notable user-visible changes are recorded here.
 
 - Extracted local-store retention policy application into a dedicated internal
   module shared by store mutation and verification.
-- Added a CI coverage ratchet at 75% for the full pytest coverage gate.
+- Extracted CLI JSON/error runtime helpers and made CLI contract tests run
+  in-process while preserving a subprocess entrypoint smoke.
+- Raised the CI coverage ratchet to 80% for the full pytest coverage gate.
 
 ## [0.1.0] - 2026-06-25
 

@@ -6,12 +6,18 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TextIO
 
 import numpy as np
 
+from mneme.cli._runtime import (
+    JsonResult,
+    error_json,
+    print_json,
+    report_to_json,
+    success_exit_code,
+)
 from mneme.core import (
     CliExitCode,
     EvaluationError,
@@ -52,22 +58,10 @@ from mneme.store import (
 
 QUERY_RESULT_SCHEMA = "mneme.query_result.v1"
 STORE_STATS_SCHEMA = "mneme.store_stats.v1"
-CLI_ERROR_SCHEMA = "mneme.cli_error.v1"
 RECEIPT_VERIFICATION_SCHEMA = "mneme.receipt_verification.v1"
 
 
-@dataclass(frozen=True)
-class JsonResult:
-    """Small JSON result wrapper for CLI-only reports."""
-
-    ok: bool
-    payload: dict[str, Any]
-
-    def to_json(self) -> dict[str, Any]:
-        return {"ok": self.ok, **self.payload}
-
-
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     """Run the Mneme command-line interface."""
 
     parser = _build_parser()
@@ -78,14 +72,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         report = args.handler(args)
     except MnemeError as exc:
-        _print_json(_error_json(exc))
+        print_json(error_json(exc), stdout)
         return cli_exit_code(exc)
     except Exception as exc:
-        _print_json(_error_json(exc))
+        print_json(error_json(exc), stdout)
         return int(CliExitCode.INTERNAL)
-    payload = _to_json(report)
-    _print_json(payload)
-    return _success_exit_code(payload)
+    payload = report_to_json(report)
+    print_json(payload, stdout)
+    return success_exit_code(payload)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -600,37 +594,6 @@ def _stats_json(stats: StoreStats) -> dict[str, Any]:
         "last_completed_transaction": stats.last_completed_transaction,
         "commitments_enabled": stats.commitments_enabled,
     }
-
-
-def _to_json(report: object) -> dict[str, Any]:
-    to_json = getattr(report, "to_json", None)
-    if callable(to_json):
-        data = to_json()
-    else:
-        data = report
-    if not isinstance(data, dict):
-        raise TypeError("command handler returned non-object JSON")
-    return data
-
-
-def _success_exit_code(payload: dict[str, Any]) -> int:
-    ok = payload.get("ok", True)
-    if ok is False:
-        return int(CliExitCode.DATA_VALIDATION)
-    return int(CliExitCode.SUCCESS)
-
-
-def _error_json(error: BaseException) -> dict[str, Any]:
-    return {
-        "schema_version": CLI_ERROR_SCHEMA,
-        "ok": False,
-        "errors": [str(error)],
-        "error_type": type(error).__name__,
-    }
-
-
-def _print_json(data: object) -> None:
-    print(json.dumps(data, sort_keys=True, indent=2))
 
 
 def _exit() -> NoReturn:

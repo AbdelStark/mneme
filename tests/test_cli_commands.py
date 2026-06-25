@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
+from _cli_runner import CliResult, run_cli
 
 from mneme.core import (
     CliExitCode,
@@ -20,13 +21,25 @@ from mneme.eval import validate_report_json
 from mneme.store import init_store
 
 
+def test_module_entrypoint_help_smoke() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-m", "mneme.cli", "--help"],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == int(CliExitCode.SUCCESS)
+    assert "usage: mneme" in completed.stdout
+
+
 def test_store_init_and_stats_cli_emit_schema_versioned_json(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "store"
 
-    init = _run_cli("store", "init", root)
-    stats = _run_cli("store", "stats", root, "--json")
+    init = run_cli("store", "init", root)
+    stats = run_cli("store", "stats", root, "--json")
 
     assert init.returncode == int(CliExitCode.SUCCESS), init.stdout + init.stderr
     assert stats.returncode == int(CliExitCode.SUCCESS), stats.stdout + stats.stderr
@@ -46,9 +59,9 @@ def test_store_init_and_stats_cli_emit_schema_versioned_json(
 
 def test_store_init_cli_reports_typed_duplicate_store_error(tmp_path: Path) -> None:
     root = tmp_path / "store"
-    assert _run_cli("store", "init", root).returncode == int(CliExitCode.SUCCESS)
+    assert run_cli("store", "init", root).returncode == int(CliExitCode.SUCCESS)
 
-    duplicate = _run_cli("store", "init", root)
+    duplicate = run_cli("store", "init", root)
 
     assert duplicate.returncode == int(CliExitCode.INTERNAL)
     error = _stdout_json(duplicate)
@@ -62,8 +75,8 @@ def test_store_verify_cli_success_and_validation_failure(tmp_path: Path) -> None
     store = init_store(root)
     store.put(_item(1.0))
 
-    ok = _run_cli("store", "verify", root)
-    missing = _run_cli("store", "verify", tmp_path / "missing")
+    ok = run_cli("store", "verify", root)
+    missing = run_cli("store", "verify", tmp_path / "missing")
 
     assert ok.returncode == int(CliExitCode.SUCCESS), ok.stdout + ok.stderr
     assert _stdout_json(ok)["schema_version"] == "mneme.store_verification.v1"
@@ -78,8 +91,8 @@ def test_index_rebuild_cli_success_and_validation_failure(tmp_path: Path) -> Non
     store = init_store(root)
     store.put(_item(1.0))
 
-    ok = _run_cli("index", "rebuild", root)
-    missing = _run_cli("index", "rebuild", tmp_path / "missing")
+    ok = run_cli("index", "rebuild", root)
+    missing = run_cli("index", "rebuild", tmp_path / "missing")
 
     assert ok.returncode == int(CliExitCode.SUCCESS), ok.stdout + ok.stderr
     ok_json = _stdout_json(ok)
@@ -98,7 +111,7 @@ def test_query_cli_emits_result_without_raw_memory_fields(tmp_path: Path) -> Non
     cid = store.put(_item(1.0))
     vector_path.write_text(json.dumps({"vector": [1.0, 0.0]}), encoding="utf-8")
 
-    result = _run_cli(
+    result = run_cli(
         "query",
         root,
         "--vector",
@@ -132,7 +145,7 @@ def test_query_cli_reports_typed_query_error(tmp_path: Path) -> None:
     init_store(root)
     vector_path.write_text("[1.0, 0.0]", encoding="utf-8")
 
-    result = _run_cli(
+    result = run_cli(
         "query",
         root,
         "--vector",
@@ -153,7 +166,7 @@ def test_query_cli_reports_typed_query_error(tmp_path: Path) -> None:
 def test_eval_fixtures_cli_writes_and_prints_valid_report(tmp_path: Path) -> None:
     output = tmp_path / "reports" / "fixtures.json"
 
-    result = _run_cli("eval", "fixtures", "--out", output, "--seed", "42")
+    result = run_cli("eval", "fixtures", "--out", output, "--seed", "42")
 
     assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr
     printed = validate_report_json(_stdout_json(result))
@@ -167,7 +180,7 @@ def test_eval_fixtures_cli_reports_typed_write_error(tmp_path: Path) -> None:
     blocked_parent = tmp_path / "not-a-directory"
     blocked_parent.write_text("occupied", encoding="utf-8")
 
-    result = _run_cli("eval", "fixtures", "--out", blocked_parent / "report.json")
+    result = run_cli("eval", "fixtures", "--out", blocked_parent / "report.json")
 
     assert result.returncode == int(CliExitCode.INTERNAL)
     error = _stdout_json(result)
@@ -181,7 +194,7 @@ def test_eval_profile_cli_writes_and_prints_valid_report(tmp_path: Path) -> None
     store = init_store(root)
     store.put_batch([_item(float(index), step=index) for index in range(3)])
 
-    result = _run_cli(
+    result = run_cli(
         "eval",
         "profile",
         "--store",
@@ -219,7 +232,7 @@ def test_eval_recall_and_latency_aliases_emit_profile_reports(tmp_path: Path) ->
 
     for command in ("recall", "latency"):
         output = tmp_path / "reports" / f"{command}.json"
-        result = _run_cli(
+        result = run_cli(
             "eval",
             command,
             "--store",
@@ -256,7 +269,7 @@ def test_eval_receipts_cli_writes_and_prints_valid_report(tmp_path: Path) -> Non
     store.put_batch([_item(float(index), step=index) for index in range(4)])
     store.commit()
 
-    result = _run_cli(
+    result = run_cli(
         "eval",
         "receipts",
         "--store",
@@ -288,7 +301,7 @@ def test_eval_remote_conformance_cli_writes_and_prints_valid_report(
 ) -> None:
     output = tmp_path / "reports" / "remote-conformance.json"
 
-    result = _run_cli(
+    result = run_cli(
         "eval",
         "remote-conformance",
         "--out",
@@ -313,7 +326,7 @@ def test_eval_cross_source_cli_writes_and_prints_valid_report(
 ) -> None:
     output = tmp_path / "reports" / "cross-source.json"
 
-    result = _run_cli(
+    result = run_cli(
         "eval",
         "cross-source",
         "--out",
@@ -355,7 +368,7 @@ def test_eval_benchmark_dry_run_cli_writes_valid_external_report(
         encoding="utf-8",
     )
 
-    result = _run_cli(
+    result = run_cli(
         "eval",
         "benchmark",
         "--dry-run",
@@ -384,7 +397,7 @@ def test_eval_benchmark_dry_run_cli_writes_valid_external_report(
 
 
 def test_eval_benchmark_cli_reports_missing_dataset(tmp_path: Path) -> None:
-    result = _run_cli(
+    result = run_cli(
         "eval",
         "benchmark",
         "--dry-run",
@@ -423,8 +436,8 @@ def test_receipts_verify_cli_verifies_committed_receipt(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    ok = _run_cli("receipts", "verify", receipt_path, "--root", committed_root.hex())
-    wrong_root = _run_cli(
+    ok = run_cli("receipts", "verify", receipt_path, "--root", committed_root.hex())
+    wrong_root = run_cli(
         "receipts",
         "verify",
         receipt_path,
@@ -469,16 +482,7 @@ def _item(key_value: float, *, step: int = 0) -> MemoryItem:
     )
 
 
-def _run_cli(*args: object) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, "-m", "mneme.cli", *(str(arg) for arg in args)],
-        check=False,
-        text=True,
-        capture_output=True,
-    )
-
-
-def _stdout_json(result: subprocess.CompletedProcess[str]) -> dict[str, object]:
+def _stdout_json(result: CliResult) -> dict[str, object]:
     data = json.loads(result.stdout)
     assert isinstance(data, dict)
     return data

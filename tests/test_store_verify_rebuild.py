@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 import pytest
+from _cli_runner import run_cli
 
 from mneme.core import (
     CliExitCode,
@@ -71,7 +70,7 @@ def test_verify_store_succeeds_on_healthy_fixture(tmp_path: Path) -> None:
     assert report.index_backend == "flat"
     assert report.errors == ()
 
-    cli = _run_cli("store", "verify", root)
+    cli = run_cli("store", "verify", root)
     assert cli.returncode == int(CliExitCode.SUCCESS)
     assert json.loads(cli.stdout)["ok"] is True
 
@@ -94,7 +93,7 @@ def test_verify_store_reports_corrupt_value_log_with_typed_failure(
     with pytest.raises(StoreCorruptionError, match="checksum mismatch"):
         verify_store(root, raise_on_error=True)
 
-    cli = _run_cli("store", "verify", root)
+    cli = run_cli("store", "verify", root)
     assert cli.returncode == int(CliExitCode.DATA_VALIDATION)
     assert json.loads(cli.stdout)["ok"] is False
 
@@ -133,7 +132,7 @@ def test_index_rebuild_cli_returns_documented_success(tmp_path: Path) -> None:
     store = init_store(root)
     store.put(_item(1.0))
 
-    cli = _run_cli("index", "rebuild", root)
+    cli = run_cli("index", "rebuild", root)
 
     assert cli.returncode == int(CliExitCode.SUCCESS)
     report = json.loads(cli.stdout)
@@ -208,7 +207,7 @@ def test_commit_init_cli_returns_upgrade_report(tmp_path: Path) -> None:
     store = init_store(root)
     store.put_batch([_item(1.0, step=1), _item(2.0, step=2)])
 
-    cli = _run_cli("store", "commit-init", root)
+    cli = run_cli("store", "commit-init", root)
 
     assert cli.returncode == int(CliExitCode.SUCCESS), cli.stdout + cli.stderr
     report = json.loads(cli.stdout)
@@ -220,15 +219,6 @@ def test_commit_init_cli_returns_upgrade_report(tmp_path: Path) -> None:
 
 
 def test_cli_invalid_args_return_user_input_exit_code() -> None:
-    cli = _run_cli("store")
+    cli = run_cli("store")
 
     assert cli.returncode == int(CliExitCode.USER_INPUT)
-
-
-def _run_cli(*args: object) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, "-m", "mneme.cli", *(str(arg) for arg in args)],
-        check=False,
-        text=True,
-        capture_output=True,
-    )

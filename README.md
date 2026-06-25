@@ -124,7 +124,7 @@ All maintainer tasks run through uv:
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75
+uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80
 uv run mypy src/mneme
 uv build --out-dir dist --clear --no-build-logs
 ```

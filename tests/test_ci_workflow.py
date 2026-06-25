@@ -14,7 +14,7 @@ def test_hosted_ci_workflow_runs_required_gates() -> None:
     assert "uv run ruff check ." in workflow
     assert "uv run ruff format --check ." in workflow
     assert (
-        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75"
+        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80"
         in workflow
     )
     assert "uv run mypy src/mneme" in workflow
@@ -58,7 +58,7 @@ def test_contributing_documents_ci_reproduction_commands() -> None:
     assert "uv run ruff check ." in contributing
     assert "uv run ruff format --check ." in contributing
     assert (
-        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75"
+        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80"
         in contributing
     )
     assert "uv run mypy src/mneme" in contributing

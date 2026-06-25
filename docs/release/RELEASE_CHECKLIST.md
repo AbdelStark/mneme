@@ -8,7 +8,7 @@ release gate, not a release announcement.
 - [ ] Confirm the target issue or release tracker links the intended scope.
 - [ ] Run `ruff check .`.
 - [ ] Run `ruff format --check .`.
-- [ ] Run `pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75`.
+- [ ] Run `pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80`.
 - [ ] Run `mypy src/mneme`.
 - [ ] Run `mkdocs build --strict`.
 - [ ] Build source and wheel artifacts with `uv build`.
