@@ -134,7 +134,7 @@ class MemoryItemEnvelope:
     item: MemoryItem
 
     def to_json(self) -> dict[str, object]:
-        cid = self.item.content_id or content_id(self.item)
+        cid = _canonical_item_content_id(self.item)
         return {
             "schema_version": self.item.schema_version,
             "content_id": cid.hex(),
@@ -433,6 +433,13 @@ def _query_from_json(data: object) -> QuerySpec:
         encoder_fp=_optional_fingerprint(mapping.get("encoder_fp")),
         schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
     )
+
+
+def _canonical_item_content_id(item: MemoryItem) -> Cid:
+    cid = content_id(item)
+    if item.content_id is not None and item.content_id != cid:
+        raise ValidationError("content_id does not match canonical item bytes")
+    return cid
 
 
 def _message_mapping(data: object, expected_schema: str) -> Mapping[str, Any]:

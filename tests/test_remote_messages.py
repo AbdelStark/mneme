@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from dataclasses import replace
 from uuid import uuid4
 
 import numpy as np
@@ -32,6 +33,7 @@ from mneme.remote import (
     STATS_REQUEST_SCHEMA,
     STATS_RESPONSE_SCHEMA,
     ErrorMessage,
+    MemoryItemEnvelope,
     ProveRequest,
     ProveResponse,
     PutRequest,
@@ -166,6 +168,13 @@ def test_query_response_round_trips_receipt_payload() -> None:
     assert decoded.retrieval.receipt == receipt
     assert decoded.retrieval.items[0].content_id == cid
     assert decoded.retrieval.distances == (0.0,)
+
+
+def test_memory_item_envelope_rejects_forged_content_id_on_serialization() -> None:
+    item = replace(_built_item(1.0), content_id=b"\x11" * 32)
+
+    with pytest.raises(ValidationError, match="content_id"):
+        MemoryItemEnvelope(item).to_json()
 
 
 def test_remote_messages_reject_non_digest_ids_and_roots() -> None:
