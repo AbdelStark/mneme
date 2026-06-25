@@ -7,7 +7,7 @@ import os
 import platform as platform_module
 import subprocess
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from typing import Final
 
@@ -30,6 +30,7 @@ from mneme.core import (
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport
 from mneme.index import FlatIndex, create_index_backend
 from mneme.store import LocalStore
+from mneme.store._retention import tombstoned_cids
 
 _PROFILE_CAVEAT: Final = (
     "Local profiling reports characterize the supplied store only and cannot "
@@ -182,28 +183,10 @@ def run_profile_evaluation(
 
 
 def _visible_items(store: LocalStore) -> tuple[tuple[Cid, MemoryItem], ...]:
-    tombstoned = _tombstoned_cids(store.manifest.retention_policy)
+    tombstoned = tombstoned_cids(store.manifest)
     return tuple(
         (cid, store._items[cid]) for cid in sorted(set(store._items) - tombstoned)
     )
-
-
-def _tombstoned_cids(retention_policy: Mapping[str, object]) -> set[Cid]:
-    raw_tombstones = retention_policy.get("tombstones", [])
-    if not isinstance(raw_tombstones, list):
-        return set()
-    cids: set[Cid] = set()
-    for raw in raw_tombstones:
-        if not isinstance(raw, Mapping):
-            continue
-        content_id_hex = raw.get("content_id")
-        if not isinstance(content_id_hex, str):
-            continue
-        try:
-            cids.add(bytes.fromhex(content_id_hex))
-        except ValueError:
-            continue
-    return cids
 
 
 def _query_vectors(

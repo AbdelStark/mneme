@@ -20,8 +20,10 @@ from mneme.core import (
     Metric,
     QuerySpec,
     Retrieval,
+    StoreCorruptionError,
     content_id,
 )
+from mneme.core._ids import cid_from_hex
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store._value_log import (
     _array_from_json,
@@ -392,14 +394,19 @@ def _item_to_json(item: MemoryItem) -> dict[str, object]:
 def _item_from_json(data: object) -> MemoryItem:
     mapping = _require_mapping(data, "item")
     cid = _bytes_from_hex(mapping.get("content_id"), "content_id")
-    item = MemoryItem(
-        content_id=cid,
-        key=_array_from_json(mapping.get("key")),
-        value=_transition_from_json(mapping.get("value")),
-        meta=_require_mapping(mapping.get("meta"), "meta"),
-        encoder_fp=_fingerprint_from_json(mapping.get("encoder_fp")),
-        schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
-    )
+    try:
+        item = MemoryItem(
+            content_id=cid,
+            key=_array_from_json(mapping.get("key")),
+            value=_transition_from_json(mapping.get("value")),
+            meta=_require_mapping(mapping.get("meta"), "meta"),
+            encoder_fp=_fingerprint_from_json(mapping.get("encoder_fp")),
+            schema_version=_require_string(
+                mapping.get("schema_version"), "schema_version"
+            ),
+        )
+    except (StoreCorruptionError, TypeError, ValueError) as exc:
+        raise EvaluationError("invalid replay item payload") from exc
     if item.content_id != content_id(item):
         raise EvaluationError("item content_id does not match canonical bytes")
     return item
@@ -532,11 +539,7 @@ def _optional_fingerprint(value: object) -> EncoderFingerprint | None:
 
 
 def _bytes_from_hex(value: object, field_name: str) -> bytes:
-    text = _require_string(value, field_name)
-    try:
-        return bytes.fromhex(text)
-    except ValueError as exc:
-        raise EvaluationError(f"{field_name} must be hex bytes") from exc
+    return cid_from_hex(value, field_name, error_type=EvaluationError)
 
 
 __all__ = [

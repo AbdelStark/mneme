@@ -443,9 +443,12 @@ class LocalStore:
         if not self.manifest.commitment.enabled or root_hex is None:
             raise UnsupportedOperationError("store commitments are not initialized")
         try:
-            return bytes.fromhex(root_hex)
+            root = bytes.fromhex(root_hex)
         except ValueError as exc:
             raise StoreCorruptionError("commitment root must be hex bytes") from exc
+        if len(root) != 32:
+            raise StoreCorruptionError("commitment root must be 32 bytes")
+        return root
 
     def commitment_state(self) -> MmrCommitmentState:
         """Load the persisted commitment state sidecar."""

@@ -15,6 +15,7 @@ from mneme.core import (
     Metric,
     QuerySpec,
     ReceiptVerificationError,
+    StoreCorruptionError,
     Transition,
     UnsupportedOperationError,
     ValidationError,
@@ -167,6 +168,19 @@ def test_store_commit_persists_mmr_sidecar_and_proves_value_log_order(
 
     with pytest.raises(ReceiptVerificationError, match="not committed"):
         reopened.prove([blake3(b"missing").digest()])
+
+
+def test_store_root_rejects_short_manifest_commitment_root(tmp_path: Path) -> None:
+    store = init_store(tmp_path / "store")
+    store.put(_item(1.0))
+    store.commit()
+    manifest_path = store.path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["commitment"]["root"] = "00"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(StoreCorruptionError, match="commitment root must be 32 bytes"):
+        open_store(store.path).root()
 
 
 def test_retrieval_receipt_verifies_items_root_and_query(tmp_path: Path) -> None:

@@ -8,13 +8,22 @@ from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
+import pytest
 
-from mneme.core import EncoderFingerprint, MemoryItem, Metric, QuerySpec, Transition
+from mneme.core import (
+    EncoderFingerprint,
+    EvaluationError,
+    MemoryItem,
+    Metric,
+    QuerySpec,
+    Transition,
+)
 from mneme.eval import (
     RECEIPT_REPLAY_REPORT_SCHEMA,
     RECEIPT_REPLAY_TRACE_SCHEMA,
     ReceiptReplayTrace,
     build_receipt_replay_trace,
+    load_replay_trace_json,
     replay_receipt_trace,
     write_replay_trace_json,
 )
@@ -93,6 +102,32 @@ def test_receipt_replay_cli_writes_report(tmp_path: Path) -> None:
     assert written["ok"] is True
     assert written["root"] == trace.receipt.root.hex()
     assert written["ids"] == [cid.hex() for cid in trace.receipt.ids]
+
+
+def test_receipt_replay_loader_rejects_non_digest_item_ids(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace = _trace(tmp_path)
+    payload = trace.to_json()
+    payload["items"][0]["content_id"] = "00"
+    trace_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="content_id must be 32 bytes"):
+        load_replay_trace_json(trace_path)
+
+
+def test_receipt_replay_loader_wraps_invalid_item_payloads(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace = _trace(tmp_path)
+    payload = trace.to_json()
+    payload["items"][0]["key"]["shape"] = [True, 2]
+    trace_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="invalid replay item payload"):
+        load_replay_trace_json(trace_path)
 
 
 def _trace(tmp_path: Path) -> ReceiptReplayTrace:
