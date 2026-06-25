@@ -264,7 +264,7 @@ def _stdlib_request_json(
     payload: JsonObject,
     config: RemoteHttpConfig,
 ) -> HttpJsonResponse:
-    body = json.dumps(payload).encode("utf-8")
+    body = _json_bytes(payload)
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -314,7 +314,7 @@ async def _send_json(
     payload: ErrorMessage | JsonObject,
 ) -> None:
     json_payload = payload.to_json() if isinstance(payload, ErrorMessage) else payload
-    body = json.dumps(json_payload).encode("utf-8")
+    body = _json_bytes(json_payload)
     await send(
         {
             "type": "http.response.start",
@@ -327,12 +327,28 @@ async def _send_json(
 
 def _json_body(body: bytes) -> JsonObject:
     try:
-        value = json.loads(body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        value = json.loads(
+            body.decode("utf-8"),
+            parse_constant=_reject_json_constant,
+        )
+    except (UnicodeDecodeError, ValueError) as exc:
         raise ValidationError("remote HTTP body must be valid JSON") from exc
     if not isinstance(value, dict):
         raise ValidationError("remote HTTP body must be a JSON object")
     return cast(JsonObject, value)
+
+
+def _json_bytes(payload: JsonObject) -> bytes:
+    try:
+        return json.dumps(payload, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ValidationError(
+            "remote HTTP payload must be JSON-serializable with finite numbers"
+        ) from exc
+
+
+def _reject_json_constant(value: str) -> object:
+    raise ValueError(f"invalid JSON constant: {value}")
 
 
 def _authorized(scope: AsgiScope, token: str) -> bool:

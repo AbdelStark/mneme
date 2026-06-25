@@ -178,6 +178,48 @@ def test_remote_http_malformed_server_response_fails_closed() -> None:
         client.stats()
 
 
+def test_remote_http_rejects_nonstandard_json_constants(tmp_path: Path) -> None:
+    app = MemoryStoreASGIApp(init_store(tmp_path / "store"))
+
+    response = asyncio.run(
+        _call_asgi_raw(
+            app,
+            "POST",
+            "/stats",
+            b'{"schema_version": NaN}',
+            RemoteHttpConfig("http://testserver"),
+        )
+    )
+
+    assert response.status_code == 400
+    assert response.payload["schema_version"] == "mneme.error.v1"
+    assert response.payload["error_type"] == "ValidationError"
+    assert "valid JSON" in str(response.payload["message"])
+
+
+def test_stdlib_request_json_rejects_nonfinite_payload_before_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = False
+
+    def urlopen(*_args: object, **_kwargs: object) -> object:
+        nonlocal called
+        called = True
+        raise AssertionError("urlopen should not be called")
+
+    monkeypatch.setattr(remote_http.urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(ValidationError, match="finite numbers"):
+        remote_http._stdlib_request_json(
+            "POST",
+            "/stats",
+            {"schema_version": float("nan")},
+            RemoteHttpConfig("http://testserver"),
+        )
+
+    assert called is False
+
+
 def test_serve_asgi_app_missing_uvicorn_is_actionable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -239,7 +281,22 @@ async def _call_asgi(
     payload: Mapping[str, object],
     config: RemoteHttpConfig,
 ) -> HttpJsonResponse:
-    body = json.dumps(payload).encode("utf-8")
+    return await _call_asgi_raw(
+        app,
+        method,
+        path,
+        json.dumps(payload, allow_nan=False).encode("utf-8"),
+        config,
+    )
+
+
+async def _call_asgi_raw(
+    app: MemoryStoreASGIApp,
+    method: str,
+    path: str,
+    body: bytes,
+    config: RemoteHttpConfig,
+) -> HttpJsonResponse:
     sent = False
     messages: list[dict[str, object]] = []
     headers = [(b"content-type", b"application/json")]
