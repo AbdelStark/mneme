@@ -492,7 +492,7 @@ def _optional_encoder_fingerprint(value: object) -> EncoderFingerprint | None:
                 "encoder_fp schema_version",
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, ValidationError) as exc:
         raise ValidationError("invalid encoder_fp") from exc
 
 

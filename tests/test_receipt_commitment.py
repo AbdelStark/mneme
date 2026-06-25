@@ -219,6 +219,23 @@ def test_retrieval_receipt_verifies_items_root_and_query(tmp_path: Path) -> None
     assert verify_retrieval_receipt(reloaded, retrieval.items, root=root, query=spec)
 
 
+def test_query_receipt_params_rejects_malformed_encoder_fingerprint_json() -> None:
+    params = QueryReceiptParams.from_query(
+        QuerySpec(
+            vector=np.array([1.0, 0.0], dtype=np.float32),
+            k=1,
+            metric=Metric.L2,
+            encoder_fp=_fingerprint(),
+        )
+    )
+    payload = params.to_json()
+    assert isinstance(payload["encoder_fp"], dict)
+    payload["encoder_fp"]["config_digest"] = None
+
+    with pytest.raises(ValidationError, match="invalid encoder_fp"):
+        QueryReceiptParams.from_json(payload)
+
+
 def test_retrieval_receipt_fails_for_altered_items_and_root(
     tmp_path: Path,
 ) -> None:
