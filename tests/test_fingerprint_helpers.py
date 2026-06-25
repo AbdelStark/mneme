@@ -83,6 +83,19 @@ def test_weight_digest_can_come_from_bytes_or_file(tmp_path: Path) -> None:
     ).weights_digest == digest_weights(weights)
 
 
+def test_weight_digest_wraps_missing_weight_file(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="weights file not found"):
+        digest_weights(tmp_path / "missing.bin")
+
+
+def test_weight_digest_wraps_unreadable_weight_path(tmp_path: Path) -> None:
+    path = tmp_path / "weights.bin"
+    path.mkdir()
+
+    with pytest.raises(ValidationError, match="weights file could not be read"):
+        digest_weights(path)
+
+
 def test_mismatched_fingerprints_fail_closed() -> None:
     expected = build_encoder_fingerprint("encoder", "summary", unweighted=True)
     actual = build_encoder_fingerprint("encoder", "other", unweighted=True)

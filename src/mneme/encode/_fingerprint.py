@@ -44,9 +44,14 @@ def digest_weights(weights: bytes | str | PathLike[str]) -> str:
 
     path = Path(weights)
     hasher = blake3()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(_CHUNK_SIZE), b""):
-            hasher.update(chunk)
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(_CHUNK_SIZE), b""):
+                hasher.update(chunk)
+    except FileNotFoundError as exc:
+        raise ValidationError(f"weights file not found: {path}") from exc
+    except OSError as exc:
+        raise ValidationError(f"weights file could not be read: {path}") from exc
     return f"{_DIGEST_PREFIX}{hasher.hexdigest()}"
 
 
