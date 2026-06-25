@@ -11,7 +11,13 @@ from mneme.core import (
     StoreCorruptionError,
     StoreError,
 )
-from mneme.store import STORE_MANIFEST_SCHEMA, init_store, load_manifest, open_store
+from mneme.store import (
+    STORE_MANIFEST_SCHEMA,
+    IndexConfig,
+    init_store,
+    load_manifest,
+    open_store,
+)
 
 
 def _fingerprint() -> EncoderFingerprint:
@@ -91,6 +97,29 @@ def test_load_manifest_reconstructs_fingerprints_and_index_config(tmp_path) -> N
     assert manifest.active_fingerprints == (_fingerprint(),)
     assert manifest.index.backend == "flat"
     assert manifest.value_logs[0].path == "values/log-000000.mnv"
+
+
+def test_index_config_rejects_non_json_safe_direct_params() -> None:
+    with pytest.raises(
+        StoreCorruptionError,
+        match="index params.threshold must contain finite",
+    ):
+        IndexConfig("flat", {"threshold": float("nan")})
+
+    with pytest.raises(StoreCorruptionError, match="index params keys must be strings"):
+        IndexConfig("flat", {1: "bad"})
+
+
+def test_init_store_rejects_invalid_index_params_before_layout(tmp_path) -> None:
+    root = tmp_path / "store"
+
+    with pytest.raises(
+        StoreCorruptionError,
+        match="index params.threshold must contain finite",
+    ):
+        init_store(root, index_params={"threshold": float("inf")})
+
+    assert not root.exists()
 
 
 def test_unknown_manifest_major_version_fails_closed(tmp_path) -> None:

@@ -489,9 +489,10 @@ def init_store(
     manifest_path = root / _MANIFEST_FILE
     if manifest_path.exists() and not exist_ok:
         raise StoreError(f"store manifest already exists at {manifest_path}")
+    index_config = IndexConfig(index_backend, index_params or {})
     create_index_backend(
-        index_backend,
-        index_params or {},
+        index_config.backend,
+        index_config.params,
         observability=observability,
     )
 
@@ -508,7 +509,7 @@ def init_store(
         updated_at=now,
         active_fingerprints=tuple(active_fingerprints or ()),
         value_logs=(ValueLogRef(_VALUE_LOG),),
-        index=IndexConfig(index_backend, index_params or {}),
+        index=index_config,
         retention_policy=retention_policy or {"policy": "none", "tombstones": []},
         last_completed_transaction=None,
         commitment=ManifestCommitmentState(

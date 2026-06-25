@@ -97,6 +97,18 @@ class IndexConfig:
     backend: str = "flat"
     params: Mapping[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "backend",
+            _require_string(self.backend, "index backend"),
+        )
+        object.__setattr__(
+            self,
+            "params",
+            _require_json_mapping(self.params, "index params"),
+        )
+
     @classmethod
     def from_json(cls, data: object) -> IndexConfig:
         mapping = _require_mapping(data, "index")
