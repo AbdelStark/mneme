@@ -290,7 +290,12 @@ def _json_ready(value: object) -> object:
             raise ValidationError("float metadata must be finite")
         return value
     if isinstance(value, Mapping):
-        return {str(key): _json_ready(nested) for key, nested in value.items()}
+        ready: dict[str, object] = {}
+        for key, nested in value.items():
+            if not isinstance(key, str) or not key:
+                raise ValidationError("mapping keys must be non-empty strings")
+            ready[key] = _json_ready(nested)
+        return ready
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return [_json_ready(item) for item in value]
     raise ValidationError(f"unsupported metadata value: {type(value).__name__}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 from dataclasses import replace
 from uuid import uuid4
 
@@ -186,6 +187,67 @@ def test_remote_messages_reject_non_digest_ids_and_roots() -> None:
         RootResponse(b"x")
     with pytest.raises(ValidationError, match="root must be 32 bytes"):
         RootResponse.from_json({"schema_version": ROOT_RESPONSE_SCHEMA, "root": "00"})
+
+
+def test_message_constructors_reject_unsupported_schema_versions() -> None:
+    item = _built_item(1.0)
+    cid = item.content_id or content_id(item)
+    proof = CommitmentState.from_cids((cid,)).prove(cid)
+    spec = QuerySpec(vector=np.array([1.0, 0.0], dtype=np.float32), k=1)
+    retrieval = Retrieval(items=(item,), distances=(0.0,))
+    root = blake3(b"root").digest()
+    invalid_messages = (
+        lambda: PutRequest((item,), schema_version="mneme.put.request.v2"),
+        lambda: PutResponse((cid,), schema_version="mneme.put.response.v2"),
+        lambda: QueryRequest(spec, schema_version="mneme.query.request.v2"),
+        lambda: QueryResponse(retrieval, schema_version="mneme.query.response.v2"),
+        lambda: ProveRequest((cid,), schema_version="mneme.prove.request.v2"),
+        lambda: ProveResponse((proof,), schema_version="mneme.prove.response.v2"),
+        lambda: RootRequest(schema_version="mneme.root.request.v2"),
+        lambda: RootResponse(root, schema_version="mneme.root.response.v2"),
+        lambda: StatsRequest(schema_version="mneme.stats.request.v2"),
+        lambda: StatsResponse({}, schema_version="mneme.stats.response.v2"),
+        lambda: ErrorMessage(
+            "ValidationError",
+            "invalid request",
+            schema_version="mneme.error.v2",
+        ),
+    )
+
+    for build_message in invalid_messages:
+        with pytest.raises(SchemaVersionError, match="unsupported message schema"):
+            build_message()
+
+
+@pytest.mark.parametrize(
+    ("build_message", "match"),
+    (
+        (lambda: MemoryItemEnvelope(object()), "item"),
+        (lambda: PutRequest((object(),)), "items"),
+        (lambda: QueryRequest(object()), "QuerySpec"),
+        (lambda: QueryResponse(object()), "Retrieval"),
+        (
+            lambda: QueryResponse(Retrieval(items=(), distances=(), receipt=object())),
+            "receipt",
+        ),
+        (lambda: ProveResponse((object(),)), "proofs"),
+        (lambda: StatsResponse([]), "stats"),
+        (lambda: StatsResponse({1: "record"}), "mapping keys"),
+        (lambda: StatsResponse({"nested": {1: "record"}}), "mapping keys"),
+        (lambda: ErrorMessage("", "invalid request"), "error_type"),
+        (lambda: ErrorMessage("ValidationError", ""), "message"),
+        (
+            lambda: ErrorMessage("ValidationError", "invalid request", retryable="no"),
+            "retryable",
+        ),
+    ),
+)
+def test_message_constructors_validate_payloads(
+    build_message: Callable[[], object],
+    match: str,
+) -> None:
+    with pytest.raises(ValidationError, match=match):
+        build_message()
 
 
 def test_unknown_major_message_schema_fails_closed() -> None:

@@ -57,10 +57,11 @@ def test_validate_query_response_fails_closed_on_malformed_schema() -> None:
 
 def test_validate_query_response_rejects_typed_response_schema_bypass() -> None:
     item = _built_item(1.0)
-    response = QueryResponse(
-        Retrieval(items=(item,), distances=(0.0,)),
-        schema_version="mneme.query.response.v2",
+    response = object.__new__(QueryResponse)
+    object.__setattr__(
+        response, "retrieval", Retrieval(items=(item,), distances=(0.0,))
     )
+    object.__setattr__(response, "schema_version", "mneme.query.response.v2")
 
     with pytest.raises(SchemaVersionError, match="unsupported message schema"):
         validate_query_response(response, QuerySpec(item.key, k=1, metric=Metric.L2))

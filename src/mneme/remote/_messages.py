@@ -133,6 +133,10 @@ class MemoryItemEnvelope:
 
     item: MemoryItem
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.item, MemoryItem):
+            raise ValidationError("item must be a MemoryItem")
+
     def to_json(self) -> dict[str, object]:
         cid = _canonical_item_content_id(self.item)
         return {
@@ -150,17 +154,20 @@ class MemoryItemEnvelope:
         mapping = _require_mapping(data, "item")
         if mapping.get("value_kind") != "transition":
             raise ValidationError("unsupported memory item value_kind")
-        item = MemoryItem(
-            content_id=_bytes_from_hex(mapping.get("content_id"), "content_id"),
-            key=RemoteArray.from_json(mapping.get("key")).to_array(),
-            value=_transition_from_json(mapping.get("value")),
-            meta=_require_mapping(mapping.get("meta"), "meta"),
-            encoder_fp=_fingerprint_from_json(mapping.get("encoder_fp")),
-            schema_version=_require_string(
-                mapping.get("schema_version"),
-                "item schema_version",
-            ),
-        )
+        try:
+            item = MemoryItem(
+                content_id=_bytes_from_hex(mapping.get("content_id"), "content_id"),
+                key=RemoteArray.from_json(mapping.get("key")).to_array(),
+                value=_transition_from_json(mapping.get("value")),
+                meta=_require_mapping(mapping.get("meta"), "meta"),
+                encoder_fp=_fingerprint_from_json(mapping.get("encoder_fp")),
+                schema_version=_require_string(
+                    mapping.get("schema_version"),
+                    "item schema_version",
+                ),
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("invalid memory item payload") from exc
         if item.content_id != content_id(item):
             raise ValidationError("content_id does not match canonical item bytes")
         return cls(item)
@@ -170,6 +177,10 @@ class MemoryItemEnvelope:
 class PutRequest:
     items: tuple[MemoryItem, ...]
     schema_version: str = PUT_REQUEST_SCHEMA
+
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, PUT_REQUEST_SCHEMA)
+        object.__setattr__(self, "items", _memory_item_sequence(self.items, "items"))
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -190,6 +201,7 @@ class PutResponse:
     schema_version: str = PUT_RESPONSE_SCHEMA
 
     def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, PUT_RESPONSE_SCHEMA)
         object.__setattr__(self, "ids", _cid_sequence(self.ids, "ids"))
 
     def to_json(self) -> dict[str, object]:
@@ -209,6 +221,11 @@ class QueryRequest:
     spec: QuerySpec
     schema_version: str = QUERY_REQUEST_SCHEMA
 
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, QUERY_REQUEST_SCHEMA)
+        if not isinstance(self.spec, QuerySpec):
+            raise ValidationError("query spec must be a QuerySpec")
+
     def to_json(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
@@ -225,6 +242,16 @@ class QueryRequest:
 class QueryResponse:
     retrieval: Retrieval
     schema_version: str = QUERY_RESPONSE_SCHEMA
+
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, QUERY_RESPONSE_SCHEMA)
+        if not isinstance(self.retrieval, Retrieval):
+            raise ValidationError("retrieval must be a Retrieval")
+        if self.retrieval.receipt is not None and not isinstance(
+            self.retrieval.receipt,
+            RetrievalReceipt,
+        ):
+            raise ValidationError("receipt must be a RetrievalReceipt")
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -258,6 +285,7 @@ class ProveRequest:
     schema_version: str = PROVE_REQUEST_SCHEMA
 
     def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, PROVE_REQUEST_SCHEMA)
         object.__setattr__(self, "ids", _cid_sequence(self.ids, "ids"))
 
     def to_json(self) -> dict[str, object]:
@@ -277,6 +305,10 @@ class ProveResponse:
     proofs: tuple[InclusionProof, ...]
     schema_version: str = PROVE_RESPONSE_SCHEMA
 
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, PROVE_RESPONSE_SCHEMA)
+        object.__setattr__(self, "proofs", _proof_sequence(self.proofs, "proofs"))
+
     def to_json(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
@@ -294,6 +326,9 @@ class ProveResponse:
 class RootRequest:
     schema_version: str = ROOT_REQUEST_SCHEMA
 
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, ROOT_REQUEST_SCHEMA)
+
     def to_json(self) -> dict[str, object]:
         return {"schema_version": self.schema_version}
 
@@ -309,6 +344,7 @@ class RootResponse:
     schema_version: str = ROOT_RESPONSE_SCHEMA
 
     def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, ROOT_RESPONSE_SCHEMA)
         object.__setattr__(
             self,
             "root",
@@ -333,6 +369,9 @@ class RootResponse:
 class StatsRequest:
     schema_version: str = STATS_REQUEST_SCHEMA
 
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, STATS_REQUEST_SCHEMA)
+
     def to_json(self) -> dict[str, object]:
         return {"schema_version": self.schema_version}
 
@@ -346,6 +385,10 @@ class StatsRequest:
 class StatsResponse:
     stats: Mapping[str, Any] = field(default_factory=dict)
     schema_version: str = STATS_RESPONSE_SCHEMA
+
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, STATS_RESPONSE_SCHEMA)
+        object.__setattr__(self, "stats", _json_object(self.stats, "stats"))
 
     @classmethod
     def from_store_stats(cls, stats: StoreStats) -> StatsResponse:
@@ -381,6 +424,12 @@ class ErrorMessage:
     message: str
     retryable: bool = False
     schema_version: str = ERROR_SCHEMA
+
+    def __post_init__(self) -> None:
+        _validate_schema(self.schema_version, ERROR_SCHEMA)
+        _require_string(self.error_type, "error_type")
+        _require_string(self.message, "message")
+        _require_bool(self.retryable, "retryable")
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -452,6 +501,8 @@ def _message_mapping(data: object, expected_schema: str) -> Mapping[str, Any]:
 
 
 def _validate_schema(schema_version: str, expected: str) -> None:
+    if not isinstance(schema_version, str):
+        raise SchemaVersionError("message schema_version must be a string")
     prefix, _, major_text = schema_version.rpartition(".v")
     expected_prefix, _, _ = expected.rpartition(".v")
     if prefix != expected_prefix or not major_text.isdigit():
@@ -512,6 +563,28 @@ def _cid_sequence(value: object, field_name: str) -> tuple[Cid, ...]:
     )
 
 
+def _memory_item_sequence(value: object, field_name: str) -> tuple[MemoryItem, ...]:
+    values = _require_sequence(value, field_name)
+    items: list[MemoryItem] = []
+    for item in values:
+        if not isinstance(item, MemoryItem):
+            raise ValidationError(f"{field_name} must contain only MemoryItem values")
+        items.append(item)
+    return tuple(items)
+
+
+def _proof_sequence(value: object, field_name: str) -> tuple[InclusionProof, ...]:
+    values = _require_sequence(value, field_name)
+    proofs: list[InclusionProof] = []
+    for proof in values:
+        if not isinstance(proof, InclusionProof):
+            raise ValidationError(
+                f"{field_name} must contain only InclusionProof values"
+            )
+        proofs.append(proof)
+    return tuple(proofs)
+
+
 def _receipt_to_json(value: object) -> dict[str, object]:
     if not isinstance(value, RetrievalReceipt):
         raise ValidationError("receipt must be a RetrievalReceipt")
@@ -528,6 +601,15 @@ def _require_mapping(value: object, field_name: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise ValidationError(f"{field_name} must be an object")
     return value
+
+
+def _json_object(value: object, field_name: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValidationError(f"{field_name} must be an object")
+    ready = _json_ready(value)
+    if not isinstance(ready, Mapping):
+        raise ValidationError(f"{field_name} must be an object")
+    return ready
 
 
 def _require_sequence(value: object, field_name: str) -> Sequence[object]:
