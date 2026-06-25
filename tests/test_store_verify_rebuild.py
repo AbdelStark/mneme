@@ -127,6 +127,38 @@ def test_rebuild_index_restores_snapshot_and_query_results(tmp_path: Path) -> No
     assert retrieval.items[0].content_id == cids[1]
 
 
+def test_verify_store_rejects_nonstandard_index_backend_json(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    (root / "index" / "backend.json").write_text(
+        '{"backend": NaN}',
+        encoding="utf-8",
+    )
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any("index backend is malformed JSON" in error for error in report.errors)
+
+
+def test_verify_store_rejects_nonstandard_index_data_json(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    assert rebuild_index(root).ok
+    (root / "index" / "data.json").write_text(
+        '{"schema_version": NaN}',
+        encoding="utf-8",
+    )
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any("index data is malformed JSON" in error for error in report.errors)
+
+
 def test_verify_store_rejects_non_digest_index_content_ids(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)

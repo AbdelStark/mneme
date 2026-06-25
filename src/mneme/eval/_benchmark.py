@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import platform as platform_module
 import subprocess
@@ -15,6 +14,7 @@ from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
 
 from mneme._version import __version__
 from mneme.core import EvaluationError
+from mneme.core._json import loads_strict_json
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport, write_report_json
 
 BenchmarkMode: TypeAlias = Literal["no_memory", "corrector", "in_context", "adapter"]
@@ -145,12 +145,12 @@ def load_benchmark_dataset_ref(path: str | Path) -> DatasetRef:
 
     manifest_path = Path(path)
     try:
-        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        data = loads_strict_json(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise EvaluationError(
             f"benchmark dataset file not found: {manifest_path}"
         ) from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise EvaluationError(
             f"benchmark dataset file is not valid JSON: {manifest_path}"
         ) from exc

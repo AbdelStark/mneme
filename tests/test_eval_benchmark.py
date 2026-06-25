@@ -85,6 +85,16 @@ def test_missing_dataset_file_fails_with_actionable_error(tmp_path: Path) -> Non
         load_benchmark_dataset_ref(missing)
 
 
+def test_dataset_manifest_rejects_nonstandard_json_constants(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="benchmark dataset file is not valid"):
+        load_benchmark_dataset_ref(dataset_path)
+
+
 def test_benchmark_spec_requires_external_dataset_split_and_valid_modes() -> None:
     fixture_dataset = DatasetRef(dataset_id="fixture", kind="fixture", split="unit")
     external_without_split = DatasetRef(dataset_id="external", kind="external")

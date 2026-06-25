@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -11,6 +10,7 @@ import numpy as np
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError, StoreError
 from mneme.core._ids import cid_from_hex
+from mneme.core._json import loads_strict_json
 from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
 from mneme.store._local import (
     _COMMITMENT_FILE,
@@ -351,11 +351,11 @@ def _validate_active_fingerprints(
 def _validate_index_backend(root: Path, manifest: StoreManifest) -> list[str]:
     backend_path = root / _INDEX_BACKEND_FILE
     try:
-        data = json.loads(backend_path.read_text(encoding="utf-8"))
+        data = loads_strict_json(backend_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return [f"index backend missing: {_INDEX_BACKEND_FILE}"]
-    except json.JSONDecodeError as exc:
-        return [f"index backend is malformed JSON: {exc.msg}"]
+    except ValueError as exc:
+        return [f"index backend is malformed JSON: {exc}"]
     if not isinstance(data, dict):
         return ["index backend must be an object"]
     errors: list[str] = []
@@ -381,9 +381,9 @@ def _validate_index_data(
     if not data_path.exists():
         return []
     try:
-        data = json.loads(data_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        return [f"index data is malformed JSON: {exc.msg}"]
+        data = loads_strict_json(data_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        return [f"index data is malformed JSON: {exc}"]
     if not isinstance(data, dict):
         return ["index data must be an object"]
     errors: list[str] = []

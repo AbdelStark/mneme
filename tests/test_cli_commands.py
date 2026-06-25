@@ -163,6 +163,30 @@ def test_query_cli_reports_typed_query_error(tmp_path: Path) -> None:
     assert error["error_type"] == "QueryError"
 
 
+def test_query_cli_rejects_nonstandard_vector_json(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    vector_path = tmp_path / "query.json"
+    init_store(root)
+    vector_path.write_text('{"vector": [NaN, 0.0]}', encoding="utf-8")
+
+    result = run_cli(
+        "query",
+        root,
+        "--vector",
+        vector_path,
+        "--k",
+        "1",
+        "--metric",
+        "l2",
+        "--json",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "QueryError"
+
+
 def test_eval_fixtures_cli_writes_and_prints_valid_report(tmp_path: Path) -> None:
     output = tmp_path / "reports" / "fixtures.json"
 
@@ -452,6 +476,20 @@ def test_receipts_verify_cli_verifies_committed_receipt(tmp_path: Path) -> None:
     assert ok_json["proof_count"] == 1
     assert wrong_root.returncode == int(CliExitCode.DATA_VALIDATION)
     assert _stdout_json(wrong_root)["ok"] is False
+
+
+def test_receipts_verify_cli_rejects_nonstandard_receipt_json(
+    tmp_path: Path,
+) -> None:
+    receipt_path = tmp_path / "receipt.json"
+    receipt_path.write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    result = run_cli("receipts", "verify", receipt_path, "--root", "00" * 32)
+
+    assert result.returncode == int(CliExitCode.DATA_VALIDATION)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "ReceiptVerificationError"
 
 
 def _fingerprint() -> EncoderFingerprint:

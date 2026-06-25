@@ -138,6 +138,16 @@ def test_receipt_replay_loader_rejects_non_digest_item_ids(
         load_replay_trace_json(trace_path)
 
 
+def test_receipt_replay_loader_rejects_nonstandard_json_constants(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace_path.write_text('{"schema_version": NaN}', encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="replay trace is not valid JSON"):
+        load_replay_trace_json(trace_path)
+
+
 def test_receipt_replay_loader_wraps_invalid_item_payloads(
     tmp_path: Path,
 ) -> None:

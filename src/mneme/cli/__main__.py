@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -30,6 +29,7 @@ from mneme.core import (
     cli_exit_code,
     content_id,
 )
+from mneme.core._json import loads_strict_json
 from mneme.eval import (
     BenchmarkSpec,
     DryRunBenchmarkRunner,
@@ -506,10 +506,10 @@ def _handle_receipts_verify(args: argparse.Namespace) -> object:
 
 def _load_vector(path: Path) -> np.ndarray:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = loads_strict_json(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise QueryError(f"vector file not found: {path}") from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise QueryError(f"vector file is not valid JSON: {path}") from exc
     if isinstance(data, dict):
         data = data.get("vector")
@@ -521,10 +521,10 @@ def _load_vector(path: Path) -> np.ndarray:
 
 def _load_receipt(path: Path) -> RetrievalReceipt:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = loads_strict_json(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ReceiptVerificationError(f"receipt file not found: {path}") from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise ReceiptVerificationError("receipt file is not valid JSON") from exc
     try:
         return RetrievalReceipt.from_json(data)

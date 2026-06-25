@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -24,7 +23,7 @@ from mneme.core import (
     content_id,
 )
 from mneme.core._ids import cid_from_hex
-from mneme.core._json import dumps_strict_json
+from mneme.core._json import dumps_strict_json, loads_strict_json
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store._value_log import (
     _array_from_json,
@@ -339,10 +338,10 @@ def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
     """Load and validate a replay trace JSON artifact."""
 
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = loads_strict_json(Path(path).read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise EvaluationError(f"replay trace not found: {path}") from exc
-    except json.JSONDecodeError as exc:
+    except ValueError as exc:
         raise EvaluationError("replay trace is not valid JSON") from exc
     return ReceiptReplayTrace.from_json(data)
 
