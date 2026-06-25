@@ -89,5 +89,5 @@ v0.1 implements `FlatIndex` and one approximate backend. The manifest records ba
 ## References
 
 - [Performance Budget](../spec/08-performance-budget.md)
-- [Testing Strategy](../spec/07-testing-strategy.md#index)
-- [PRD Section 9.1](../../prd.md#91-index)
+- [Testing Strategy](../spec/07-testing-strategy.md#required-test-groups)
+- [PRD Section 9.1](https://github.com/AbdelStark/mneme/blob/main/prd.md#91-index)

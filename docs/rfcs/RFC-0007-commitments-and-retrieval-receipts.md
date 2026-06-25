@@ -117,4 +117,4 @@ v0.3 adds commitment files to existing stores through an offline `mneme store co
 
 - [Security](../spec/06-security.md)
 - [Data Model](../spec/03-data-model.md#retrievalreceipt)
-- [PRD Section 10](../../prd.md#10-verifiability-layer)
+- [PRD Section 10](https://github.com/AbdelStark/mneme/blob/main/prd.md#10-verifiability-layer)

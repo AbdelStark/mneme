@@ -10,13 +10,16 @@ release gate, not a release announcement.
 - [ ] Run `ruff format --check .`.
 - [ ] Run `pytest`.
 - [ ] Run `mypy src/mneme`.
-- [ ] Build source and wheel artifacts with `python -m build`.
+- [ ] Run `mkdocs build --strict`.
+- [ ] Build source and wheel artifacts with `uv build`.
 - [ ] Install the built wheel in a clean environment.
 - [ ] Import the installed package and record `mneme.__version__`.
+- [ ] Run the installed `mneme` console script.
 - [ ] Generate a fixture report from the installed package.
 - [ ] Validate artifacts and fixture evidence with the release validation command.
-- [ ] Confirm README, SPEC links, CONTRIBUTING, SECURITY, CHANGELOG, LICENSE, and
-  this checklist are present in the source artifact.
+- [ ] Confirm README, SPEC links, CONTRIBUTING, SECURITY, CHANGELOG, LICENSE,
+  `uv.lock`, `mkdocs.yml`, docs, examples, and this checklist are present in
+  the source artifact.
 - [ ] Confirm the changelog has a user-visible entry for the release.
 - [ ] Confirm public docs do not claim external task success, broad benchmark
   improvement, private retrieval, encrypted storage, or receipt verification
@@ -36,7 +39,7 @@ release gate, not a release announcement.
 After building artifacts and writing the fixture report, run:
 
 ```bash
-python -m mneme.release.validate_artifacts \
+uv run python -m mneme.release.validate_artifacts \
   --dist dist \
   --fixture-report .artifacts/release/fixtures.json \
   --out .artifacts/release/release-artifacts.json

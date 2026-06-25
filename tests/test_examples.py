@@ -29,10 +29,12 @@ def test_remote_shared_store_example_runs_and_reports_receipt_validation() -> No
 def test_examples_readme_states_prerequisites_reports_and_boundaries() -> None:
     readme = Path("examples/README.md").read_text(encoding="utf-8")
 
-    assert "python3 examples/local_corrector.py" in readme
-    assert "python3 examples/remote_shared_store.py" in readme
-    assert "mneme.cli eval fixtures --out .artifacts/examples/fixtures.json" in readme
+    assert "uv sync --locked --group dev" in readme
+    assert "uv run python examples/local_corrector.py" in readme
+    assert "uv run python examples/remote_shared_store.py" in readme
+    assert "mneme eval fixtures --out .artifacts/examples/fixtures.json" in readme
     assert "remote-conformance" in readme
+    assert "cross-source" in readme
     assert "SPEC" in readme
     assert "RFC-0005" in readme
     assert "RFC-0007" in readme

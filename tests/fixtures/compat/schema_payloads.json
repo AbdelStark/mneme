@@ -12,7 +12,7 @@
       "summarizer_id": "meanpool-v1",
       "weights_digest": null
     },
-    "package_version": "0.1.0.dev0",
+    "package_version": "0.1.0",
     "schema_version": "mneme.adapter_checkpoint.v1",
     "training_report_uri": "reports/train.json",
     "weights_file": "adapter.safetensors"
@@ -55,7 +55,7 @@
     "metrics": {
       "ok": 1
     },
-    "package_version": "0.1.0.dev0",
+    "package_version": "0.1.0",
     "passed": true,
     "platform": {
       "system": "fixture"

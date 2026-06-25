@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Created: 2026-06-24
-- Source: [../../prd.md](../../prd.md#11-reference-implementation-mneme-python)
+- Source: [https://github.com/AbdelStark/mneme/blob/main/prd.md](https://github.com/AbdelStark/mneme/blob/main/prd.md#11-reference-implementation-mneme-python)
 
 ## API Stability
 
@@ -456,7 +456,7 @@ mneme receipts verify RECEIPT_FILE --root ROOT_HEX
 ```
 
 Commands return exit code 0 on success, 2 for invalid user input, 3 for data validation failure, 4 for unavailable optional dependency, and 5 for internal errors.
-The implemented v0.1 module entry point is `python -m mneme.cli ...`.
+The implemented v0.1 module entry point is `mneme ...`.
 Store stats, verification, committed-store initialization, index rebuild, query,
 fixture-eval, profile-eval, recall-eval, latency-eval, receipt-overhead eval,
 receipt replay, remote conformance, and cross-source transfer commands print

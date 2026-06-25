@@ -115,11 +115,15 @@ def _write_fake_dist(tmp_path: Path, *, version: str) -> Path:
             "CHANGELOG.md",
             "CONTRIBUTING.md",
             "LICENSE",
+            "mkdocs.yml",
             "README.md",
             "SECURITY.md",
+            "docs/index.md",
             "docs/release/RELEASE_CHECKLIST.md",
             "docs/spec/09-release-and-versioning.md",
+            "examples/README.md",
             "pyproject.toml",
+            "uv.lock",
         ):
             _add_tar_text(archive, f"{root}/{name}", f"{name}\n")
     return dist
@@ -130,6 +134,7 @@ def _metadata(version: str) -> str:
 Name: mneme
 Version: {version}
 Summary: Episodic memory and retrieval for latent world models.
+Project-URL: Documentation, https://abdelstark.github.io/mneme/
 Project-URL: Source, https://github.com/AbdelStark/mneme
 Project-URL: Issues, https://github.com/AbdelStark/mneme/issues
 Project-URL: Security, https://github.com/AbdelStark/mneme/security/advisories

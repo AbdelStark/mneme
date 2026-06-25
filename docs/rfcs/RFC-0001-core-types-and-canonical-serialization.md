@@ -11,7 +11,7 @@ Mneme defines immutable core data carriers and a deterministic canonical seriali
 
 ## Motivation
 
-[SPEC.md](../../SPEC.md#scope) requires a reusable memory layer with auditable stored transitions. [Data Model](../spec/03-data-model.md#memoryitem) requires every memory item to have a content id derived from canonical bytes. Without a canonical format, two processes can disagree about the same item identity and receipts cannot be verified reliably.
+[SPEC.md](https://github.com/AbdelStark/mneme/blob/main/SPEC.md#scope) requires a reusable memory layer with auditable stored transitions. [Data Model](../spec/03-data-model.md#memoryitem) requires every memory item to have a content id derived from canonical bytes. Without a canonical format, two processes can disagree about the same item identity and receipts cannot be verified reliably.
 
 ## Goals
 
@@ -117,4 +117,4 @@ v0.1 implements schema `v1` only and rejects unknown major versions. Minor schem
 
 - [Data Model](../spec/03-data-model.md)
 - [Error Model](../spec/04-error-model.md)
-- [PRD Section 6](../../prd.md#6-data-model-and-core-concepts)
+- [PRD Section 6](https://github.com/AbdelStark/mneme/blob/main/prd.md#6-data-model-and-core-concepts)

@@ -102,4 +102,4 @@ v0.1 supports one fingerprint per local store and rejects mismatches. Multi-fing
 
 - [Architecture](../spec/01-architecture.md)
 - [Data Model](../spec/03-data-model.md#summaryvec)
-- [PRD Section 9.3](../../prd.md#93-encoder-versioning)
+- [PRD Section 9.3](https://github.com/AbdelStark/mneme/blob/main/prd.md#93-encoder-versioning)

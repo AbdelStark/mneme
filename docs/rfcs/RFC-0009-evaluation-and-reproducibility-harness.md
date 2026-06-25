@@ -11,7 +11,7 @@ Mneme evaluations produce schema-versioned reports that distinguish fixture-scal
 
 ## Motivation
 
-[Overview](../spec/00-overview.md#claim-boundary) says performance and drift improvements are not achieved results yet. [Testing Strategy](../spec/07-testing-strategy.md#evaluation) requires reports with commands, seeds, metrics, and caveats. This RFC defines what evidence must exist before public claims change.
+[Overview](../spec/00-overview.md#claim-boundary) says performance and drift improvements are not achieved results yet. [Testing Strategy](../spec/07-testing-strategy.md#required-test-groups) requires reports with commands, seeds, metrics, and caveats. This RFC defines what evidence must exist before public claims change.
 
 ## Goals
 
@@ -145,4 +145,4 @@ v0.1 implements fixture reports and local latency/recall reports. v0.2 adds adap
 - [Testing Strategy](../spec/07-testing-strategy.md)
 - [Performance Budget](../spec/08-performance-budget.md)
 - [RFC-0013](RFC-0013-cross-source-memory-provenance.md)
-- [PRD Section 13](../../prd.md#13-evaluation-plan)
+- [PRD Section 13](https://github.com/AbdelStark/mneme/blob/main/prd.md#13-evaluation-plan)

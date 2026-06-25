@@ -8,18 +8,41 @@ def test_hosted_ci_workflow_runs_required_gates() -> None:
 
     assert "pull_request:" in workflow
     assert "push:" in workflow
-    assert "python -m ruff check ." in workflow
-    assert "python -m ruff format --check ." in workflow
-    assert "python -m pytest" in workflow
-    assert "python -m mypy src/mneme" in workflow
-    assert "python -m build" in workflow
-    assert ".ci-install/bin/python -m pip install dist/*.whl" in workflow
+    assert "astral-sh/setup-uv@v8.2.0" in workflow
+    assert "uv lock --check" in workflow
+    assert "uv sync --locked --group dev" in workflow
+    assert "uv run ruff check ." in workflow
+    assert "uv run ruff format --check ." in workflow
+    assert "uv run pytest --cov=mneme --cov-report=term-missing" in workflow
+    assert "uv run mypy src/mneme" in workflow
+    assert "uv build --out-dir dist --clear --no-build-logs" in workflow
+    assert "uv pip install --python .ci-install/bin/python dist/*.whl" in workflow
     assert ".ci-install/bin/python -c" in workflow
-    assert "mneme.cli eval fixtures --out .artifacts/ci/fixtures.json" in workflow
+    assert (
+        ".ci-install/bin/mneme eval fixtures --out .artifacts/ci/fixtures.json"
+        in workflow
+    )
     assert "Validate release artifacts against checklist" in workflow
     assert "mneme.release.validate_artifacts --dist dist" in workflow
     assert "release-artifacts.json" in workflow
     assert "actions/upload-artifact@v4" in workflow
+
+
+def test_docs_workflow_builds_and_deploys_github_pages() -> None:
+    workflow = Path(".github/workflows/docs.yml").read_text(encoding="utf-8")
+
+    assert "name: Docs" in workflow
+    assert "pull_request:" in workflow
+    assert "push:" in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "astral-sh/setup-uv@v8.2.0" in workflow
+    assert "uv lock --check" in workflow
+    assert "uv sync --locked --group docs" in workflow
+    assert "uv run mkdocs build --strict" in workflow
+    assert "actions/configure-pages@v6.0.0" in workflow
+    assert "actions/upload-pages-artifact@v5.0.0" in workflow
+    assert "actions/deploy-pages@v5.0.0" in workflow
 
 
 def test_contributing_documents_ci_reproduction_commands() -> None:
@@ -27,13 +50,19 @@ def test_contributing_documents_ci_reproduction_commands() -> None:
 
     assert "## CI Reproduction" in contributing
     assert "Hosted CI runs on pull requests" in contributing
-    assert ".venv/bin/ruff check ." in contributing
-    assert ".venv/bin/ruff format --check ." in contributing
-    assert ".venv/bin/pytest" in contributing
-    assert ".venv/bin/mypy src/mneme" in contributing
-    assert ".venv/bin/python -m build" in contributing
-    assert ".ci-install/bin/python -m pip install dist/*.whl" in contributing
+    assert "uv sync --locked --group dev" in contributing
+    assert "uv lock --check" in contributing
+    assert "uv run ruff check ." in contributing
+    assert "uv run ruff format --check ." in contributing
+    assert "uv run pytest --cov=mneme --cov-report=term-missing" in contributing
+    assert "uv run mypy src/mneme" in contributing
+    assert "uv run mkdocs build --strict" in contributing
+    assert "uv build --out-dir dist --clear --no-build-logs" in contributing
+    assert "uv pip install --python .ci-install/bin/python dist/*.whl" in contributing
     assert ".ci-install/bin/python -c" in contributing
-    assert "mneme.cli eval fixtures --out .artifacts/ci/fixtures.json" in contributing
+    assert (
+        ".ci-install/bin/mneme eval fixtures --out .artifacts/ci/fixtures.json"
+        in contributing
+    )
     assert "mneme.release.validate_artifacts --dist dist" in contributing
     assert "release-artifacts.json" in contributing

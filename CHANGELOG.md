@@ -1,12 +1,17 @@
 # Changelog
 
-All notable user-visible changes are recorded here. Mneme is pre-1.0; breaking
-changes may occur before the first stable release.
+All notable user-visible changes are recorded here.
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.1.0] - 2026-06-25
+
 ### Added
 
+- Installable typed `mneme` package with a `mneme` console script and uv-first
+  development, CI, docs, and release workflows.
 - Public README with install instructions, minimal local-store usage, current
   limitations, and specification links.
 - Contributing guide with local validation gates and claim-boundary rules.
@@ -29,6 +34,7 @@ changes may occur before the first stable release.
   report command.
 - Merkle Mountain Range commitment state with inclusion proofs and local-store
   commit sidecar persistence.
+- Strict MkDocs documentation site and GitHub Pages workflow.
 
 ### Security
 

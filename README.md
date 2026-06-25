@@ -1,45 +1,73 @@
 # Mneme
 
-Mneme is a pre-1.0 Python package for episodic memory infrastructure around
-latent world models. It focuses on the parts around a model: schema-versioned
-memory items, local persistence, exact retrieval, training-free conditioning,
-in-context retrieved-token baselines, fixture-scale evaluation reports, and
-redacted structured events.
+[![CI](https://github.com/AbdelStark/mneme/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdelStark/mneme/actions/workflows/ci.yml)
+[![Docs](https://github.com/AbdelStark/mneme/actions/workflows/docs.yml/badge.svg)](https://github.com/AbdelStark/mneme/actions/workflows/docs.yml)
 
-Mneme is not a new world-model architecture and does not claim external task
-success, broad benchmark improvement, private retrieval, or encrypted storage.
-Fixture reports are useful for CI and claim discipline only; external benchmark
-claims require separate reports.
+Mneme is a Python 0.1.0 library for episodic memory around latent world models.
+It gives an existing encoder or predictor a clean memory layer: schema-versioned
+latent transitions, content-addressed storage, exact retrieval, training-free
+kNN conditioning, receipt-backed replay, remote-store protocol fixtures,
+redacted events, and JSON evaluation reports.
+
+Mneme is not a new world-model architecture. It does not claim external task
+success, broad benchmark improvement, private retrieval, encrypted storage, or
+production remote-store security. The included reports are fixture-scale release
+evidence for API, packaging, protocol, and claim discipline.
+
+## Why Use It
+
+- Model-agnostic memory objects for latent transitions and summary keys.
+- A durable local store with manifest validation, retention, rebuild, and
+  typed failure modes.
+- Exact flat search by default; FAISS HNSW is optional behind the `index` extra.
+- Training-free `KnnCorrector` and in-context retrieved-token conditioning
+  baselines.
+- Retrieval receipts and replay utilities for committed local-store evidence.
+- A modern `mneme` CLI for store, query, receipt, and evaluation tasks.
+- uv-first packaging, locked development environments, strict CI, and a
+  GitHub Pages documentation site.
 
 ## Install
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -e .
-python3 -c "import mneme; print(mneme.__version__)"
-```
-
-Development tools:
+From a checkout:
 
 ```bash
-python3 -m pip install -e ".[dev]"
+uv sync --locked --group dev
+uv run mneme --help
+uv run python -c "import mneme; print(mneme.__version__)"
 ```
 
-Optional extras are declared for subsystem work and should be installed only
-when that subsystem is needed:
+Once Mneme is published to an index, add it to another uv-managed project with:
 
 ```bash
-python3 -m pip install -e ".[index]"
-python3 -m pip install -e ".[ml]"
-python3 -m pip install -e ".[receipts]"
-python3 -m pip install -e ".[docs]"
+uv add mneme
+mneme --help
 ```
 
-The minimal package install keeps optional ML, approximate-index, receipt, and
-remote dependencies out of the core import path.
+To test a local wheel artifact instead:
 
-## Minimal Usage
+```bash
+uv pip install dist/mneme-0.1.0-py3-none-any.whl
+mneme --help
+```
+
+Optional runtime extras stay out of the core import path:
+
+```bash
+uv sync --locked --extra index      # FAISS HNSW approximate index
+uv sync --locked --extra ml         # torch-backed adapter components
+uv sync --locked --extra receipts   # optional cryptography integrations
+uv sync --locked --extra remote     # ASGI serving dependencies
+```
+
+Documentation tooling is a dependency group, not a runtime extra:
+
+```bash
+uv sync --locked --group docs
+uv run mkdocs serve
+```
+
+## Quickstart
 
 ```python
 from pathlib import Path
@@ -89,81 +117,94 @@ with TemporaryDirectory() as tmp:
     assert verify_store(store.path).ok
 ```
 
-Fixture evaluation report:
+## CLI Tasks
+
+All maintainer tasks run through uv:
 
 ```bash
-python -m mneme.eval.fixtures --out .artifacts/fixtures.json
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest --cov=mneme --cov-report=term-missing
+uv run mypy src/mneme
+uv build --out-dir dist --clear --no-build-logs
 ```
 
-Runnable examples:
+Common Mneme commands:
 
 ```bash
-python3 examples/local_corrector.py
-python3 examples/remote_shared_store.py
-python -m mneme.cli eval remote-conformance --out .artifacts/remote-conformance.json
-python -m mneme.cli eval cross-source --out .artifacts/cross-source.json
+uv run mneme store init .artifacts/demo-store
+uv run mneme store verify .artifacts/demo-store
+uv run mneme eval fixtures --out .artifacts/fixtures.json
+uv run mneme eval remote-conformance --out .artifacts/remote-conformance.json
+uv run mneme eval cross-source --out .artifacts/cross-source.json
 ```
 
-See [examples/README.md](examples/README.md) for prerequisites, expected JSON
-success signals, generated report paths, and the SPEC/RFC links behind each
-example.
-
-Opt-in external benchmark dry-run:
+Opt-in external benchmark runner plumbing:
 
 ```bash
-python -m mneme.cli eval benchmark --dry-run --dataset dataset.json --checkpoint CHECKPOINT --out reports/benchmark.json
+uv run mneme eval benchmark --dry-run \
+  --dataset dataset.json \
+  --checkpoint CHECKPOINT \
+  --out reports/benchmark.json
 ```
 
-The benchmark command writes a valid `mneme.eval_report.v1` envelope for runner
-plumbing and claim review. The built-in dry-run runner is not benchmark
+The built-in dry-run runner checks envelope plumbing only. It is not benchmark
 evidence.
 
-The cross-source report is a synthetic fixture for pooled-memory evaluation. It
-records source identities, per-source retrieval receipts, no-memory and
-single-source baselines, pooled-memory metrics, and caveats; it is not evidence
-for general transfer, confidentiality, or private retrieval.
+## Examples
+
+```bash
+uv run python examples/local_corrector.py
+uv run python examples/remote_shared_store.py
+```
+
+The examples print JSON success signals and use synthetic fixtures. See
+[Examples](examples/README.md) for prerequisites, expected output, generated
+report paths, and security boundaries.
+
+## Documentation
+
+The documentation site is published from `main` with GitHub Pages:
+
+- [Documentation site](https://abdelstark.github.io/mneme/)
+- [Getting started](docs/getting-started.md)
+- [CLI reference](docs/cli.md)
+- [Examples](docs/examples.md)
+- [Public API](docs/spec/02-public-api.md)
+- [Security](docs/spec/06-security.md)
+- [Release checklist](docs/release/RELEASE_CHECKLIST.md)
+
+Build it locally with:
+
+```bash
+uv run --group docs mkdocs build --strict
+```
 
 ## Security And Privacy
 
 Mneme stores are not confidential by default. Treat readable store directories,
 value logs, manifests, fixture reports, and run outputs as sensitive when they
-contain real environment data. See [SECURITY.md](SECURITY.md) and
-[Security](docs/spec/06-security.md).
-
-Remote/shared stores require deployment controls outside Mneme: authenticated
+contain real environment data. Remote/shared deployments require authenticated
 transport, network policy, credential management, backup controls, and external
-confidentiality protections when memories are sensitive. Remote examples should
-link to `validate_query_response`, receipt verification steps, and the
-[shared-store checklist](docs/spec/06-security.md#shared-store-deployment-checklist).
+confidentiality protections when memories are sensitive.
 
-## Limitations
+Read [SECURITY.md](SECURITY.md) and the
+[security spec](docs/spec/06-security.md) before using real environment data.
+
+## Current Limits
 
 - No encryption at rest.
 - No private retrieval.
-- No built-in production authentication service for remote stores.
-- No production trained-adapter checkpoint or external trained-adapter report
-  yet.
-- The in-context conditioner is a baseline for compatible predictor wrappers;
-  its attention cost scales with retrieved `k`.
-- Local retrieval receipts verify committed membership and canonical item bytes,
-  but signing, verifiable search, and private retrieval are not complete yet.
-- No external benchmark or drift-improvement claim without an external report.
-
-## Documentation
-
-- [Product requirements](prd.md)
-- [Accepted specification](SPEC.md)
-- [Architecture](docs/spec/01-architecture.md)
-- [Public API](docs/spec/02-public-api.md)
-- [Observability](docs/spec/05-observability.md)
-- [Security](docs/spec/06-security.md)
-- [Testing strategy](docs/spec/07-testing-strategy.md)
-- [Release and versioning](docs/spec/09-release-and-versioning.md)
-- [Release checklist](docs/release/RELEASE_CHECKLIST.md)
-- [Examples](examples/README.md)
-- [Implementation roadmap](docs/roadmap/IMPLEMENTATION.md)
+- No hosted authentication service for remote stores.
+- No production trained-adapter checkpoint or external trained-adapter report.
+- No external benchmark, task-success, or drift-improvement claim without a
+  separate generated report.
+- Retrieval receipts verify committed membership and canonical item bytes; they
+  do not prove private retrieval, exact approximate-search optimality, or signed
+  provenance.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Public docs, examples, and reports must
-stay within the evidence currently produced by tests and fixture reports.
+stay within the evidence produced by tests, fixture reports, and linked release
+artifacts.

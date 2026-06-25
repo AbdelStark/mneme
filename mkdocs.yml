@@ -1,0 +1,66 @@
+site_name: Mneme
+site_description: Episodic memory and retrieval for latent world models.
+site_url: https://abdelstark.github.io/mneme/
+repo_name: AbdelStark/mneme
+repo_url: https://github.com/AbdelStark/mneme
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: black
+      accent: indigo
+
+markdown_extensions:
+  - admonition
+  - fenced_code
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - CLI: cli.md
+  - Examples: examples.md
+  - Evaluation: evaluation.md
+  - Reference:
+      - Overview: spec/00-overview.md
+      - Architecture: spec/01-architecture.md
+      - Public API: spec/02-public-api.md
+      - Data Model: spec/03-data-model.md
+      - Error Model: spec/04-error-model.md
+      - Observability: spec/05-observability.md
+      - Security: spec/06-security.md
+      - Testing Strategy: spec/07-testing-strategy.md
+      - Performance Budget: spec/08-performance-budget.md
+      - Release and Versioning: spec/09-release-and-versioning.md
+      - Glossary: spec/10-glossary.md
+  - RFCs:
+      - Core Types: rfcs/RFC-0001-core-types-and-canonical-serialization.md
+      - Encoder Fingerprints: rfcs/RFC-0002-encoder-fingerprints-and-summary-keys.md
+      - Index Backends: rfcs/RFC-0003-index-backends-and-query-semantics.md
+      - Store Persistence: rfcs/RFC-0004-memory-store-persistence-and-retention.md
+      - kNN Conditioning: rfcs/RFC-0005-training-free-knn-conditioning.md
+      - Trained Adapter: rfcs/RFC-0006-trained-memory-adapter.md
+      - Receipts: rfcs/RFC-0007-commitments-and-retrieval-receipts.md
+      - Remote Protocol: rfcs/RFC-0008-remote-store-protocol-messages.md
+      - Evaluation: rfcs/RFC-0009-evaluation-and-reproducibility-harness.md
+      - Packaging: rfcs/RFC-0010-packaging-ci-and-release-discipline.md
+      - Observability: rfcs/RFC-0011-observability-and-redaction.md
+      - Security: rfcs/RFC-0012-security-boundaries-and-privacy-tiers.md
+      - Cross-Source Provenance: rfcs/RFC-0013-cross-source-memory-provenance.md
+  - Release:
+      - Checklist: release/RELEASE_CHECKLIST.md
+      - API Compatibility: release/API_COMPATIBILITY.md
+      - Security Review: release/SECURITY_REVIEW.md
+      - v1 Readiness: release/V1_READINESS_REPORT.md
+  - Roadmap:
+      - Implementation Ledger: roadmap/IMPLEMENTATION.md

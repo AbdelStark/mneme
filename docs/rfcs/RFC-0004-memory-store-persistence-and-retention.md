@@ -100,4 +100,4 @@ v0.1 implements local single-writer stores, verification, and index rebuild. v0.
 
 - [Architecture](../spec/01-architecture.md#write-path)
 - [Error Model](../spec/04-error-model.md)
-- [PRD Section 9.2](../../prd.md#92-storage-and-footprint)
+- [PRD Section 9.2](https://github.com/AbdelStark/mneme/blob/main/prd.md#92-storage-and-footprint)

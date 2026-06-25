@@ -26,11 +26,11 @@ notes.
 | [#50](https://github.com/AbdelStark/mneme/issues/50) integrity and privacy review | Closed 2026-06-24 | `docs/release/SECURITY_REVIEW.md`, `tests/test_security_review.py` |
 | [#51](https://github.com/AbdelStark/mneme/issues/51) v1.0 readiness gate | This report | `docs/release/V1_READINESS_REPORT.md`, `tests/test_v1_readiness_report.py` |
 
-Open p0 and p1 issues [#52](https://github.com/AbdelStark/mneme/issues/52)
-through [#63](https://github.com/AbdelStark/mneme/issues/63) are tracking
-parents with `type:tracking` and `tracking` labels. They remain intentionally
-open as subsystem roadmaps and are not actionable release blockers for this
-readiness gate unless a non-tracking child issue is reopened.
+Issues [#52](https://github.com/AbdelStark/mneme/issues/52) through
+[#63](https://github.com/AbdelStark/mneme/issues/63) were tracking parents with
+`type:tracking` and `tracking` labels. They were closed after their child
+issues closed, and they are not actionable release blockers for this readiness
+gate unless a non-tracking child issue is reopened.
 
 ## Local Evidence Commands
 
@@ -41,22 +41,22 @@ ruff check .
 ruff format --check .
 pytest
 mypy src/mneme
+mkdocs build --strict
 rm -rf dist .artifacts/ci .ci-install
-python -m build
-python3 -m venv .ci-install
-.ci-install/bin/python -m pip install --upgrade pip
-.ci-install/bin/python -m pip install dist/*.whl
+uv build --out-dir dist --clear --no-build-logs
+uv venv .ci-install
+uv pip install --python .ci-install/bin/python dist/*.whl
 .ci-install/bin/python -c "import mneme; print(mneme.__version__)"
-.ci-install/bin/python -m mneme.cli eval fixtures --out .artifacts/ci/fixtures.json
-.ci-install/bin/python -m mneme.cli eval remote-conformance --out .artifacts/ci/remote-conformance.json
-.ci-install/bin/python -m mneme.cli eval cross-source --out .artifacts/ci/cross-source.json
+.ci-install/bin/mneme eval fixtures --out .artifacts/ci/fixtures.json
+.ci-install/bin/mneme eval remote-conformance --out .artifacts/ci/remote-conformance.json
+.ci-install/bin/mneme eval cross-source --out .artifacts/ci/cross-source.json
 .ci-install/bin/python -m mneme.release.validate_artifacts --dist dist --fixture-report .artifacts/ci/fixtures.json --out .artifacts/ci/release-artifacts.json
 ```
 
-Expected generated artifacts for version `0.1.0.dev0`:
+Expected generated artifacts for version `0.1.0`:
 
-- `dist/mneme-0.1.0.dev0-py3-none-any.whl`
-- `dist/mneme-0.1.0.dev0.tar.gz`
+- `dist/mneme-0.1.0-py3-none-any.whl`
+- `dist/mneme-0.1.0.tar.gz`
 - `.artifacts/ci/fixtures.json`
 - `.artifacts/ci/remote-conformance.json`
 - `.artifacts/ci/cross-source.json`
@@ -64,8 +64,10 @@ Expected generated artifacts for version `0.1.0.dev0`:
 
 Hosted CI evidence is the `Python 3.12 gates` workflow on the readiness PR or
 release-candidate PR. The workflow builds source and wheel artifacts, installs
-the built wheel in `.ci-install`, writes `.artifacts/ci/fixtures.json`, and
-validates `.artifacts/ci/release-artifacts.json`.
+the built wheel in `.ci-install`, runs the installed `mneme` console script,
+writes `.artifacts/ci/fixtures.json`, and validates
+`.artifacts/ci/release-artifacts.json`. The `Docs` workflow builds the MkDocs
+site strictly and deploys it from `main` through GitHub Pages.
 
 ## Evaluation Claim Boundary
 
@@ -88,7 +90,7 @@ artifacts.
 | Area | Evidence |
 |---|---|
 | Public docs and examples | `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `examples/README.md`, `tests/test_public_docs.py`, `tests/test_examples.py` |
-| Release checklist and artifacts | `docs/release/RELEASE_CHECKLIST.md`, `.github/workflows/ci.yml`, `tests/test_release_docs.py`, `tests/test_release_artifacts.py` |
+| Release checklist and artifacts | `docs/release/RELEASE_CHECKLIST.md`, `.github/workflows/ci.yml`, `.github/workflows/docs.yml`, `tests/test_release_docs.py`, `tests/test_release_artifacts.py` |
 | Security and privacy | `SECURITY.md`, `docs/spec/06-security.md`, `docs/release/SECURITY_REVIEW.md`, `tests/test_security_docs.py`, `tests/test_security_review.py` |
 | Public API compatibility | `docs/release/API_COMPATIBILITY.md`, `tests/fixtures/compat/public_api_snapshot.json`, `tests/test_public_api_compatibility.py` |
 | Cross-source provenance boundary | `docs/rfcs/RFC-0013-cross-source-memory-provenance.md`, `tests/test_cross_source_provenance_docs.py` |
