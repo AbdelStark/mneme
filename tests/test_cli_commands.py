@@ -492,6 +492,24 @@ def test_receipts_verify_cli_rejects_nonstandard_receipt_json(
     assert error["error_type"] == "ReceiptVerificationError"
 
 
+def test_receipts_verify_cli_wraps_malformed_receipt_payload(
+    tmp_path: Path,
+) -> None:
+    receipt_path = tmp_path / "receipt.json"
+    receipt_path.write_text(
+        json.dumps({"schema_version": "mneme.receipt.v1"}),
+        encoding="utf-8",
+    )
+
+    result = run_cli("receipts", "verify", receipt_path, "--root", "00" * 32)
+
+    assert result.returncode == int(CliExitCode.DATA_VALIDATION)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "ReceiptVerificationError"
+    assert error["errors"] == ["receipt file is invalid"]
+
+
 def _fingerprint() -> EncoderFingerprint:
     return EncoderFingerprint(
         encoder_id="encoder.fixture",

@@ -528,8 +528,8 @@ def _load_receipt(path: Path) -> RetrievalReceipt:
         raise ReceiptVerificationError("receipt file is not valid JSON") from exc
     try:
         return RetrievalReceipt.from_json(data)
-    except MnemeError:
-        raise
+    except MnemeError as exc:
+        raise ReceiptVerificationError("receipt file is invalid") from exc
     except (TypeError, ValueError) as exc:
         raise ReceiptVerificationError("receipt file is invalid") from exc
 
