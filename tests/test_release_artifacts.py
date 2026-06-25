@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import io
 import json
-import subprocess
-import sys
 import tarfile
 import zipfile
 from pathlib import Path
+
+from _entrypoint_runner import run_entrypoint
 
 import mneme
 from mneme.core import CliExitCode
@@ -15,6 +15,7 @@ from mneme.release import (
     RELEASE_ARTIFACT_REPORT_SCHEMA,
     validate_release_artifacts,
 )
+from mneme.release.validate_artifacts import main as validate_artifacts_main
 
 
 def test_release_artifact_validator_accepts_valid_artifacts(
@@ -56,21 +57,14 @@ def test_release_artifact_validation_command_returns_json(tmp_path: Path) -> Non
     fixture_report = _write_fixture_report(tmp_path)
     output = tmp_path / "release-artifacts.json"
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mneme.release.validate_artifacts",
-            "--dist",
-            str(dist),
-            "--fixture-report",
-            str(fixture_report),
-            "--out",
-            str(output),
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
+    result = run_entrypoint(
+        validate_artifacts_main,
+        "--dist",
+        dist,
+        "--fixture-report",
+        fixture_report,
+        "--out",
+        output,
     )
 
     assert result.returncode == int(CliExitCode.SUCCESS), result.stdout + result.stderr

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 
+from _entrypoint_runner import run_entrypoint
+
 from mneme.eval import run_fixture_evaluation, validate_report_json
+from mneme.eval.fixtures import main as fixtures_main
 
 
 def test_fixture_evaluation_report_validates_and_records_seed_caveats() -> None:
@@ -56,23 +57,17 @@ def test_fixture_report_does_not_imply_broad_benchmark_claim() -> None:
 def test_fixture_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     output = tmp_path / "reports" / "fixtures.json"
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mneme.eval.fixtures",
-            "--out",
-            str(output),
-            "--seed",
-            "42",
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
+    completed = run_entrypoint(
+        fixtures_main,
+        "--out",
+        output,
+        "--seed",
+        "42",
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "RuntimeWarning" not in completed.stderr
+    assert completed.stdout.strip() == str(output)
     report = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
     assert report.seed == 42
     assert report.command[:4] == ("mneme", "eval", "fixtures", "--out")

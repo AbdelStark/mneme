@@ -5,14 +5,13 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TextIO
 
-from mneme.core import CliExitCode
 from mneme.eval._cross_source import run_cross_source_transfer_evaluation
-from mneme.eval._reports import write_report_json
+from mneme.eval._entrypoints import write_report_for_entrypoint
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     """Write the deterministic cross-source transfer report."""
 
     parser = argparse.ArgumentParser(prog="mneme eval cross-source")
@@ -29,9 +28,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         str(args.seed),
     )
     report = run_cross_source_transfer_evaluation(seed=args.seed, command=command)
-    write_report_json(report, args.out)
-    print(args.out)
-    return int(CliExitCode.SUCCESS)
+    return write_report_for_entrypoint(
+        report,
+        args.out,
+        report_name="cross-source transfer",
+        stdout=stdout,
+    )
 
 
 def _exit() -> NoReturn:

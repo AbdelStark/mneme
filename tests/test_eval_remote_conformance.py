@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
+
+from _entrypoint_runner import run_entrypoint
 
 from mneme._version import __version__
 from mneme.eval import run_remote_conformance_evaluation, validate_report_json
+from mneme.eval.remote_conformance import main as remote_conformance_main
 
 
 def test_remote_conformance_report_validates_and_records_transport() -> None:
@@ -64,23 +65,17 @@ def test_remote_conformance_eval_module_writes_valid_report_json(
 ) -> None:
     output = tmp_path / "reports" / "remote-conformance.json"
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mneme.eval.remote_conformance",
-            "--out",
-            str(output),
-            "--seed",
-            "11",
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
+    completed = run_entrypoint(
+        remote_conformance_main,
+        "--out",
+        output,
+        "--seed",
+        "11",
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "RuntimeWarning" not in completed.stderr
+    assert completed.stdout == ""
     report = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
     assert report.seed == 11
     assert report.command[:3] == ("mneme", "eval", "remote-conformance")

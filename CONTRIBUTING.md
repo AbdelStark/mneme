@@ -37,7 +37,7 @@ pull request:
 uv lock --check
 uv run ruff check .
 uv run ruff format --check .
-uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80
+uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=84
 uv run mypy src/mneme
 uv run --group docs mkdocs build --strict
 uv build --out-dir dist --clear --no-build-logs
@@ -61,7 +61,7 @@ uv sync --locked --group dev
 uv lock --check
 uv run ruff check .
 uv run ruff format --check .
-uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80
+uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=84
 uv run mypy src/mneme
 rm -rf dist .artifacts/ci .ci-install
 uv build --out-dir dist --clear --no-build-logs

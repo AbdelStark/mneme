@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 import pytest
+from _entrypoint_runner import run_entrypoint
 
 from mneme.core import (
     EncoderFingerprint,
@@ -17,6 +16,7 @@ from mneme.core import (
     Transition,
 )
 from mneme.eval import run_receipt_profile_evaluation, validate_report_json
+from mneme.eval.receipts import main as receipts_main
 from mneme.store import init_store, open_store
 
 
@@ -80,32 +80,26 @@ def test_receipt_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     store.put_batch([_item(float(index), step=index) for index in range(4)])
     store.commit()
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mneme.eval.receipts",
-            "--store",
-            str(store.path),
-            "--out",
-            str(output),
-            "--k",
-            "2",
-            "--metric",
-            "l2",
-            "--queries",
-            "2",
-            "--warmup",
-            "0",
-            "--measurements",
-            "1",
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
+    completed = run_entrypoint(
+        receipts_main,
+        "--store",
+        store.path,
+        "--out",
+        output,
+        "--k",
+        "2",
+        "--metric",
+        "l2",
+        "--queries",
+        "2",
+        "--warmup",
+        "0",
+        "--measurements",
+        "1",
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert completed.stdout.strip() == str(output)
     report = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
     assert report.command[:4] == ("mneme", "eval", "receipts", "--store")
     assert report.metrics["receipt_proof_count_mean"] == 2.0

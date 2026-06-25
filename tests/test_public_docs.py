@@ -54,7 +54,7 @@ def test_contributing_lists_local_gates() -> None:
     assert "uv run ruff check ." in contributing
     assert "uv run ruff format --check ." in contributing
     assert (
-        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80"
+        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=84"
         in contributing
     )
     assert "uv run mypy src/mneme" in contributing

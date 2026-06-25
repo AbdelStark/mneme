@@ -10,7 +10,9 @@ All notable user-visible changes are recorded here.
   module shared by store mutation and verification.
 - Extracted CLI JSON/error runtime helpers and made CLI contract tests run
   in-process while preserving a subprocess entrypoint smoke.
-- Raised the CI coverage ratchet to 80% for the full pytest coverage gate.
+- Centralized eval module entrypoint report writing and moved eval/release
+  module command tests in-process.
+- Raised the CI coverage ratchet to 84% for the full pytest coverage gate.
 
 ## [0.1.0] - 2026-06-25
 

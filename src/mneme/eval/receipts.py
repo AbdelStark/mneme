@@ -5,15 +5,15 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TextIO
 
-from mneme.core import CliExitCode, Metric
+from mneme.core import Metric
+from mneme.eval._entrypoints import write_report_for_entrypoint
 from mneme.eval._receipts import run_receipt_profile_evaluation
-from mneme.eval._reports import write_report_json
 from mneme.store import open_store
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     """Write a local receipt overhead and proof-size report."""
 
     parser = argparse.ArgumentParser(prog="mneme eval receipts")
@@ -61,9 +61,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         seed=args.seed,
         command=command,
     )
-    write_report_json(report, args.out)
-    print(args.out)
-    return int(CliExitCode.SUCCESS)
+    return write_report_for_entrypoint(
+        report,
+        args.out,
+        report_name="receipt profile",
+        stdout=stdout,
+    )
 
 
 def _exit() -> NoReturn:

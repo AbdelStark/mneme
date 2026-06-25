@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TextIO
 
 from mneme.core import CliExitCode
 from mneme.release import validate_release_artifacts
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     """Validate built release artifacts and fixture evidence."""
 
     parser = argparse.ArgumentParser(prog="python -m mneme.release.validate_artifacts")
@@ -33,7 +34,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         target = Path(args.out)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(output, encoding="utf-8")
-    print(output, end="")
+    target_stream = sys.stdout if stdout is None else stdout
+    print(output, end="", file=target_stream)
     if report.ok:
         return int(CliExitCode.SUCCESS)
     return int(CliExitCode.DATA_VALIDATION)

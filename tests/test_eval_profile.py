@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import importlib
 import json
-import subprocess
-import sys
 from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 import pytest
+from _entrypoint_runner import run_entrypoint
 
 from mneme.core import (
     EncoderFingerprint,
@@ -18,6 +17,7 @@ from mneme.core import (
     Transition,
 )
 from mneme.eval import run_profile_evaluation, validate_report_json
+from mneme.eval.profile import main as profile_main
 from mneme.store import count_retention, init_store, open_store
 
 
@@ -108,34 +108,28 @@ def test_profile_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     output = tmp_path / "reports" / "profile.json"
     store.put_batch([_item(float(index), step=index) for index in range(3)])
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mneme.eval.profile",
-            "--store",
-            str(store.path),
-            "--out",
-            str(output),
-            "--k",
-            "2",
-            "--metric",
-            "l2",
-            "--queries",
-            "2",
-            "--warmup",
-            "0",
-            "--measurements",
-            "2",
-            "--approx-backend",
-            "none",
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
+    completed = run_entrypoint(
+        profile_main,
+        "--store",
+        store.path,
+        "--out",
+        output,
+        "--k",
+        "2",
+        "--metric",
+        "l2",
+        "--queries",
+        "2",
+        "--warmup",
+        "0",
+        "--measurements",
+        "2",
+        "--approx-backend",
+        "none",
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert completed.stdout.strip() == str(output)
     report = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
     assert report.command[:4] == ("mneme", "eval", "profile", "--store")
     assert report.metrics["flat_recall_at_k"] == 1.0

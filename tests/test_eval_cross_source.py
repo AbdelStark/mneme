@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 
+from _entrypoint_runner import run_entrypoint
+
 from mneme._version import __version__
 from mneme.eval import run_cross_source_transfer_evaluation, validate_report_json
+from mneme.eval.cross_source import main as cross_source_main
 
 
 def test_cross_source_report_validates_and_records_provenance() -> None:
@@ -81,23 +82,17 @@ def test_cross_source_report_keeps_fixture_claim_boundary() -> None:
 def test_cross_source_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     output = tmp_path / "reports" / "cross-source.json"
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mneme.eval.cross_source",
-            "--out",
-            str(output),
-            "--seed",
-            "23",
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
+    completed = run_entrypoint(
+        cross_source_main,
+        "--out",
+        output,
+        "--seed",
+        "23",
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "RuntimeWarning" not in completed.stderr
+    assert completed.stdout.strip() == str(output)
     report = validate_report_json(json.loads(output.read_text(encoding="utf-8")))
     assert report.seed == 23
     assert report.command[:3] == ("mneme", "eval", "cross-source")

@@ -9,7 +9,7 @@ def test_release_checklist_covers_required_gates() -> None:
     for required in (
         "ruff check .",
         "ruff format --check .",
-        "pytest --cov=mneme --cov-report=term-missing --cov-fail-under=80",
+        "pytest --cov=mneme --cov-report=term-missing --cov-fail-under=84",
         "mypy src/mneme",
         "mkdocs build --strict",
         "uv build",
