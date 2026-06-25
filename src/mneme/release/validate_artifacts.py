@@ -32,8 +32,15 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
     output = dumps_strict_json(report.to_json(), sort_keys=True, indent=2) + "\n"
     if args.out:
         target = Path(args.out)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(output, encoding="utf-8")
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(output, encoding="utf-8")
+        except OSError:
+            print(
+                f"failed to write release artifact report: {target}",
+                file=sys.stderr,
+            )
+            return int(CliExitCode.INTERNAL)
     target_stream = sys.stdout if stdout is None else stdout
     print(output, end="", file=target_stream)
     if report.ok:

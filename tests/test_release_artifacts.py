@@ -151,6 +151,28 @@ def test_release_artifact_validation_command_returns_json(tmp_path: Path) -> Non
     assert json.loads(output.read_text(encoding="utf-8")) == payload
 
 
+def test_release_artifact_validation_command_reports_write_error(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(tmp_path, version=mneme.__version__)
+    fixture_report = _write_fixture_report(tmp_path)
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+
+    result = run_entrypoint(
+        validate_artifacts_main,
+        "--dist",
+        dist,
+        "--fixture-report",
+        fixture_report,
+        "--out",
+        blocked_parent / "release-artifacts.json",
+    )
+
+    assert result.returncode == int(CliExitCode.INTERNAL)
+    assert "failed to write release artifact report" in result.stderr
+
+
 def test_release_artifact_report_constructor_normalizes_sequences() -> None:
     report = ReleaseArtifactReport(
         ok=True,
