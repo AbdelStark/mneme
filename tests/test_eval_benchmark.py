@@ -95,6 +95,32 @@ def test_dataset_manifest_rejects_nonstandard_json_constants(
         load_benchmark_dataset_ref(dataset_path)
 
 
+def test_dataset_manifest_wraps_malformed_dataset_payload(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps({"schema_version": "mneme.dataset_ref.v1"}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(EvaluationError, match="benchmark dataset manifest is invalid"):
+        load_benchmark_dataset_ref(dataset_path)
+
+
+def test_nested_dataset_manifest_wraps_malformed_dataset_payload(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps({"dataset": {"schema_version": "mneme.dataset_ref.v2"}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(EvaluationError, match="benchmark dataset manifest is invalid"):
+        load_benchmark_dataset_ref(dataset_path)
+
+
 def test_benchmark_spec_requires_external_dataset_split_and_valid_modes() -> None:
     fixture_dataset = DatasetRef(dataset_id="fixture", kind="fixture", split="unit")
     external_without_split = DatasetRef(dataset_id="external", kind="external")

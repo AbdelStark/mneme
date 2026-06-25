@@ -13,7 +13,7 @@ from types import MappingProxyType
 from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
 
 from mneme._version import __version__
-from mneme.core import EvaluationError
+from mneme.core import EvaluationError, MnemeError
 from mneme.core._json import loads_strict_json
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport, write_report_json
 
@@ -163,7 +163,12 @@ def load_benchmark_dataset_ref(path: str | Path) -> DatasetRef:
         ) from exc
     if isinstance(data, Mapping) and "dataset" in data:
         data = data["dataset"]
-    dataset = DatasetRef.from_json(data)
+    try:
+        dataset = DatasetRef.from_json(data)
+    except MnemeError as exc:
+        raise EvaluationError(
+            f"benchmark dataset manifest is invalid: {manifest_path}"
+        ) from exc
     if dataset.kind != "external":
         raise EvaluationError("benchmark dataset kind must be external")
     if dataset.split is None:
