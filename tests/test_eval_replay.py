@@ -26,6 +26,7 @@ from mneme.eval import (
     build_receipt_replay_trace,
     load_replay_trace_json,
     replay_receipt_trace,
+    write_replay_report_json,
     write_replay_trace_json,
 )
 from mneme.store import init_store, open_store
@@ -70,6 +71,25 @@ def test_receipt_replay_altered_item_fails_before_conditioning(
     assert report.replayed_prediction is None
     assert report.max_abs_error is None
     assert report.mismatch_causes == ("receipt_verification_failed",)
+
+
+def test_receipt_replay_shape_mismatch_writes_strict_json(tmp_path: Path) -> None:
+    trace = replace(
+        _trace(tmp_path),
+        expected_prediction=np.array([[1.5, 0.0]], dtype=np.float32),
+    )
+    output = tmp_path / "shape-mismatch-report.json"
+
+    report = replay_receipt_trace(trace)
+    write_replay_report_json(report, output)
+
+    payload = output.read_text(encoding="utf-8")
+    written = json.loads(payload)
+    assert not report.ok
+    assert report.mismatch_causes == ("prediction_shape_mismatch",)
+    assert report.max_abs_error is None
+    assert "Infinity" not in payload
+    assert written["max_abs_error"] is None
 
 
 def test_receipt_replay_cli_writes_report(tmp_path: Path) -> None:

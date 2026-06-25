@@ -310,11 +310,11 @@ def replay_receipt_trace(
         retrieval,
         trace.current_latent,
     )
-    max_abs_error = _max_abs_error(replayed, trace.expected_prediction)
     causes: list[str] = []
-    if replayed.shape != trace.expected_prediction.shape:
+    max_abs_error = _max_abs_error(replayed, trace.expected_prediction)
+    if max_abs_error is None:
         causes.append("prediction_shape_mismatch")
-    if max_abs_error > atol:
+    elif max_abs_error > atol:
         causes.append("prediction_value_mismatch")
     return ReceiptReplayReport(
         ok=not causes,
@@ -455,9 +455,9 @@ def _require_array(value: object, field_name: str) -> np.ndarray:
     return np.ascontiguousarray(value)
 
 
-def _max_abs_error(left: np.ndarray, right: np.ndarray) -> float:
+def _max_abs_error(left: np.ndarray, right: np.ndarray) -> float | None:
     if left.shape != right.shape:
-        return math.inf
+        return None
     return float(np.max(np.abs(left - right)))
 
 
@@ -465,7 +465,7 @@ def _write_json(path: str | Path, data: Mapping[str, object]) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        json.dumps(data, sort_keys=True, indent=2) + "\n",
+        json.dumps(data, sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
 
