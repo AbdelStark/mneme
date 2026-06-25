@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
 import numpy as np
 
-from mneme.core import Cid, MemoryItem, StoreCorruptionError, StoreError
+from mneme.core import (
+    Cid,
+    MemoryItem,
+    StoreCorruptionError,
+    StoreError,
+    ValidationError,
+)
 from mneme.core._ids import cid_from_hex
 from mneme.core._json import loads_strict_json
 from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
@@ -43,6 +50,28 @@ class StoreVerificationReport:
     errors: tuple[str, ...]
     schema_version: str = STORE_VERIFICATION_SCHEMA
 
+    def __post_init__(self) -> None:
+        if self.schema_version != STORE_VERIFICATION_SCHEMA:
+            raise ValidationError("unsupported store verification report schema")
+        object.__setattr__(self, "ok", _require_bool(self.ok, "ok"))
+        object.__setattr__(
+            self, "store_id", _optional_non_empty_string(self.store_id, "store_id")
+        )
+        object.__setattr__(
+            self, "item_count", _require_non_negative_int(self.item_count, "item_count")
+        )
+        object.__setattr__(
+            self,
+            "value_log_count",
+            _require_non_negative_int(self.value_log_count, "value_log_count"),
+        )
+        object.__setattr__(
+            self,
+            "index_backend",
+            _optional_non_empty_string(self.index_backend, "index_backend"),
+        )
+        object.__setattr__(self, "errors", _string_tuple(self.errors, "errors"))
+
     def to_json(self) -> dict[str, Any]:
         """Return a JSON-serializable report."""
 
@@ -67,6 +96,23 @@ class IndexRebuildReport:
     data_path: str
     errors: tuple[str, ...]
     schema_version: str = INDEX_REBUILD_SCHEMA
+
+    def __post_init__(self) -> None:
+        if self.schema_version != INDEX_REBUILD_SCHEMA:
+            raise ValidationError("unsupported index rebuild report schema")
+        object.__setattr__(self, "ok", _require_bool(self.ok, "ok"))
+        object.__setattr__(
+            self, "item_count", _require_non_negative_int(self.item_count, "item_count")
+        )
+        object.__setattr__(
+            self,
+            "index_backend",
+            _optional_non_empty_string(self.index_backend, "index_backend"),
+        )
+        object.__setattr__(
+            self, "data_path", _require_non_empty_string(self.data_path, "data_path")
+        )
+        object.__setattr__(self, "errors", _string_tuple(self.errors, "errors"))
 
     def to_json(self) -> dict[str, Any]:
         """Return a JSON-serializable report."""
@@ -93,6 +139,29 @@ class CommitInitReport:
     already_initialized: bool
     errors: tuple[str, ...]
     schema_version: str = COMMIT_INIT_SCHEMA
+
+    def __post_init__(self) -> None:
+        if self.schema_version != COMMIT_INIT_SCHEMA:
+            raise ValidationError("unsupported commit init report schema")
+        object.__setattr__(self, "ok", _require_bool(self.ok, "ok"))
+        object.__setattr__(
+            self, "store_id", _optional_non_empty_string(self.store_id, "store_id")
+        )
+        object.__setattr__(
+            self, "item_count", _require_non_negative_int(self.item_count, "item_count")
+        )
+        object.__setattr__(self, "root", _optional_root_hex(self.root))
+        object.__setattr__(
+            self,
+            "commitment_path",
+            _require_non_empty_string(self.commitment_path, "commitment_path"),
+        )
+        object.__setattr__(
+            self,
+            "already_initialized",
+            _require_bool(self.already_initialized, "already_initialized"),
+        )
+        object.__setattr__(self, "errors", _string_tuple(self.errors, "errors"))
 
     def to_json(self) -> dict[str, Any]:
         """Return a JSON-serializable report."""
@@ -152,6 +221,44 @@ def verify_store(
     if raise_on_error and not report.ok:
         raise StoreCorruptionError("; ".join(report.errors))
     return report
+
+
+def _require_bool(value: object, field_name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValidationError(f"{field_name} must be a bool")
+    return value
+
+
+def _require_non_negative_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValidationError(f"{field_name} must be a non-negative integer")
+    return value
+
+
+def _require_non_empty_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValidationError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _optional_non_empty_string(value: object, field_name: str) -> str | None:
+    if value is None:
+        return None
+    return _require_non_empty_string(value, field_name)
+
+
+def _optional_root_hex(value: object) -> str | None:
+    if value is None:
+        return None
+    return cid_from_hex(value, "root", error_type=ValidationError).hex()
+
+
+def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise ValidationError(f"{field_name} must be a sequence")
+    return tuple(
+        _require_non_empty_string(item, f"{field_name} item") for item in value
+    )
 
 
 def commit_init_store(path: str | Path) -> CommitInitReport:
@@ -484,11 +591,14 @@ def _verification_report(
 
 
 __all__ = [
+    "COMMIT_INIT_SCHEMA",
     "INDEX_DATA_SCHEMA",
     "INDEX_REBUILD_SCHEMA",
     "STORE_VERIFICATION_SCHEMA",
+    "CommitInitReport",
     "IndexRebuildReport",
     "StoreVerificationReport",
+    "commit_init_store",
     "rebuild_index",
     "verify_store",
 ]

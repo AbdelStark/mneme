@@ -16,11 +16,17 @@ from mneme.core import (
     QuerySpec,
     StoreCorruptionError,
     Transition,
+    ValidationError,
 )
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import (
     COMMIT_INIT_SCHEMA,
     INDEX_DATA_SCHEMA,
+    INDEX_REBUILD_SCHEMA,
+    STORE_VERIFICATION_SCHEMA,
+    CommitInitReport,
+    IndexRebuildReport,
+    StoreVerificationReport,
     commit_init_store,
     init_store,
     open_store,
@@ -273,3 +279,150 @@ def test_cli_invalid_args_return_user_input_exit_code() -> None:
     cli = run_cli("store")
 
     assert cli.returncode == int(CliExitCode.USER_INPUT)
+
+
+def test_store_report_constructors_normalize_sequences_and_roots() -> None:
+    verification = StoreVerificationReport(
+        ok=False,
+        store_id=None,
+        item_count=0,
+        value_log_count=0,
+        index_backend=None,
+        errors=["manifest missing"],
+    )
+    rebuild = IndexRebuildReport(
+        ok=True,
+        item_count=0,
+        index_backend="flat",
+        data_path="index/data.json",
+        errors=[],
+    )
+    commit_init = CommitInitReport(
+        ok=True,
+        store_id="store",
+        item_count=1,
+        root=("AA" * 32),
+        commitment_path="receipts/commitment-mmr-v1.json",
+        already_initialized=False,
+        errors=[],
+    )
+
+    assert verification.errors == ("manifest missing",)
+    assert rebuild.errors == ()
+    assert commit_init.root == "aa" * 32
+    assert commit_init.errors == ()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        (
+            {"schema_version": "mneme.store_verification.v2"},
+            "unsupported store verification",
+        ),
+        ({"ok": "yes"}, "ok must be a bool"),
+        ({"store_id": ""}, "store_id must be a non-empty string"),
+        ({"item_count": -1}, "item_count must be a non-negative integer"),
+        (
+            {"value_log_count": True},
+            "value_log_count must be a non-negative integer",
+        ),
+        ({"index_backend": object()}, "index_backend must be a non-empty string"),
+        ({"errors": "bad"}, "errors must be a sequence"),
+        ({"errors": ("",)}, "errors item must be a non-empty string"),
+    ),
+)
+def test_store_verification_report_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _store_verification_report_values()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        StoreVerificationReport(**values)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"schema_version": "mneme.index_rebuild.v2"}, "unsupported index rebuild"),
+        ({"ok": 1}, "ok must be a bool"),
+        ({"item_count": -1}, "item_count must be a non-negative integer"),
+        ({"index_backend": ""}, "index_backend must be a non-empty string"),
+        ({"data_path": object()}, "data_path must be a non-empty string"),
+        ({"errors": object()}, "errors must be a sequence"),
+        ({"errors": ("",)}, "errors item must be a non-empty string"),
+    ),
+)
+def test_index_rebuild_report_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _index_rebuild_report_values()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        IndexRebuildReport(**values)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"schema_version": "mneme.store_commit_init.v2"}, "unsupported commit init"),
+        ({"ok": "yes"}, "ok must be a bool"),
+        ({"store_id": ""}, "store_id must be a non-empty string"),
+        ({"item_count": -1}, "item_count must be a non-negative integer"),
+        ({"root": "00"}, "root must be 32 bytes"),
+        ({"root": object()}, "root must be a non-empty string"),
+        ({"commitment_path": ""}, "commitment_path must be a non-empty string"),
+        ({"already_initialized": 0}, "already_initialized must be a bool"),
+        ({"errors": object()}, "errors must be a sequence"),
+        ({"errors": ("",)}, "errors item must be a non-empty string"),
+    ),
+)
+def test_commit_init_report_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _commit_init_report_values()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        CommitInitReport(**values)
+
+
+def _store_verification_report_values() -> dict[str, object]:
+    return {
+        "ok": True,
+        "store_id": "store",
+        "item_count": 1,
+        "value_log_count": 1,
+        "index_backend": "flat",
+        "errors": (),
+        "schema_version": STORE_VERIFICATION_SCHEMA,
+    }
+
+
+def _index_rebuild_report_values() -> dict[str, object]:
+    return {
+        "ok": True,
+        "item_count": 1,
+        "index_backend": "flat",
+        "data_path": "index/data.json",
+        "errors": (),
+        "schema_version": INDEX_REBUILD_SCHEMA,
+    }
+
+
+def _commit_init_report_values() -> dict[str, object]:
+    return {
+        "ok": True,
+        "store_id": "store",
+        "item_count": 1,
+        "root": "00" * 32,
+        "commitment_path": "receipts/commitment-mmr-v1.json",
+        "already_initialized": False,
+        "errors": (),
+        "schema_version": COMMIT_INIT_SCHEMA,
+    }
