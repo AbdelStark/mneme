@@ -62,7 +62,9 @@ Changelog = "https://github.com/AbdelStark/mneme/releases"
 
 [tool.hatch.build.targets.sdist]
 include = [
+  "/CITATION.cff",
   "/CHANGELOG.md",
+  "/CODE_OF_CONDUCT.md",
   "/CONTRIBUTING.md",
   "/docs",
   "/examples",
@@ -71,6 +73,7 @@ include = [
   "/README.md",
   "/pyproject.toml",
   "/SECURITY.md",
+  "/SUPPORT.md",
   "/src",
   "/tests",
   "/uv.lock",

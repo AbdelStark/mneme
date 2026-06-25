@@ -35,6 +35,7 @@ No unreleased changes yet.
 - Merkle Mountain Range commitment state with inclusion proofs and local-store
   commit sidecar persistence.
 - Strict MkDocs documentation site and GitHub Pages workflow.
+- Code of conduct, support policy, and citation metadata for public release use.
 
 ### Security
 
