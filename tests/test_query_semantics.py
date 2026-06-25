@@ -90,6 +90,11 @@ def test_deduplicate_results_preserves_first_occurrence() -> None:
     ]
 
 
+def test_deduplicate_results_rejects_nonfinite_distances() -> None:
+    with pytest.raises(QueryError, match="distance must be a finite number"):
+        deduplicate_results([(b"a", float("nan"))])
+
+
 def test_planned_search_k_overfetches_for_filters() -> None:
     unfiltered = _query(k=3, ef=5)
     filtered = _query(k=3, ef=5, filters={"source": "fixture"})
@@ -137,6 +142,37 @@ def test_temporal_decay_requires_timestamps_and_now() -> None:
         apply_temporal_decay([(b"a", 0.1)], decay=0.1, timestamps=None, now=1.0)
     with pytest.raises(QueryError, match="missing timestamp"):
         apply_temporal_decay([(b"a", 0.1)], decay=0.1, timestamps={}, now=1.0)
+
+
+def test_temporal_decay_rejects_nonfinite_inputs() -> None:
+    with pytest.raises(QueryError, match="temporal_decay must be a finite number"):
+        apply_temporal_decay(
+            [(b"a", 0.1)],
+            decay=float("inf"),
+            timestamps={b"a": 0.0},
+            now=1.0,
+        )
+    with pytest.raises(QueryError, match="now must be a finite number"):
+        apply_temporal_decay(
+            [(b"a", 0.1)],
+            decay=0.1,
+            timestamps={b"a": 0.0},
+            now=float("nan"),
+        )
+    with pytest.raises(QueryError, match="distance must be a finite number"):
+        apply_temporal_decay(
+            [(b"a", float("nan"))],
+            decay=0.1,
+            timestamps={b"a": 0.0},
+            now=1.0,
+        )
+    with pytest.raises(QueryError, match="timestamp must be a finite number"):
+        apply_temporal_decay(
+            [(b"a", 0.1)],
+            decay=0.1,
+            timestamps={b"a": float("inf")},
+            now=1.0,
+        )
 
 
 def test_query_fingerprint_mismatch_fails_closed() -> None:

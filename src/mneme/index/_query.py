@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
+from typing import SupportsFloat
 
 from mneme.core import (
     Cid,
@@ -92,7 +94,7 @@ def deduplicate_results(results: list[tuple[Cid, float]]) -> list[tuple[Cid, flo
         if cid in seen:
             continue
         seen.add(cid)
-        deduped.append((cid, float(distance)))
+        deduped.append((cid, _finite_float(distance, "distance")))
     return deduped
 
 
@@ -107,14 +109,28 @@ def apply_temporal_decay(
 
     if timestamps is None or now is None:
         raise QueryError("timestamps and now are required for temporal decay")
+    decay_value = _finite_float(decay, "temporal_decay")
+    now_value = _finite_float(now, "now")
     decayed: list[tuple[Cid, float]] = []
     for cid, distance in results:
         if cid not in timestamps:
             raise QueryError(f"missing timestamp for result id {cid.hex()}")
-        age = max(0.0, float(now) - float(timestamps[cid]))
-        decayed.append((cid, float(distance) + float(decay) * age))
+        distance_value = _finite_float(distance, "distance")
+        timestamp_value = _finite_float(timestamps[cid], "timestamp")
+        age = max(0.0, now_value - timestamp_value)
+        score = distance_value + decay_value * age
+        decayed.append((cid, _finite_float(score, "decayed distance")))
     decayed.sort(key=lambda item: (item[1], item[0]))
     return decayed
+
+
+def _finite_float(value: object, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, SupportsFloat):
+        raise QueryError(f"{field_name} must be a finite number")
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise QueryError(f"{field_name} must be a finite number")
+    return numeric
 
 
 def _validate_query_spec(spec: QuerySpec) -> None:
