@@ -222,8 +222,11 @@ def write_external_benchmark_report(
     return report
 
 
-def _mode_tuple(values: Sequence[object]) -> tuple[BenchmarkMode, ...]:
-    if isinstance(values, str | bytes | bytearray):
+def _mode_tuple(values: object) -> tuple[BenchmarkMode, ...]:
+    if isinstance(values, str | bytes | bytearray) or not isinstance(
+        values,
+        Sequence,
+    ):
         raise EvaluationError("benchmark modes must be a sequence")
     if not values:
         raise EvaluationError("benchmark modes must include at least one mode")
@@ -273,8 +276,11 @@ def _freeze_string_mapping(
     return MappingProxyType(frozen)
 
 
-def _string_tuple(values: Sequence[object], field_name: str) -> tuple[str, ...]:
-    if isinstance(values, str | bytes | bytearray):
+def _string_tuple(values: object, field_name: str) -> tuple[str, ...]:
+    if isinstance(values, str | bytes | bytearray) or not isinstance(
+        values,
+        Sequence,
+    ):
         raise EvaluationError(f"{field_name} must be a sequence")
     result = tuple(
         _require_non_empty_str(value, f"{field_name} item") for value in values

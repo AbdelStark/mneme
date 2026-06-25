@@ -111,6 +111,53 @@ def test_benchmark_spec_requires_external_dataset_split_and_valid_modes() -> Non
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"checkpoint_uri": object()}, "checkpoint_uri must be a non-empty string"),
+        ({"modes": object()}, "benchmark modes must be a sequence"),
+        ({"modes": ()}, "benchmark modes must include at least one mode"),
+        ({"command": object()}, "command must be a sequence"),
+        ({"command": ()}, "command must not be empty"),
+        ({"seed": True}, "seed must be None or an integer"),
+        ({"hardware": []}, "hardware must be a mapping"),
+        ({"dataset_manifest": object()}, "dataset_manifest must be a non-empty string"),
+    ),
+)
+def test_benchmark_spec_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {
+        "dataset": _dataset(),
+        "checkpoint_uri": "checkpoint",
+    }
+    values.update(kwargs)
+
+    with pytest.raises(EvaluationError, match=match):
+        BenchmarkSpec(**values)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"metrics": []}, "metrics must be a mapping"),
+        ({"artifacts": []}, "artifacts must be a mapping"),
+        ({"caveats": object()}, "caveats must be a sequence"),
+        ({"passed": "yes"}, "passed must be a bool"),
+    ),
+)
+def test_benchmark_result_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {"metrics": {"score": 1}}
+    values.update(kwargs)
+
+    with pytest.raises(EvaluationError, match=match):
+        BenchmarkResult(**values)
+
+
 def test_custom_runner_protocol_and_mode_parser() -> None:
     class CustomRunner:
         def run(self, spec: BenchmarkSpec) -> BenchmarkResult:
