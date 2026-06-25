@@ -15,6 +15,8 @@ All notable user-visible changes are recorded here.
 - Aligned PRD, architecture, and remote RFC package-boundary docs with the
   shipped `mneme.remote` package and optional extra names.
 - Hardened release artifact validation against packaged Python bytecode.
+- Made signed receipt verification fail-closed behavior explicit until a signing
+  backend exists.
 - Raised the CI coverage ratchet to 84% for the full pytest coverage gate.
 
 ## [0.1.0] - 2026-06-25

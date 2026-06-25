@@ -111,6 +111,33 @@ def test_validate_query_response_maps_receipt_failure_to_typed_error() -> None:
         validate_query_response(bad_response, spec)
 
 
+def test_validate_query_response_rejects_signed_receipt_until_backend_exists() -> None:
+    item = _built_item(1.0)
+    spec = QuerySpec(
+        vector=np.array([1.0, 0.0], dtype=np.float32),
+        k=1,
+        metric=Metric.L2,
+        with_receipt=True,
+    )
+    response = _response_with_receipt(spec, item)
+    assert response.retrieval.receipt is not None
+    signed_receipt = replace(
+        response.retrieval.receipt,
+        signer="ed25519:test-key",
+        signature=b"unsigned-fixture-signature",
+    )
+    signed_response = QueryResponse(
+        Retrieval(
+            items=response.retrieval.items,
+            distances=response.retrieval.distances,
+            receipt=signed_receipt,
+        )
+    )
+
+    with pytest.raises(ReceiptVerificationError, match="verification failed"):
+        validate_query_response(signed_response, spec)
+
+
 def test_validate_query_response_requires_receipt_when_requested() -> None:
     item = _built_item(1.0)
     spec = QuerySpec(

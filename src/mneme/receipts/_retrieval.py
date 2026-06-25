@@ -258,10 +258,12 @@ def verify_retrieval_receipt(
     root: bytes | None = None,
     query: QuerySpec | None = None,
 ) -> bool:
-    """Return whether a receipt verifies for the supplied root, items, and query."""
+    """Return whether an unsigned receipt verifies for root, items, and query."""
 
     if not isinstance(receipt, RetrievalReceipt):
         raise ReceiptVerificationError("receipt must be a RetrievalReceipt")
+    # Signature fields are schema-reserved for a later signing backend. Treat a
+    # signed receipt as unverifiable until that backend is available.
     if receipt.signature is not None:
         return False
     if root is not None and _require_digest(root, "expected root") != receipt.root:

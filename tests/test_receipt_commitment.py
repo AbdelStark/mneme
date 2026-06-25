@@ -218,6 +218,35 @@ def test_retrieval_receipt_fails_for_altered_items_and_root(
     )
 
 
+def test_signed_retrieval_receipts_fail_closed_until_signing_backend_exists(
+    tmp_path: Path,
+) -> None:
+    store = init_store(tmp_path / "store")
+    (cid,) = store.put_batch([_item(1.0)])
+    root = store.commit()
+    spec = QuerySpec(
+        vector=np.array([1.0, 0.0], dtype=np.float32),
+        k=1,
+        metric=Metric.L2,
+    )
+    receipt = build_retrieval_receipt(
+        root=root,
+        ids=(cid,),
+        proofs=tuple(store.prove([cid])),
+        query=spec,
+        store_id=str(store.manifest.store_id),
+        signer="ed25519:test-key",
+        signature=b"unsigned-fixture-signature",
+    )
+
+    reloaded = RetrievalReceipt.from_json(receipt.to_json())
+
+    assert reloaded.signer == "ed25519:test-key"
+    assert reloaded.signature == b"unsigned-fixture-signature"
+    assert not verify_retrieval_receipt(receipt, root=root, query=spec)
+    assert not verify_retrieval_receipt(reloaded, root=root, query=spec)
+
+
 def test_build_retrieval_receipt_requires_matching_ids_and_proofs(
     tmp_path: Path,
 ) -> None:
