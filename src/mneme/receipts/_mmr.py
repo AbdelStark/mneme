@@ -283,6 +283,10 @@ def load_commitment_state(path: str | Path) -> CommitmentState:
         data = loads_strict_json(target.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ReceiptVerificationError(f"commitment state not found: {target}") from exc
+    except OSError as exc:
+        raise ReceiptVerificationError(
+            f"commitment state could not be read: {target}"
+        ) from exc
     except ValueError as exc:
         raise ReceiptVerificationError(
             f"commitment state is not valid JSON: {target}"

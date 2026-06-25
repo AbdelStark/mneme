@@ -150,6 +150,14 @@ def test_commitment_state_rejects_nonstandard_json_constants(tmp_path: Path) -> 
         load_commitment_state(path)
 
 
+def test_commitment_state_wraps_unreadable_sidecar(tmp_path: Path) -> None:
+    path = tmp_path / "commitment.json"
+    path.mkdir()
+
+    with pytest.raises(ReceiptVerificationError, match="could not be read"):
+        load_commitment_state(path)
+
+
 def test_store_commit_persists_mmr_sidecar_and_proves_value_log_order(
     tmp_path: Path,
 ) -> None:
