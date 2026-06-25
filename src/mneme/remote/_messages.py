@@ -18,6 +18,7 @@ from mneme.core import (
     QuerySpec,
     Retrieval,
     SchemaVersionError,
+    StoreCorruptionError,
     ValidationError,
     content_id,
 )
@@ -166,7 +167,7 @@ class MemoryItemEnvelope:
                     "item schema_version",
                 ),
             )
-        except (TypeError, ValueError) as exc:
+        except (TypeError, ValueError, ValidationError, StoreCorruptionError) as exc:
             raise ValidationError("invalid memory item payload") from exc
         if item.content_id != content_id(item):
             raise ValidationError("content_id does not match canonical item bytes")
@@ -680,7 +681,10 @@ def _metric(value: object) -> Metric:
 def _optional_fingerprint(value: object) -> EncoderFingerprint | None:
     if value is None:
         return None
-    return _fingerprint_from_json(value)
+    try:
+        return _fingerprint_from_json(value)
+    except StoreCorruptionError as exc:
+        raise ValidationError("invalid encoder_fp") from exc
 
 
 def _bytes_from_hex(value: object, field_name: str) -> bytes:

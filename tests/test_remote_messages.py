@@ -178,6 +178,34 @@ def test_memory_item_envelope_rejects_forged_content_id_on_serialization() -> No
         MemoryItemEnvelope(item).to_json()
 
 
+def test_memory_item_envelope_rejects_malformed_payload_as_validation() -> None:
+    item = _built_item(1.0)
+    payload = MemoryItemEnvelope(item).to_json()
+    assert isinstance(payload["value"], dict)
+    payload["value"]["episode_id"] = "not-a-uuid"
+
+    with pytest.raises(ValidationError, match="invalid memory item payload"):
+        MemoryItemEnvelope.from_json(payload)
+
+
+def test_query_request_rejects_malformed_encoder_fingerprint_as_validation() -> None:
+    payload = QueryRequest(
+        QuerySpec(
+            vector=np.array([1.0, 0.0], dtype=np.float32),
+            k=1,
+            encoder_fp=_fingerprint(),
+        )
+    ).to_json()
+    query = payload["query"]
+    assert isinstance(query, dict)
+    encoder_fp = query["encoder_fp"]
+    assert isinstance(encoder_fp, dict)
+    encoder_fp["config_digest"] = None
+
+    with pytest.raises(ValidationError, match="invalid encoder_fp"):
+        QueryRequest.from_json(payload)
+
+
 def test_remote_messages_reject_non_digest_ids_and_roots() -> None:
     with pytest.raises(ValidationError, match="content id must be 32 bytes"):
         PutResponse((b"x",))
