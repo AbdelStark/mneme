@@ -16,9 +16,17 @@ from mneme.core import (
     QuerySpec,
     StoreCorruptionError,
     Transition,
+    ValidationError,
     content_id,
 )
-from mneme.store import init_store, open_store, rebuild_index
+from mneme.store import (
+    STORE_MANIFEST_SCHEMA,
+    StoreRecoveryEvent,
+    StoreStats,
+    init_store,
+    open_store,
+    rebuild_index,
+)
 from mneme.store._value_log import VALUE_RECORD_SCHEMA, append_value_record
 
 
@@ -242,6 +250,143 @@ def test_value_log_short_content_id_is_store_corruption(tmp_path: Path) -> None:
 
     with pytest.raises(StoreCorruptionError, match="content_id must be 32 bytes"):
         open_store(root)
+
+
+def test_store_stats_constructor_normalizes_path() -> None:
+    stats = StoreStats(
+        store_id=uuid4(),
+        path="store",
+        schema_version=STORE_MANIFEST_SCHEMA,
+        active_fingerprint_count=1,
+        value_log_count=1,
+        value_record_count=2,
+        visible_record_count=2,
+        value_bytes=128,
+        index_backend="flat",
+        retention_policy="none",
+        tombstone_count=0,
+        last_completed_transaction=None,
+        commitments_enabled=False,
+    )
+
+    assert stats.path == Path("store")
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"store_id": "store"}, "store_id must be a UUID"),
+        ({"path": object()}, "path must be a path-like value"),
+        ({"path": ""}, "path must not be empty"),
+        ({"schema_version": ""}, "schema_version must be a non-empty string"),
+        (
+            {"active_fingerprint_count": -1},
+            "active_fingerprint_count must be a non-negative integer",
+        ),
+        ({"value_log_count": True}, "value_log_count must be a non-negative integer"),
+        (
+            {"value_record_count": -1},
+            "value_record_count must be a non-negative integer",
+        ),
+        (
+            {"visible_record_count": -1},
+            "visible_record_count must be a non-negative integer",
+        ),
+        ({"value_bytes": -1}, "value_bytes must be a non-negative integer"),
+        ({"index_backend": ""}, "index_backend must be a non-empty string"),
+        ({"retention_policy": object()}, "retention_policy must be"),
+        ({"tombstone_count": -1}, "tombstone_count must be a non-negative integer"),
+        (
+            {"last_completed_transaction": ""},
+            "last_completed_transaction must be a non-empty string",
+        ),
+        ({"commitments_enabled": 1}, "commitments_enabled must be a bool"),
+    ),
+)
+def test_store_stats_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _store_stats_values()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        StoreStats(**values)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"schema_version": "mneme.store_recovery_event.v2"}, "unsupported store"),
+        ({"event": ""}, "event must be a non-empty string"),
+        ({"store_id": object()}, "store_id must be a non-empty string"),
+        ({"operation": ""}, "operation must be a non-empty string"),
+        ({"status": ""}, "status must be a non-empty string"),
+        ({"transaction_id": ""}, "transaction_id must be a non-empty string"),
+        ({"value_log": object()}, "value_log must be a non-empty string"),
+        (
+            {"previous_size_bytes": -1},
+            "previous_size_bytes must be a non-negative integer",
+        ),
+        (
+            {"recovered_size_bytes": True},
+            "recovered_size_bytes must be a non-negative integer",
+        ),
+        (
+            {"previous_record_count": -1},
+            "previous_record_count must be a non-negative integer",
+        ),
+        (
+            {"recovered_record_count": -1},
+            "recovered_record_count must be a non-negative integer",
+        ),
+        ({"duration_ms": float("nan")}, "duration_ms must be"),
+        ({"duration_ms": -0.1}, "duration_ms must be"),
+    ),
+)
+def test_store_recovery_event_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _recovery_event_values()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        StoreRecoveryEvent(**values)
+
+
+def _store_stats_values() -> dict[str, object]:
+    return {
+        "store_id": uuid4(),
+        "path": Path("store"),
+        "schema_version": STORE_MANIFEST_SCHEMA,
+        "active_fingerprint_count": 1,
+        "value_log_count": 1,
+        "value_record_count": 1,
+        "visible_record_count": 1,
+        "value_bytes": 128,
+        "index_backend": "flat",
+        "retention_policy": "none",
+        "tombstone_count": 0,
+        "last_completed_transaction": "txn-fixture",
+        "commitments_enabled": False,
+    }
+
+
+def _recovery_event_values() -> dict[str, object]:
+    return {
+        "event": "mneme.store.recover",
+        "store_id": str(uuid4()),
+        "operation": "store.recover",
+        "status": "completed",
+        "transaction_id": "txn-fixture",
+        "value_log": "values/log-000000.mnv",
+        "previous_size_bytes": 0,
+        "recovered_size_bytes": 0,
+        "previous_record_count": 0,
+        "recovered_record_count": 0,
+        "duration_ms": 0.0,
+    }
 
 
 def test_value_log_non_object_record_is_store_corruption(tmp_path: Path) -> None:

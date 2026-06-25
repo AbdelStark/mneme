@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -91,6 +92,77 @@ class StoreStats:
     last_completed_transaction: str | None
     commitments_enabled: bool
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.store_id, UUID):
+            raise ValidationError("store_id must be a UUID")
+        object.__setattr__(self, "path", _require_stats_path(self.path))
+        _require_non_empty_stats_string(self.schema_version, "schema_version")
+        object.__setattr__(
+            self,
+            "active_fingerprint_count",
+            _require_non_negative_stats_int(
+                self.active_fingerprint_count,
+                "active_fingerprint_count",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "value_log_count",
+            _require_non_negative_stats_int(self.value_log_count, "value_log_count"),
+        )
+        object.__setattr__(
+            self,
+            "value_record_count",
+            _require_non_negative_stats_int(
+                self.value_record_count,
+                "value_record_count",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "visible_record_count",
+            _require_non_negative_stats_int(
+                self.visible_record_count,
+                "visible_record_count",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "value_bytes",
+            _require_non_negative_stats_int(self.value_bytes, "value_bytes"),
+        )
+        object.__setattr__(
+            self,
+            "index_backend",
+            _require_non_empty_stats_string(self.index_backend, "index_backend"),
+        )
+        object.__setattr__(
+            self,
+            "retention_policy",
+            _require_non_empty_stats_string(
+                self.retention_policy,
+                "retention_policy",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "tombstone_count",
+            _require_non_negative_stats_int(self.tombstone_count, "tombstone_count"),
+        )
+        object.__setattr__(
+            self,
+            "last_completed_transaction",
+            _optional_non_empty_stats_string(
+                self.last_completed_transaction,
+                "last_completed_transaction",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "commitments_enabled",
+            _require_stats_bool(self.commitments_enabled, "commitments_enabled"),
+        )
+
 
 @dataclass(frozen=True)
 class StoreRecoveryEvent:
@@ -109,6 +181,73 @@ class StoreRecoveryEvent:
     duration_ms: float
     schema_version: str = _STORE_RECOVERY_EVENT_SCHEMA
 
+    def __post_init__(self) -> None:
+        if self.schema_version != _STORE_RECOVERY_EVENT_SCHEMA:
+            raise ValidationError("unsupported store recovery event schema")
+        object.__setattr__(
+            self, "event", _require_non_empty_stats_string(self.event, "event")
+        )
+        object.__setattr__(
+            self,
+            "store_id",
+            _require_non_empty_stats_string(self.store_id, "store_id"),
+        )
+        object.__setattr__(
+            self,
+            "operation",
+            _require_non_empty_stats_string(self.operation, "operation"),
+        )
+        object.__setattr__(
+            self, "status", _require_non_empty_stats_string(self.status, "status")
+        )
+        object.__setattr__(
+            self,
+            "transaction_id",
+            _require_non_empty_stats_string(self.transaction_id, "transaction_id"),
+        )
+        object.__setattr__(
+            self,
+            "value_log",
+            _require_non_empty_stats_string(self.value_log, "value_log"),
+        )
+        object.__setattr__(
+            self,
+            "previous_size_bytes",
+            _require_non_negative_stats_int(
+                self.previous_size_bytes,
+                "previous_size_bytes",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "recovered_size_bytes",
+            _require_non_negative_stats_int(
+                self.recovered_size_bytes,
+                "recovered_size_bytes",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "previous_record_count",
+            _require_non_negative_stats_int(
+                self.previous_record_count,
+                "previous_record_count",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "recovered_record_count",
+            _require_non_negative_stats_int(
+                self.recovered_record_count,
+                "recovered_record_count",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "duration_ms",
+            _require_non_negative_stats_float(self.duration_ms, "duration_ms"),
+        )
+
     def to_json(self) -> dict[str, Any]:
         """Return a JSON-serializable recovery event."""
 
@@ -126,6 +265,51 @@ class StoreRecoveryEvent:
             "previous_record_count": self.previous_record_count,
             "recovered_record_count": self.recovered_record_count,
         }
+
+
+def _require_stats_path(value: object) -> Path:
+    if isinstance(value, str) and not value:
+        raise ValidationError("path must not be empty")
+    if isinstance(value, str | Path):
+        path = Path(value)
+    else:
+        raise ValidationError("path must be a path-like value")
+    if not str(path):
+        raise ValidationError("path must not be empty")
+    return path
+
+
+def _require_stats_bool(value: object, field_name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValidationError(f"{field_name} must be a bool")
+    return value
+
+
+def _require_non_negative_stats_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValidationError(f"{field_name} must be a non-negative integer")
+    return value
+
+
+def _require_non_negative_stats_float(value: object, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValidationError(f"{field_name} must be a finite non-negative number")
+    numeric = float(value)
+    if not math.isfinite(numeric) or numeric < 0.0:
+        raise ValidationError(f"{field_name} must be a finite non-negative number")
+    return numeric
+
+
+def _require_non_empty_stats_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValidationError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _optional_non_empty_stats_string(value: object, field_name: str) -> str | None:
+    if value is None:
+        return None
+    return _require_non_empty_stats_string(value, field_name)
 
 
 @dataclass
