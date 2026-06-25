@@ -8,7 +8,12 @@ from pathlib import PurePosixPath
 from typing import Any, Final
 from uuid import UUID
 
-from mneme.core import EncoderFingerprint, SchemaVersionError, StoreCorruptionError
+from mneme.core import (
+    EncoderFingerprint,
+    SchemaVersionError,
+    StoreCorruptionError,
+    ValidationError,
+)
 from mneme.core._ids import cid_from_hex
 
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
@@ -313,7 +318,7 @@ def _fingerprint_from_json(data: object) -> EncoderFingerprint:
                 mapping.get("schema_version"), "schema_version"
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, ValidationError) as exc:
         raise StoreCorruptionError("invalid encoder fingerprint") from exc
 
 

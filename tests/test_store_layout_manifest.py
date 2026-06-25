@@ -274,6 +274,22 @@ def test_unknown_manifest_major_version_fails_closed(tmp_path) -> None:
         open_store(root)
 
 
+def test_manifest_rejects_unsupported_active_fingerprint_schema_as_corruption(
+    tmp_path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root, active_fingerprints=[_fingerprint()])
+    manifest_path = root / "manifest.json"
+    manifest_json = json.loads(manifest_path.read_text())
+    manifest_json["active_fingerprints"][0]["schema_version"] = (
+        "mneme.encoder_fingerprint.v2"
+    )
+    manifest_path.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+    with pytest.raises(StoreCorruptionError, match="invalid encoder fingerprint"):
+        open_store(root)
+
+
 def test_missing_manifest_fails_without_create(tmp_path) -> None:
     root = tmp_path / "store"
     root.mkdir()
