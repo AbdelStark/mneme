@@ -21,6 +21,7 @@ from mneme.core import (
 from mneme.eval import (
     RECEIPT_REPLAY_REPORT_SCHEMA,
     RECEIPT_REPLAY_TRACE_SCHEMA,
+    KnnReplayConfig,
     ReceiptReplayTrace,
     build_receipt_replay_trace,
     load_replay_trace_json,
@@ -127,6 +128,37 @@ def test_receipt_replay_loader_wraps_invalid_item_payloads(
     trace_path.write_text(json.dumps(payload), encoding="utf-8")
 
     with pytest.raises(EvaluationError, match="invalid replay item payload"):
+        load_replay_trace_json(trace_path)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"tau": 0.0}, "tau must be positive"),
+        ({"lambda_max": 1.5}, "lambda_max must be between 0 and 1"),
+        ({"alpha": -1.0}, "alpha must be non-negative"),
+        ({"delta0": float("nan")}, "delta0 must be finite"),
+        ({"mode": "unknown"}, "mode must be 'delta' or 'absolute'"),
+    ],
+)
+def test_knn_replay_config_rejects_invalid_values(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    with pytest.raises(EvaluationError, match=match):
+        KnnReplayConfig(**kwargs)
+
+
+def test_receipt_replay_loader_rejects_invalid_conditioner_config(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace = _trace(tmp_path)
+    payload = trace.to_json()
+    payload["conditioner"]["tau"] = 0.0
+    trace_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="tau must be positive"):
         load_replay_trace_json(trace_path)
 
 

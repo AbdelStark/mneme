@@ -48,6 +48,25 @@ class KnnReplayConfig:
     delta0: float = 0.2
     mode: KnnMode = "delta"
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "tau", _require_positive_float(self.tau, "tau"))
+        object.__setattr__(
+            self,
+            "lambda_max",
+            _require_probability(self.lambda_max, "lambda_max"),
+        )
+        object.__setattr__(
+            self,
+            "alpha",
+            _require_non_negative_float(self.alpha, "alpha"),
+        )
+        object.__setattr__(
+            self,
+            "delta0",
+            _require_finite_float(self.delta0, "delta0"),
+        )
+        object.__setattr__(self, "mode", _knn_mode(self.mode))
+
     def conditioner(self) -> KnnCorrector:
         """Return the configured conditioner."""
 
@@ -478,10 +497,24 @@ def _require_finite_float(value: object, field_name: str) -> float:
     return numeric
 
 
+def _require_positive_float(value: object, field_name: str) -> float:
+    numeric = _require_finite_float(value, field_name)
+    if numeric <= 0.0:
+        raise EvaluationError(f"{field_name} must be positive")
+    return numeric
+
+
 def _require_non_negative_float(value: object, field_name: str) -> float:
     numeric = _require_finite_float(value, field_name)
     if numeric < 0.0:
         raise EvaluationError(f"{field_name} must be non-negative")
+    return numeric
+
+
+def _require_probability(value: object, field_name: str) -> float:
+    numeric = _require_finite_float(value, field_name)
+    if numeric < 0.0 or numeric > 1.0:
+        raise EvaluationError(f"{field_name} must be between 0 and 1")
     return numeric
 
 
