@@ -509,6 +509,8 @@ def _load_vector(path: Path) -> np.ndarray:
         data = loads_strict_json(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise QueryError(f"vector file not found: {path}") from exc
+    except OSError as exc:
+        raise QueryError(f"vector file could not be read: {path}") from exc
     except ValueError as exc:
         raise QueryError(f"vector file is not valid JSON: {path}") from exc
     if isinstance(data, dict):
@@ -524,6 +526,10 @@ def _load_receipt(path: Path) -> RetrievalReceipt:
         data = loads_strict_json(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ReceiptVerificationError(f"receipt file not found: {path}") from exc
+    except OSError as exc:
+        raise ReceiptVerificationError(
+            f"receipt file could not be read: {path}"
+        ) from exc
     except ValueError as exc:
         raise ReceiptVerificationError("receipt file is not valid JSON") from exc
     try:

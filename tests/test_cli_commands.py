@@ -187,6 +187,33 @@ def test_query_cli_rejects_nonstandard_vector_json(tmp_path: Path) -> None:
     assert error["error_type"] == "QueryError"
 
 
+def test_query_cli_wraps_unreadable_vector_path_as_query_error(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    vector_path = tmp_path / "vector-dir"
+    init_store(root)
+    vector_path.mkdir()
+
+    result = run_cli(
+        "query",
+        root,
+        "--vector",
+        vector_path,
+        "--k",
+        "1",
+        "--metric",
+        "l2",
+        "--json",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "QueryError"
+    assert "vector file could not be read" in str(error["errors"][0])
+
+
 def test_eval_fixtures_cli_writes_and_prints_valid_report(tmp_path: Path) -> None:
     output = tmp_path / "reports" / "fixtures.json"
 
@@ -490,6 +517,21 @@ def test_receipts_verify_cli_rejects_nonstandard_receipt_json(
     error = _stdout_json(result)
     assert error["schema_version"] == "mneme.cli_error.v1"
     assert error["error_type"] == "ReceiptVerificationError"
+
+
+def test_receipts_verify_cli_wraps_unreadable_receipt_path(
+    tmp_path: Path,
+) -> None:
+    receipt_path = tmp_path / "receipt-dir"
+    receipt_path.mkdir()
+
+    result = run_cli("receipts", "verify", receipt_path, "--root", "00" * 32)
+
+    assert result.returncode == int(CliExitCode.DATA_VALIDATION)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "ReceiptVerificationError"
+    assert "receipt file could not be read" in str(error["errors"][0])
 
 
 def test_receipts_verify_cli_wraps_malformed_receipt_payload(
