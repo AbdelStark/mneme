@@ -24,6 +24,7 @@ from mneme.receipts import (
     COMMITMENT_SCHEMA,
     CommitmentState,
     InclusionProof,
+    QueryReceiptParams,
     RetrievalReceipt,
     build_retrieval_receipt,
     load_commitment_state,
@@ -75,6 +76,22 @@ def _item(key_value: float, *, step: int = 0) -> MemoryItem:
         meta={"source": "commitment-fixture", "step": step},
         encoder_fp=_fingerprint(),
     )
+
+
+def _query_params() -> QueryReceiptParams:
+    return QueryReceiptParams.from_query(
+        QuerySpec(
+            vector=np.array([1.0, 0.0], dtype=np.float32),
+            k=1,
+            metric=Metric.L2,
+        )
+    )
+
+
+def _receipt_parts() -> tuple[bytes, bytes, InclusionProof, QueryReceiptParams]:
+    cid = _cids(1)[0]
+    state = CommitmentState.from_cids((cid,))
+    return state.root, cid, state.prove(cid), _query_params()
 
 
 def test_mmr_append_roots_match_golden_vectors() -> None:
@@ -245,6 +262,67 @@ def test_signed_retrieval_receipts_fail_closed_until_signing_backend_exists(
     assert reloaded.signature == b"unsigned-fixture-signature"
     assert not verify_retrieval_receipt(receipt, root=root, query=spec)
     assert not verify_retrieval_receipt(reloaded, root=root, query=spec)
+
+
+def test_retrieval_receipt_direct_constructor_validates_container_types() -> None:
+    root, cid, proof, params = _receipt_parts()
+
+    receipt = RetrievalReceipt(
+        root=root,
+        ids=[cid],
+        proofs=[proof],
+        params=params,
+        store_id="store-fixture",
+        created_at="2026-06-24T00:00:00Z",
+    )
+
+    assert receipt.ids == (cid,)
+    assert receipt.proofs == (proof,)
+    with pytest.raises(ValidationError, match="receipt ids must be a sequence"):
+        RetrievalReceipt(
+            root=root,
+            ids=None,
+            proofs=(proof,),
+            params=params,
+            store_id="store-fixture",
+            created_at="2026-06-24T00:00:00Z",
+        )
+    with pytest.raises(ValidationError, match="receipt proofs must be a sequence"):
+        RetrievalReceipt(
+            root=root,
+            ids=(cid,),
+            proofs=None,
+            params=params,
+            store_id="store-fixture",
+            created_at="2026-06-24T00:00:00Z",
+        )
+
+
+def test_retrieval_receipt_direct_constructor_requires_signature_bytes() -> None:
+    root, cid, proof, params = _receipt_parts()
+
+    with pytest.raises(ValidationError, match="signature must be non-empty bytes"):
+        RetrievalReceipt(
+            root=root,
+            ids=(cid,),
+            proofs=(proof,),
+            params=params,
+            store_id="store-fixture",
+            created_at="2026-06-24T00:00:00Z",
+            signer="ed25519:test-key",
+            signature="not-bytes",
+        )
+    with pytest.raises(ValidationError, match="signature must be non-empty bytes"):
+        RetrievalReceipt(
+            root=root,
+            ids=(cid,),
+            proofs=(proof,),
+            params=params,
+            store_id="store-fixture",
+            created_at="2026-06-24T00:00:00Z",
+            signer="ed25519:test-key",
+            signature=b"",
+        )
 
 
 def test_build_retrieval_receipt_requires_matching_ids_and_proofs(

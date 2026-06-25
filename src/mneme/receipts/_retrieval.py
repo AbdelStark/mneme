@@ -166,12 +166,18 @@ class RetrievalReceipt:
         object.__setattr__(
             self,
             "ids",
-            tuple(_require_digest(cid, "receipt id") for cid in self.ids),
+            tuple(
+                _require_digest(cid, "receipt id")
+                for cid in _require_sequence(self.ids, "receipt ids")
+            ),
         )
         object.__setattr__(
             self,
             "proofs",
-            tuple(_require_inclusion_proof(proof) for proof in self.proofs),
+            tuple(
+                _require_inclusion_proof(proof)
+                for proof in _require_sequence(self.proofs, "receipt proofs")
+            ),
         )
         if len(self.ids) != len(self.proofs):
             raise ValidationError("receipt ids and proofs must have matching lengths")
@@ -183,8 +189,12 @@ class RetrievalReceipt:
             raise ValidationError("signer and signature must both be set or both null")
         if self.signer is not None:
             _require_string(self.signer, "signer")
-        if self.signature is not None and not self.signature:
-            raise ValidationError("signature must not be empty")
+        if self.signature is not None:
+            object.__setattr__(
+                self,
+                "signature",
+                _require_signature(self.signature),
+            )
 
     def to_json(self) -> dict[str, object]:
         """Return a JSON-ready receipt object."""
@@ -390,6 +400,12 @@ def _require_mapping(value: object, field_name: str) -> Mapping[str, object]:
     return value
 
 
+def _require_sequence(value: object, field_name: str) -> Sequence[object]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise ValidationError(f"{field_name} must be a sequence")
+    return value
+
+
 def _optional_mapping(
     value: object,
     field_name: str,
@@ -483,6 +499,12 @@ def _optional_encoder_fingerprint(value: object) -> EncoderFingerprint | None:
 def _require_inclusion_proof(value: object) -> InclusionProof:
     if not isinstance(value, InclusionProof):
         raise ValidationError("proofs must contain InclusionProof instances")
+    return value
+
+
+def _require_signature(value: object) -> bytes:
+    if not isinstance(value, bytes) or not value:
+        raise ValidationError("signature must be non-empty bytes")
     return value
 
 
