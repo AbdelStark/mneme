@@ -78,6 +78,12 @@ def test_remote_http_config_normalizes_and_validates_inputs() -> None:
     invalid_cases = [
         ({"base_url": ""}, "base_url"),
         ({"base_url": object()}, "base_url"),
+        ({"base_url": "testserver"}, "base_url"),
+        ({"base_url": "ftp://testserver"}, "base_url"),
+        ({"base_url": "file:///tmp/store"}, "base_url"),
+        ({"base_url": "http://user:test@testserver"}, "base_url"),
+        ({"base_url": "http://testserver?token=secret"}, "base_url"),
+        ({"base_url": "http://testserver#fragment"}, "base_url"),
         ({"base_url": "http://testserver", "bearer_token": ""}, "bearer_token"),
         (
             {"base_url": "http://testserver", "bearer_token": object()},

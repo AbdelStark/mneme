@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import math
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -61,6 +62,7 @@ class RemoteHttpConfig:
     def __post_init__(self) -> None:
         if not isinstance(self.base_url, str) or not self.base_url:
             raise ValidationError("remote HTTP base_url must be non-empty")
+        _validate_http_base_url(self.base_url)
         if self.bearer_token is not None and (
             not isinstance(self.bearer_token, str) or not self.bearer_token
         ):
@@ -293,6 +295,22 @@ def _stdlib_request_json(
 
 def _url(base_url: str, path: str) -> str:
     return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
+
+
+def _validate_http_base_url(base_url: str) -> None:
+    parsed = urllib.parse.urlsplit(base_url)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+        or bool(parsed.query)
+        or bool(parsed.fragment)
+    ):
+        raise ValidationError(
+            "remote HTTP base_url must be an http(s) URL without credentials, "
+            "query, or fragment"
+        )
 
 
 async def _read_body(receive: AsgiReceive) -> bytes:
