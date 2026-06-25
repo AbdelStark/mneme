@@ -120,3 +120,28 @@ def test_invalid_report_schema_and_metrics_fail_closed() -> None:
     data["metrics"]["bad"] = float("nan")
     with pytest.raises(ValidationError, match="metric bad"):
         validate_report_json(data)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"command": object()}, "command must be a sequence"),
+        ({"metrics": []}, "metrics must be an object"),
+        ({"caveats": object()}, "caveats must be a sequence"),
+    ),
+)
+def test_eval_report_constructor_rejects_malformed_collections(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _report().to_json()
+    values["dataset"] = _dataset()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        EvalReport(**values)
+
+
+def test_dataset_ref_constructor_rejects_non_string_kind() -> None:
+    with pytest.raises(ValidationError, match="dataset kind"):
+        DatasetRef(dataset_id="fixture", kind=[])  # type: ignore[arg-type]

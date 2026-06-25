@@ -34,8 +34,7 @@ class DatasetRef:
     def __post_init__(self) -> None:
         _validate_schema(self.schema_version, DATASET_REF_SCHEMA, "dataset")
         _require_string(self.dataset_id, "dataset_id")
-        if self.kind not in {"fixture", "external"}:
-            raise ValidationError("dataset kind must be 'fixture' or 'external'")
+        object.__setattr__(self, "kind", _dataset_kind(self.kind))
         _optional_string(self.split, "split")
         _optional_string(self.version, "version")
         _optional_string(self.uri, "uri")
@@ -249,8 +248,11 @@ def _require_bool(value: object, field_name: str) -> bool:
     return value
 
 
-def _string_tuple(values: Sequence[object], field_name: str) -> tuple[str, ...]:
-    if isinstance(values, str | bytes | bytearray):
+def _string_tuple(values: object, field_name: str) -> tuple[str, ...]:
+    if isinstance(values, str | bytes | bytearray) or not isinstance(
+        values,
+        Sequence,
+    ):
         raise ValidationError(f"{field_name} must be a sequence of strings")
     result = tuple(_require_string(value, f"{field_name} item") for value in values)
     if field_name == "command" and not result:
@@ -271,9 +273,10 @@ def _freeze_string_mapping(data: object, field_name: str) -> Mapping[str, str]:
     )
 
 
-def _freeze_metrics(metrics: Mapping[str, EvalMetric]) -> Mapping[str, EvalMetric]:
+def _freeze_metrics(metrics: object) -> Mapping[str, EvalMetric]:
+    mapping = _require_mapping(metrics, "metrics")
     frozen: dict[str, EvalMetric] = {}
-    for key, value in metrics.items():
+    for key, value in mapping.items():
         metric_name = _require_string(key, "metric name")
         if isinstance(value, bool):
             raise ValidationError(f"metric {metric_name} must not be bool")
