@@ -106,6 +106,13 @@ class DryRunBenchmarkRunner:
 
     runner_id: str = "dry_run"
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "runner_id",
+            _require_non_empty_str(self.runner_id, "runner_id"),
+        )
+
     def run(self, spec: BenchmarkSpec) -> BenchmarkResult:
         """Return deterministic dry-run metrics for all requested modes."""
 

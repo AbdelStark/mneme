@@ -192,3 +192,18 @@ def test_custom_runner_protocol_and_mode_parser() -> None:
     assert report.artifacts["runner"] == "custom"
     assert report.artifacts["comparison_modes"] == "no_memory,adapter"
     assert report.passed is False
+
+
+@pytest.mark.parametrize(
+    ("runner_id", "match"),
+    (
+        ("", "runner_id must be a non-empty string"),
+        (object(), "runner_id must be a non-empty string"),
+    ),
+)
+def test_dry_run_benchmark_runner_constructor_rejects_bad_runner_id(
+    runner_id: object,
+    match: str,
+) -> None:
+    with pytest.raises(EvaluationError, match=match):
+        DryRunBenchmarkRunner(runner_id=runner_id)

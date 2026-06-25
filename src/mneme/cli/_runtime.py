@@ -6,7 +6,7 @@ import sys
 from dataclasses import dataclass
 from typing import Any, TextIO
 
-from mneme.core import CliExitCode
+from mneme.core import CliExitCode, ValidationError
 from mneme.core._json import dumps_strict_json
 
 CLI_ERROR_SCHEMA = "mneme.cli_error.v1"
@@ -18,6 +18,18 @@ class JsonResult:
 
     ok: bool
     payload: dict[str, Any]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.ok, bool):
+            raise ValidationError("ok must be a bool")
+        if not isinstance(self.payload, dict):
+            raise ValidationError("payload must be a dict")
+        if "ok" in self.payload:
+            raise ValidationError("payload must not contain ok")
+        for key in self.payload:
+            if not isinstance(key, str) or not key:
+                raise ValidationError("payload keys must be non-empty strings")
+        object.__setattr__(self, "payload", dict(self.payload))
 
     def to_json(self) -> dict[str, Any]:
         return {"ok": self.ok, **self.payload}
