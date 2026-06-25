@@ -193,7 +193,7 @@ def write_report_json(report: EvalReport, path: str | Path) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        json.dumps(report.to_json(), sort_keys=True, indent=2) + "\n",
+        json.dumps(report.to_json(), sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
 

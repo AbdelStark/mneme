@@ -67,6 +67,17 @@ def test_write_report_json_writes_deterministic_valid_json(tmp_path: Path) -> No
     assert output.read_text(encoding="utf-8").endswith("\n")
 
 
+def test_write_report_json_rejects_nonfinite_runtime_payload(tmp_path: Path) -> None:
+    output = tmp_path / "reports" / "gate.json"
+    report = _report()
+    object.__setattr__(report, "metrics", {"bad": float("nan")})
+
+    with pytest.raises(ValueError, match="Out of range float values"):
+        write_report_json(report, output)
+
+    assert not output.exists()
+
+
 def test_missing_caveats_fail_for_fixture_reports() -> None:
     with pytest.raises(ValidationError, match="fixture reports must include caveats"):
         EvalReport(
