@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from email.message import Message
 from email.parser import Parser
 from importlib import metadata
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Final
 
 from mneme.core import ValidationError
@@ -227,6 +227,7 @@ def _validate_wheel(
     try:
         with zipfile.ZipFile(path) as archive:
             names = set(archive.namelist())
+            _reject_unsafe_archive_paths(names, "wheel", errors)
             _reject_generated_python_artifacts(names, "wheel", errors)
             _require_suffixes(names, REQUIRED_WHEEL_SUFFIXES, "wheel", errors)
             metadata_name = _single_name_with_suffix(
@@ -262,6 +263,7 @@ def _validate_sdist(
     try:
         with tarfile.open(path, "r:gz") as archive:
             names = set(archive.getnames())
+            _reject_unsafe_archive_paths(names, "sdist", errors)
             _reject_generated_python_artifacts(names, "sdist", errors)
             root = _sdist_root(names, errors)
             if root is not None:
@@ -348,6 +350,24 @@ def _reject_generated_python_artifacts(
         parts = name.split("/")
         if "__pycache__" in parts or name.endswith((".pyc", ".pyo")):
             errors.append(f"{source} contains generated Python artifact: {name}")
+
+
+def _reject_unsafe_archive_paths(
+    names: set[str],
+    source: str,
+    errors: list[str],
+) -> None:
+    for name in sorted(names):
+        parsed = PurePosixPath(name)
+        if (
+            not name
+            or parsed.is_absolute()
+            or ".." in parsed.parts
+            or "\\" in name
+            or ":" in name
+            or name.startswith("~")
+        ):
+            errors.append(f"{source} contains unsafe archive path: {name}")
 
 
 def _single_name_with_suffix(

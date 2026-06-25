@@ -99,6 +99,35 @@ def test_release_artifact_validator_rejects_generated_python_artifacts(
     )
 
 
+def test_release_artifact_validator_rejects_unsafe_archive_paths(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(
+        tmp_path,
+        version=mneme.__version__,
+        wheel_extra_files={"../escape.txt": "escape\n"},
+        sdist_extra_files={"../escape.txt": "escape\n"},
+    )
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any(
+        "wheel contains unsafe archive path: ../escape.txt" in error
+        for error in report.errors
+    )
+    assert any(
+        f"sdist contains unsafe archive path: mneme-{mneme.__version__}/../escape.txt"
+        in error
+        for error in report.errors
+    )
+
+
 def test_release_artifact_validation_command_returns_json(tmp_path: Path) -> None:
     dist = _write_fake_dist(tmp_path, version=mneme.__version__)
     fixture_report = _write_fixture_report(tmp_path)
