@@ -8,12 +8,14 @@ import numpy as np
 import pytest
 
 from mneme.core import (
+    Cid,
     EncoderFingerprint,
     MemoryItem,
     Metric,
     QuerySpec,
     StoreCorruptionError,
     Transition,
+    build_item,
 )
 from mneme.store import (
     age_retention,
@@ -23,6 +25,7 @@ from mneme.store import (
     rebuild_index,
     verify_store,
 )
+from mneme.store._retention import apply_retention_policy
 
 
 def test_count_retention_caps_visible_items_and_persists_tombstones(
@@ -100,6 +103,46 @@ def test_retention_manifest_validation_fails_closed(tmp_path: Path) -> None:
         open_store(root)
 
 
+def test_count_retention_helper_uses_deterministic_tie_breaks() -> None:
+    items = dict(
+        _prepared_item_pairs(
+            [
+                _item(1.0, step=1),
+                _item(2.0, step=2),
+                _item(3.0, step=2),
+            ]
+        )
+    )
+    ordered = sorted(
+        items.items(),
+        key=lambda entry: (entry[1].value.t, entry[0]),
+        reverse=True,
+    )
+
+    policy = apply_retention_policy(
+        {"policy": "count", "max_items": 2, "tombstones": []},
+        items,
+        transaction_id="txn-retention",
+    )
+
+    assert [stone["content_id"] for stone in policy["tombstones"]] == [
+        ordered[2][0].hex()
+    ]
+    assert policy["tombstones"][0]["reason"] == "count"
+    assert policy["tombstones"][0]["transaction_id"] == "txn-retention"
+
+
+def test_retention_helper_rejects_unvalidated_policy_numbers() -> None:
+    item = _prepared_item(_item(1.0, step=1))
+
+    with pytest.raises(StoreCorruptionError, match="max_items"):
+        apply_retention_policy(
+            {"policy": "count", "max_items": True, "tombstones": []},
+            {_prepared_cid(item): item},
+            transaction_id="txn-invalid",
+        )
+
+
 def _fingerprint() -> EncoderFingerprint:
     return EncoderFingerprint(
         encoder_id="encoder.fixture",
@@ -126,3 +169,18 @@ def _item(key_value: float, *, step: int) -> MemoryItem:
         meta={"source": "fixture", "step": step},
         encoder_fp=_fingerprint(),
     )
+
+
+def _prepared_item(item: MemoryItem) -> MemoryItem:
+    return build_item(item.value, item.key, item.encoder_fp, item.meta)
+
+
+def _prepared_item_pairs(items: list[MemoryItem]) -> list[tuple[bytes, MemoryItem]]:
+    prepared = [_prepared_item(item) for item in items]
+    return [(_prepared_cid(item), item) for item in prepared]
+
+
+def _prepared_cid(item: MemoryItem) -> Cid:
+    if item.content_id is None:
+        raise AssertionError("prepared test item must have a content id")
+    return item.content_id

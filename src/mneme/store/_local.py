@@ -53,6 +53,11 @@ from mneme.store._manifest import (
 from mneme.store._manifest import (
     CommitmentState as ManifestCommitmentState,
 )
+from mneme.store._retention import (
+    apply_retention_policy,
+    tombstoned_cids,
+    visible_cids,
+)
 from mneme.store._value_log import (
     append_value_record,
     read_value_records,
@@ -137,7 +142,7 @@ class LocalStore:
     def stats(self) -> StoreStats:
         value_record_count = sum(log.record_count for log in self.manifest.value_logs)
         value_bytes = sum(log.size_bytes for log in self.manifest.value_logs)
-        tombstoned = _tombstoned_cids(self.manifest)
+        tombstoned = tombstoned_cids(self.manifest)
         return StoreStats(
             store_id=self.manifest.store_id,
             path=self.path,
@@ -222,7 +227,7 @@ class LocalStore:
             )
             for item in prepared:
                 self._items[item.content_id or content_id(item)] = item
-            previous_tombstones = _tombstoned_cids(self.manifest)
+            previous_tombstones = tombstoned_cids(self.manifest)
             self.manifest = _manifest_after_commit(
                 self.manifest,
                 txid=txid,
@@ -230,7 +235,7 @@ class LocalStore:
                 log_size=log_path.stat().st_size,
                 all_items=self._items,
             )
-            if _tombstoned_cids(self.manifest) != previous_tombstones:
+            if tombstoned_cids(self.manifest) != previous_tombstones:
                 self.index = _index_from_items(
                     self.manifest,
                     self._items,
@@ -654,7 +659,7 @@ def _manifest_after_commit(
     )
     return replace(
         updated,
-        retention_policy=_apply_retention_policy(
+        retention_policy=apply_retention_policy(
             updated.retention_policy,
             all_items,
             transaction_id=txid,
@@ -673,127 +678,9 @@ def _index_from_items(
         manifest.index.params,
         observability=observability,
     )
-    for cid in sorted(_visible_cids(manifest, items)):
+    for cid in sorted(visible_cids(manifest, items)):
         index.add(cid, items[cid].key)
     return index
-
-
-def _visible_cids(
-    manifest: StoreManifest,
-    items: Mapping[Cid, MemoryItem],
-) -> set[Cid]:
-    return set(items) - _tombstoned_cids(manifest)
-
-
-def _tombstoned_cids(manifest: StoreManifest) -> set[Cid]:
-    tombstones = manifest.retention_policy.get("tombstones", [])
-    if not isinstance(tombstones, list):
-        return set()
-    cids: set[Cid] = set()
-    for tombstone in tombstones:
-        if isinstance(tombstone, Mapping):
-            raw = tombstone.get("content_id")
-            if isinstance(raw, str):
-                try:
-                    cids.add(bytes.fromhex(raw))
-                except ValueError:
-                    continue
-    return cids
-
-
-def _apply_retention_policy(
-    policy: Mapping[str, Any],
-    all_items: Mapping[Cid, MemoryItem],
-    *,
-    transaction_id: str,
-) -> dict[str, Any]:
-    policy_name = str(policy.get("policy", "none"))
-    tombstones = _retention_tombstones(policy)
-    live = {cid: item for cid, item in all_items.items() if cid not in tombstones}
-    if policy_name == "count":
-        max_items = int(policy["max_items"])
-        evicted = _count_evictions(live, max_items)
-        tombstones.update(
-            _new_tombstones(evicted, reason="count", transaction_id=transaction_id)
-        )
-        return {
-            "policy": "count",
-            "max_items": max_items,
-            "tombstones": _sorted_tombstones(tombstones),
-        }
-    if policy_name == "age":
-        max_age_seconds = int(policy["max_age_seconds"])
-        evicted = _age_evictions(live, max_age_seconds)
-        tombstones.update(
-            _new_tombstones(evicted, reason="age", transaction_id=transaction_id)
-        )
-        return {
-            "policy": "age",
-            "max_age_seconds": max_age_seconds,
-            "tombstones": _sorted_tombstones(tombstones),
-        }
-    return {"policy": "none", "tombstones": _sorted_tombstones(tombstones)}
-
-
-def _retention_tombstones(policy: Mapping[str, Any]) -> dict[Cid, dict[str, Any]]:
-    raw_tombstones = policy.get("tombstones", [])
-    tombstones: dict[Cid, dict[str, Any]] = {}
-    if not isinstance(raw_tombstones, list):
-        return tombstones
-    for raw in raw_tombstones:
-        if not isinstance(raw, Mapping):
-            continue
-        content_id_hex = raw.get("content_id")
-        if not isinstance(content_id_hex, str):
-            continue
-        try:
-            cid = bytes.fromhex(content_id_hex)
-        except ValueError:
-            continue
-        tombstones[cid] = dict(raw)
-    return tombstones
-
-
-def _count_evictions(items: Mapping[Cid, MemoryItem], max_items: int) -> list[Cid]:
-    ordered = sorted(
-        items.items(),
-        key=lambda entry: (entry[1].value.t, entry[0]),
-        reverse=True,
-    )
-    return [cid for cid, _ in ordered[max_items:]]
-
-
-def _age_evictions(items: Mapping[Cid, MemoryItem], max_age_seconds: int) -> list[Cid]:
-    if not items:
-        return []
-    newest = max(item.value.t for item in items.values())
-    return [
-        cid for cid, item in items.items() if newest - item.value.t > max_age_seconds
-    ]
-
-
-def _new_tombstones(
-    cids: list[Cid],
-    *,
-    reason: str,
-    transaction_id: str,
-) -> dict[Cid, dict[str, Any]]:
-    created_at = _utc_now()
-    return {
-        cid: {
-            "content_id": cid.hex(),
-            "reason": reason,
-            "created_at": created_at,
-            "transaction_id": transaction_id,
-        }
-        for cid in cids
-    }
-
-
-def _sorted_tombstones(
-    tombstones: Mapping[Cid, Mapping[str, Any]],
-) -> list[dict[str, Any]]:
-    return [dict(tombstones[cid]) for cid in sorted(tombstones)]
 
 
 def _write_transaction(root: Path, txid: str, data: dict[str, Any]) -> None:

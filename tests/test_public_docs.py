@@ -53,7 +53,10 @@ def test_contributing_lists_local_gates() -> None:
     assert "uv sync --locked --group dev" in contributing
     assert "uv run ruff check ." in contributing
     assert "uv run ruff format --check ." in contributing
-    assert "uv run pytest --cov=mneme --cov-report=term-missing" in contributing
+    assert (
+        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75"
+        in contributing
+    )
     assert "uv run mypy src/mneme" in contributing
     assert "uv run --group docs mkdocs build --strict" in contributing
     assert "uv build --out-dir dist --clear --no-build-logs" in contributing

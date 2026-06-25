@@ -18,6 +18,7 @@ from mneme.store._local import (
     open_store,
 )
 from mneme.store._manifest import StoreManifest, ValueLogRef
+from mneme.store._retention import tombstoned_cids
 from mneme.store._value_log import read_value_records
 
 STORE_VERIFICATION_SCHEMA: Final = "mneme.store_verification.v1"
@@ -402,7 +403,7 @@ def _validate_index_data(
             f"actual={len(items)}"
         )
     seen: set[Cid] = set()
-    tombstoned = _tombstoned_cids(manifest)
+    tombstoned = tombstoned_cids(manifest)
     for index, raw_item in enumerate(items):
         if not isinstance(raw_item, dict):
             errors.append(f"index data item {index} must be an object")
@@ -431,26 +432,8 @@ def _visible_items(
     manifest: StoreManifest,
     items: dict[Cid, MemoryItem],
 ) -> dict[Cid, MemoryItem]:
-    tombstoned = _tombstoned_cids(manifest)
+    tombstoned = tombstoned_cids(manifest)
     return {cid: item for cid, item in items.items() if cid not in tombstoned}
-
-
-def _tombstoned_cids(manifest: StoreManifest) -> set[Cid]:
-    tombstones = manifest.retention_policy.get("tombstones", [])
-    if not isinstance(tombstones, list):
-        return set()
-    cids: set[Cid] = set()
-    for tombstone in tombstones:
-        if not isinstance(tombstone, dict):
-            continue
-        content_id_hex = tombstone.get("content_id")
-        if not isinstance(content_id_hex, str):
-            continue
-        try:
-            cids.add(bytes.fromhex(content_id_hex))
-        except ValueError:
-            continue
-    return cids
 
 
 def _validate_index_key(

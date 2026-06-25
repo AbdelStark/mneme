@@ -4,7 +4,11 @@ All notable user-visible changes are recorded here.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Changed
+
+- Extracted local-store retention policy application into a dedicated internal
+  module shared by store mutation and verification.
+- Added a CI coverage ratchet at 75% for the full pytest coverage gate.
 
 ## [0.1.0] - 2026-06-25
 

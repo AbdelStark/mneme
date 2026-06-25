@@ -13,7 +13,10 @@ def test_hosted_ci_workflow_runs_required_gates() -> None:
     assert "uv sync --locked --group dev" in workflow
     assert "uv run ruff check ." in workflow
     assert "uv run ruff format --check ." in workflow
-    assert "uv run pytest --cov=mneme --cov-report=term-missing" in workflow
+    assert (
+        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75"
+        in workflow
+    )
     assert "uv run mypy src/mneme" in workflow
     assert "uv build --out-dir dist --clear --no-build-logs" in workflow
     assert "uv pip install --python .ci-install/bin/python dist/*.whl" in workflow
@@ -54,7 +57,10 @@ def test_contributing_documents_ci_reproduction_commands() -> None:
     assert "uv lock --check" in contributing
     assert "uv run ruff check ." in contributing
     assert "uv run ruff format --check ." in contributing
-    assert "uv run pytest --cov=mneme --cov-report=term-missing" in contributing
+    assert (
+        "uv run pytest --cov=mneme --cov-report=term-missing --cov-fail-under=75"
+        in contributing
+    )
     assert "uv run mypy src/mneme" in contributing
     assert "uv run mkdocs build --strict" in contributing
     assert "uv build --out-dir dist --clear --no-build-logs" in contributing
