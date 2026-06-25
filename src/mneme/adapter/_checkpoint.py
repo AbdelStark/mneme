@@ -116,6 +116,20 @@ class AdapterCheckpoint:
     metadata_path: Path
     weights_path: Path
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.metadata, AdapterCheckpointMetadata):
+            raise ValidationError("metadata must be AdapterCheckpointMetadata")
+        object.__setattr__(
+            self,
+            "metadata_path",
+            _require_path(self.metadata_path, "metadata_path"),
+        )
+        object.__setattr__(
+            self,
+            "weights_path",
+            _require_path(self.weights_path, "weights_path"),
+        )
+
 
 def save_adapter_checkpoint_metadata(
     path: str | Path,
@@ -224,6 +238,14 @@ def _require_relative_file(value: object, field_name: str) -> str:
     if path.is_absolute() or ".." in path.parts or not path.name:
         raise ValidationError(f"{field_name} must be a relative file path")
     return text
+
+
+def _require_path(value: object, field_name: str) -> Path:
+    if isinstance(value, str) and not value:
+        raise ValidationError(f"{field_name} must not be empty")
+    if isinstance(value, str | Path):
+        return Path(value)
+    raise ValidationError(f"{field_name} must be a path-like value")
 
 
 def _freeze_json_mapping(

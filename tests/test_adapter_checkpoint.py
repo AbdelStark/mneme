@@ -12,6 +12,7 @@ from mneme.adapter import (
     ADAPTER_CHECKPOINT_METADATA_FILE,
     ADAPTER_CHECKPOINT_SCHEMA,
     DEFAULT_ADAPTER_WEIGHTS_FILE,
+    AdapterCheckpoint,
     AdapterCheckpointMetadata,
     load_adapter_checkpoint,
     load_adapter_checkpoint_metadata,
@@ -99,6 +100,45 @@ def test_save_and_load_checkpoint_validates_weights_and_base_fingerprint(
             tmp_path,
             expected_base_fingerprint=_fingerprint(encoder_id="other.encoder"),
         )
+
+
+def test_adapter_checkpoint_constructor_normalizes_path_fields() -> None:
+    metadata = _metadata()
+
+    checkpoint = AdapterCheckpoint(
+        metadata=metadata,
+        metadata_path="adapter.json",
+        weights_path="adapter.safetensors",
+    )
+
+    assert checkpoint.metadata == metadata
+    assert checkpoint.metadata_path == Path("adapter.json")
+    assert checkpoint.weights_path == Path("adapter.safetensors")
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"metadata": object()}, "metadata must be AdapterCheckpointMetadata"),
+        ({"metadata_path": object()}, "metadata_path must be a path-like value"),
+        ({"metadata_path": ""}, "metadata_path must not be empty"),
+        ({"weights_path": object()}, "weights_path must be a path-like value"),
+        ({"weights_path": ""}, "weights_path must not be empty"),
+    ),
+)
+def test_adapter_checkpoint_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {
+        "metadata": _metadata(),
+        "metadata_path": Path("adapter.json"),
+        "weights_path": Path("adapter.safetensors"),
+    }
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        AdapterCheckpoint(**values)
 
 
 def test_load_checkpoint_metadata_accepts_sidecar_path(tmp_path: Path) -> None:

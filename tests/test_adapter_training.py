@@ -235,6 +235,29 @@ def test_frozen_base_training_requires_all_splits(
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"predictor_input": None}, "predictor_input must not be None"),
+        ({"retrieved_values": None}, "retrieved_values must not be None"),
+        ({"target_hidden": None}, "target_hidden must not be None"),
+    ),
+)
+def test_adapter_training_batch_constructor_rejects_missing_payloads(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {
+        "predictor_input": FakeTensor(0.0),
+        "retrieved_values": FakeTensor(1.0),
+        "target_hidden": FakeTensor(2.0),
+    }
+    values.update(kwargs)
+
+    with pytest.raises(EvaluationError, match=match):
+        AdapterTrainingBatch(**values)
+
+
 def test_frozen_base_training_missing_torch_raises_optional_dependency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

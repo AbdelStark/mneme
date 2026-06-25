@@ -36,6 +36,11 @@ class AdapterTrainingBatch:
     target_hidden: object
     attention_mask: object | None = None
 
+    def __post_init__(self) -> None:
+        _require_batch_value(self.predictor_input, "predictor_input")
+        _require_batch_value(self.retrieved_values, "retrieved_values")
+        _require_batch_value(self.target_hidden, "target_hidden")
+
 
 def train_frozen_base_adapter(
     *,
@@ -305,6 +310,11 @@ def _require_positive_float(value: object, field_name: str) -> None:
         raise EvaluationError(f"{field_name} must be a positive number")
     if not math.isfinite(float(value)):
         raise EvaluationError(f"{field_name} must be finite")
+
+
+def _require_batch_value(value: object, field_name: str) -> None:
+    if value is None:
+        raise EvaluationError(f"{field_name} must not be None")
 
 
 def _utc_now() -> str:
