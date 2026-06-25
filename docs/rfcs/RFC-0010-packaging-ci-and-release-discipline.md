@@ -97,7 +97,10 @@ v0.1 creates package scaffolding and minimal CI. Optional extras are tested in a
 
 ## Resolved Bootstrap Decisions
 
-- Build backend and lockfile policy: use Hatchling as the build backend. Do not commit a lockfile for the library in v0.1; CI may generate temporary lockfiles but package metadata remains the dependency source of truth.
+- Build backend and lockfile policy: use Hatchling as the build backend.
+  Commit `uv.lock` for reproducible repository CI, docs, and release artifact
+  validation, and include it in source artifacts. Package metadata remains the
+  dependency source of truth for the built library.
 - Type checking is required in v0.1 CI. mypy runs against public package modules, with strictness concentrated on exported protocols, dataclasses, constructors, and serialization boundaries.
 
 ## References

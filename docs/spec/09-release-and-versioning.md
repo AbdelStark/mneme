@@ -26,7 +26,9 @@ The package metadata must define:
 - license file
 - README description
 - typed package marker
-- optional extras for index backends, ML adapters, receipts, remote protocol, docs, and dev tools
+- optional extras for index backends, ML adapters, receipts, and the remote
+  protocol
+- dependency groups for docs and development tooling
 - project URLs for source, issues, security, and changelog
 
 ## Dependency Policy
@@ -104,5 +106,8 @@ carry a migration note or changelog entry.
 
 ## Resolved Bootstrap Decisions
 
-- Build backend and lockfile policy: use Hatchling as the PEP 517 build backend. Do not commit a library lockfile in v0.1; CI tests declared dependency ranges and may generate throwaway lockfiles for reproducible jobs.
+- Build backend and lockfile policy: use Hatchling as the PEP 517 build
+  backend. Commit `uv.lock` for reproducible repository CI, docs, and release
+  artifact validation, and include it in source artifacts. Package metadata
+  remains the dependency source of truth for the built library.
 - v0.1 publication policy: v0.1 ships source and wheel artifacts from the repository release only. Package-index publication starts no earlier than v0.2, after the fixture evidence, README, security boundary, and install checks are stable.
