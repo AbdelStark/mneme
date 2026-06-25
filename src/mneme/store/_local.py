@@ -814,6 +814,10 @@ def load_manifest(path: str | Path) -> StoreManifest:
         raw = loads_strict_json(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise StoreError(f"store manifest not found at {manifest_path}") from exc
+    except OSError as exc:
+        raise StoreCorruptionError(
+            f"store manifest could not be read: {manifest_path}"
+        ) from exc
     except ValueError as exc:
         raise StoreCorruptionError(
             f"store manifest is malformed JSON: {manifest_path}"
@@ -975,6 +979,10 @@ def _recover_interrupted_transactions(
 def _load_pending_transaction(path: Path) -> _PendingTransaction | None:
     try:
         data = loads_strict_json(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise StoreCorruptionError(
+            f"transaction file could not be read: {path.name}"
+        ) from exc
     except ValueError as exc:
         raise StoreCorruptionError(
             f"transaction file is malformed JSON: {path.name}"

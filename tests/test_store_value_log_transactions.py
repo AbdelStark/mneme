@@ -213,6 +213,19 @@ def test_malformed_transaction_file_raises_store_corruption(tmp_path: Path) -> N
         open_store(root)
 
 
+def test_unreadable_transaction_file_raises_store_corruption(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    (root / "transactions" / "txn-bad.json").mkdir()
+
+    with pytest.raises(
+        StoreCorruptionError, match="transaction file could not be read"
+    ):
+        open_store(root)
+
+
 def test_value_log_checksum_corruption_is_detected_on_open(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)

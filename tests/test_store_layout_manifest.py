@@ -307,6 +307,15 @@ def test_malformed_manifest_json_raises_store_corruption(tmp_path) -> None:
         open_store(root)
 
 
+def test_unreadable_manifest_raises_store_corruption(tmp_path) -> None:
+    root = tmp_path / "store"
+    root.mkdir()
+    (root / "manifest.json").mkdir()
+
+    with pytest.raises(StoreCorruptionError, match="manifest could not be read"):
+        open_store(root)
+
+
 def test_manifest_rejects_nonstandard_json_constants(tmp_path) -> None:
     root = tmp_path / "store"
     root.mkdir()
