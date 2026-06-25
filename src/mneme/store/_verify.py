@@ -461,6 +461,8 @@ def _validate_index_backend(root: Path, manifest: StoreManifest) -> list[str]:
         data = loads_strict_json(backend_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return [f"index backend missing: {_INDEX_BACKEND_FILE}"]
+    except OSError:
+        return [f"index backend could not be read: {_INDEX_BACKEND_FILE}"]
     except ValueError as exc:
         return [f"index backend is malformed JSON: {exc}"]
     if not isinstance(data, dict):
@@ -489,6 +491,8 @@ def _validate_index_data(
         return []
     try:
         data = loads_strict_json(data_path.read_text(encoding="utf-8"))
+    except OSError:
+        return [f"index data could not be read: {_INDEX_DATA_FILE}"]
     except ValueError as exc:
         return [f"index data is malformed JSON: {exc}"]
     if not isinstance(data, dict):

@@ -149,6 +149,19 @@ def test_verify_store_rejects_nonstandard_index_backend_json(
     assert any("index backend is malformed JSON" in error for error in report.errors)
 
 
+def test_verify_store_reports_unreadable_index_backend(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    backend_path = root / "index" / "backend.json"
+    backend_path.unlink()
+    backend_path.mkdir()
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any("index backend could not be read" in error for error in report.errors)
+
+
 def test_verify_store_rejects_nonstandard_index_data_json(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)
@@ -163,6 +176,21 @@ def test_verify_store_rejects_nonstandard_index_data_json(tmp_path: Path) -> Non
 
     assert not report.ok
     assert any("index data is malformed JSON" in error for error in report.errors)
+
+
+def test_verify_store_reports_unreadable_index_data(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    assert rebuild_index(root).ok
+    data_path = root / "index" / "data.json"
+    data_path.unlink()
+    data_path.mkdir()
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any("index data could not be read" in error for error in report.errors)
 
 
 def test_verify_store_rejects_overflowed_index_data_json(tmp_path: Path) -> None:
