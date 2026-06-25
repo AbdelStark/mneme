@@ -17,6 +17,7 @@ from mneme.core import (
     EvaluationError,
     MemoryItem,
     Metric,
+    MnemeError,
     QuerySpec,
     Retrieval,
     StoreCorruptionError,
@@ -192,21 +193,33 @@ class ReceiptReplayTrace:
             raise EvaluationError("unsupported replay trace schema")
         items = _require_sequence(mapping.get("items"), "items")
         distances = _require_sequence(mapping.get("distances"), "distances")
-        return cls(
-            schema_version=schema_version,
-            query=_query_from_json(mapping.get("query")),
-            items=tuple(_item_from_json(item) for item in items),
-            distances=tuple(
-                _require_finite_float(item, "distance") for item in distances
-            ),
-            receipt=RetrievalReceipt.from_json(mapping.get("receipt")),
-            conditioner=KnnReplayConfig.from_json(mapping.get("conditioner")),
-            parametric_prediction=_array_from_json(
-                mapping.get("parametric_prediction")
-            ),
-            current_latent=_array_from_json(mapping.get("current_latent")),
-            expected_prediction=_array_from_json(mapping.get("expected_prediction")),
-        )
+        try:
+            return cls(
+                schema_version=schema_version,
+                query=_query_from_json(mapping.get("query")),
+                items=tuple(_item_from_json(item) for item in items),
+                distances=tuple(
+                    _require_finite_float(item, "distance") for item in distances
+                ),
+                receipt=_receipt_from_json(mapping.get("receipt")),
+                conditioner=KnnReplayConfig.from_json(mapping.get("conditioner")),
+                parametric_prediction=_array_field_from_json(
+                    mapping.get("parametric_prediction"),
+                    "parametric_prediction",
+                ),
+                current_latent=_array_field_from_json(
+                    mapping.get("current_latent"),
+                    "current_latent",
+                ),
+                expected_prediction=_array_field_from_json(
+                    mapping.get("expected_prediction"),
+                    "expected_prediction",
+                ),
+            )
+        except EvaluationError:
+            raise
+        except MnemeError as exc:
+            raise EvaluationError("invalid replay trace payload") from exc
 
 
 @dataclass(frozen=True)
@@ -413,20 +426,28 @@ def _query_to_json(spec: QuerySpec) -> dict[str, object]:
 
 def _query_from_json(data: object) -> QuerySpec:
     mapping = _require_mapping(data, "query")
-    return QuerySpec(
-        vector=_array_from_json(mapping.get("vector")),
-        k=_require_positive_int(mapping.get("k"), "k"),
-        metric=_metric(mapping.get("metric")),
-        ef=_optional_positive_int(mapping.get("ef"), "ef"),
-        filters=_optional_mapping(mapping.get("filters"), "filters"),
-        temporal_decay=_optional_non_negative_float(
-            mapping.get("temporal_decay"),
-            "temporal_decay",
-        ),
-        with_receipt=_require_bool(mapping.get("with_receipt"), "with_receipt"),
-        encoder_fp=_optional_fingerprint(mapping.get("encoder_fp")),
-        schema_version=_require_string(mapping.get("schema_version"), "schema_version"),
-    )
+    try:
+        return QuerySpec(
+            vector=_array_field_from_json(mapping.get("vector"), "query.vector"),
+            k=_require_positive_int(mapping.get("k"), "k"),
+            metric=_metric(mapping.get("metric")),
+            ef=_optional_positive_int(mapping.get("ef"), "ef"),
+            filters=_optional_mapping(mapping.get("filters"), "filters"),
+            temporal_decay=_optional_non_negative_float(
+                mapping.get("temporal_decay"),
+                "temporal_decay",
+            ),
+            with_receipt=_require_bool(mapping.get("with_receipt"), "with_receipt"),
+            encoder_fp=_optional_fingerprint(mapping.get("encoder_fp")),
+            schema_version=_require_string(
+                mapping.get("schema_version"),
+                "schema_version",
+            ),
+        )
+    except EvaluationError:
+        raise
+    except MnemeError as exc:
+        raise EvaluationError("invalid replay query payload") from exc
 
 
 def _item_to_json(item: MemoryItem) -> dict[str, object]:
@@ -455,11 +476,27 @@ def _item_from_json(data: object) -> MemoryItem:
                 mapping.get("schema_version"), "schema_version"
             ),
         )
-    except (StoreCorruptionError, TypeError, ValueError) as exc:
+    except EvaluationError:
+        raise
+    except (MnemeError, TypeError, ValueError) as exc:
         raise EvaluationError("invalid replay item payload") from exc
     if item.content_id != content_id(item):
         raise EvaluationError("item content_id does not match canonical bytes")
     return item
+
+
+def _receipt_from_json(data: object) -> RetrievalReceipt:
+    try:
+        return RetrievalReceipt.from_json(data)
+    except MnemeError as exc:
+        raise EvaluationError("invalid replay receipt payload") from exc
+
+
+def _array_field_from_json(data: object, field_name: str) -> np.ndarray:
+    try:
+        return _array_from_json(data)
+    except StoreCorruptionError as exc:
+        raise EvaluationError(f"{field_name} is invalid") from exc
 
 
 def _require_item(item: object) -> MemoryItem:
@@ -622,7 +659,10 @@ def _knn_mode(value: object) -> KnnMode:
 def _optional_fingerprint(value: object) -> EncoderFingerprint | None:
     if value is None:
         return None
-    return _fingerprint_from_json(value)
+    try:
+        return _fingerprint_from_json(value)
+    except StoreCorruptionError as exc:
+        raise EvaluationError("encoder_fp is invalid") from exc
 
 
 def _bytes_from_hex(value: object, field_name: str) -> bytes:

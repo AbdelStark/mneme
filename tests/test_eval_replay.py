@@ -162,6 +162,32 @@ def test_receipt_replay_loader_wraps_invalid_item_payloads(
         load_replay_trace_json(trace_path)
 
 
+def test_receipt_replay_loader_wraps_invalid_receipt_payloads(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace = _trace(tmp_path)
+    payload = trace.to_json()
+    payload["receipt"] = {"schema_version": "mneme.receipt.v1"}
+    trace_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="invalid replay receipt payload"):
+        load_replay_trace_json(trace_path)
+
+
+def test_receipt_replay_loader_wraps_invalid_array_payloads(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace = _trace(tmp_path)
+    payload = trace.to_json()
+    payload["parametric_prediction"]["shape"] = [True, 2]
+    trace_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="parametric_prediction is invalid"):
+        load_replay_trace_json(trace_path)
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
