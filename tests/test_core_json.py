@@ -15,6 +15,14 @@ def test_loads_strict_json_rejects_nonstandard_constants() -> None:
         loads_strict_json('{"metric": NaN}')
 
 
+def test_loads_strict_json_rejects_overflowed_numbers() -> None:
+    with pytest.raises(ValueError, match="JSON number must be finite: 1e999"):
+        loads_strict_json('{"metric": 1e999}')
+
+    with pytest.raises(ValueError, match="JSON number must be finite: -1e999"):
+        loads_strict_json('{"metrics": [-1e999]}')
+
+
 def test_strict_json_preserves_deterministic_formatting() -> None:
     assert dumps_strict_json({"b": 1, "a": True}, sort_keys=True, indent=2) == (
         '{\n  "a": true,\n  "b": 1\n}'

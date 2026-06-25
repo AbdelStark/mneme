@@ -165,6 +165,26 @@ def test_verify_store_rejects_nonstandard_index_data_json(tmp_path: Path) -> Non
     assert any("index data is malformed JSON" in error for error in report.errors)
 
 
+def test_verify_store_rejects_overflowed_index_data_json(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    assert rebuild_index(root).ok
+    content_id = "00" * 32
+    (root / "index" / "data.json").write_text(
+        f'{{"schema_version": "mneme.flat_index_snapshot.v1",'
+        f'"backend": "flat",'
+        f'"item_count": 1,'
+        f'"items": [{{"content_id": "{content_id}", "key": [1e999]}}]}}',
+        encoding="utf-8",
+    )
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any("JSON number must be finite: 1e999" in error for error in report.errors)
+
+
 def test_verify_store_rejects_non_digest_index_content_ids(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)
