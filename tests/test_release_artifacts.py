@@ -6,13 +6,15 @@ import tarfile
 import zipfile
 from pathlib import Path
 
+import pytest
 from _entrypoint_runner import run_entrypoint
 
 import mneme
-from mneme.core import CliExitCode
+from mneme.core import CliExitCode, ValidationError
 from mneme.eval import run_fixture_evaluation, write_report_json
 from mneme.release import (
     RELEASE_ARTIFACT_REPORT_SCHEMA,
+    ReleaseArtifactReport,
     validate_release_artifacts,
 )
 from mneme.release.validate_artifacts import main as validate_artifacts_main
@@ -118,6 +120,68 @@ def test_release_artifact_validation_command_returns_json(tmp_path: Path) -> Non
     assert payload["ok"] is True
     assert payload["wheel"] == f"mneme-{mneme.__version__}-py3-none-any.whl"
     assert json.loads(output.read_text(encoding="utf-8")) == payload
+
+
+def test_release_artifact_report_constructor_normalizes_sequences() -> None:
+    report = ReleaseArtifactReport(
+        ok=True,
+        package_name="mneme",
+        version=mneme.__version__,
+        dist_dir="dist",
+        wheel=None,
+        sdist=None,
+        fixture_report=None,
+        installed_version=mneme.__version__,
+        checked=["wheel metadata", "fixture report"],
+        errors=[],
+    )
+
+    assert report.checked == ("wheel metadata", "fixture report")
+    assert report.errors == ()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"schema_version": "mneme.release_artifact_report.v2"}, "unsupported release"),
+        ({"ok": "yes"}, "ok must be a bool"),
+        ({"package_name": object()}, "package_name must be a non-empty string"),
+        ({"version": ""}, "version must be a non-empty string"),
+        ({"dist_dir": object()}, "dist_dir must be a non-empty string"),
+        ({"wheel": ""}, "wheel must be a non-empty string"),
+        ({"sdist": object()}, "sdist must be a non-empty string"),
+        ({"fixture_report": ""}, "fixture_report must be a non-empty string"),
+        ({"installed_version": object()}, "installed_version must be"),
+        ({"checked": "wheel metadata"}, "checked must be a sequence"),
+        ({"checked": ("",)}, "checked item must be a non-empty string"),
+        ({"errors": object()}, "errors must be a sequence"),
+        ({"errors": ("",)}, "errors item must be a non-empty string"),
+    ),
+)
+def test_release_artifact_report_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _release_report_values()
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        ReleaseArtifactReport(**values)
+
+
+def _release_report_values() -> dict[str, object]:
+    return {
+        "ok": True,
+        "package_name": "mneme",
+        "version": mneme.__version__,
+        "dist_dir": "dist",
+        "wheel": f"mneme-{mneme.__version__}-py3-none-any.whl",
+        "sdist": f"mneme-{mneme.__version__}.tar.gz",
+        "fixture_report": "fixtures.json",
+        "installed_version": mneme.__version__,
+        "checked": ("wheel metadata", "fixture report"),
+        "errors": (),
+    }
 
 
 def _write_fixture_report(tmp_path: Path) -> Path:

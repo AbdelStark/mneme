@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tarfile
 import zipfile
+from collections.abc import Sequence
 from dataclasses import dataclass
 from email.message import Message
 from email.parser import Parser
@@ -68,6 +69,40 @@ class ReleaseArtifactReport:
     checked: tuple[str, ...]
     errors: tuple[str, ...]
     schema_version: str = RELEASE_ARTIFACT_REPORT_SCHEMA
+
+    def __post_init__(self) -> None:
+        if self.schema_version != RELEASE_ARTIFACT_REPORT_SCHEMA:
+            raise ValidationError("unsupported release artifact report schema")
+        object.__setattr__(self, "ok", _require_bool(self.ok, "ok"))
+        object.__setattr__(
+            self,
+            "package_name",
+            _require_non_empty_string(self.package_name, "package_name"),
+        )
+        object.__setattr__(
+            self, "version", _require_non_empty_string(self.version, "version")
+        )
+        object.__setattr__(
+            self, "dist_dir", _require_non_empty_string(self.dist_dir, "dist_dir")
+        )
+        object.__setattr__(
+            self, "wheel", _optional_non_empty_string(self.wheel, "wheel")
+        )
+        object.__setattr__(
+            self, "sdist", _optional_non_empty_string(self.sdist, "sdist")
+        )
+        object.__setattr__(
+            self,
+            "fixture_report",
+            _optional_non_empty_string(self.fixture_report, "fixture_report"),
+        )
+        object.__setattr__(
+            self,
+            "installed_version",
+            _optional_non_empty_string(self.installed_version, "installed_version"),
+        )
+        object.__setattr__(self, "checked", _string_tuple(self.checked, "checked"))
+        object.__setattr__(self, "errors", _string_tuple(self.errors, "errors"))
 
     def to_json(self) -> dict[str, Any]:
         """Return a JSON-serializable validation report."""
@@ -141,6 +176,32 @@ def _installed_version(package_name: str) -> str | None:
         return metadata.version(package_name)
     except metadata.PackageNotFoundError:
         return None
+
+
+def _require_bool(value: object, field_name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValidationError(f"{field_name} must be a bool")
+    return value
+
+
+def _require_non_empty_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValidationError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _optional_non_empty_string(value: object, field_name: str) -> str | None:
+    if value is None:
+        return None
+    return _require_non_empty_string(value, field_name)
+
+
+def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise ValidationError(f"{field_name} must be a sequence")
+    return tuple(
+        _require_non_empty_string(item, f"{field_name} item") for item in value
+    )
 
 
 def _single_artifact(
