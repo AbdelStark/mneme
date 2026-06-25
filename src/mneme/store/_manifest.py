@@ -323,10 +323,12 @@ def _require_mapping(data: object, field_name: str) -> Mapping[str, Any]:
     return data
 
 
-def _require_json_mapping(data: object, field_name: str) -> Mapping[str, Any]:
+def _require_json_mapping(data: object, field_name: str) -> dict[str, Any]:
     mapping = _require_mapping(data, field_name)
-    _validate_json_value(mapping, field_name)
-    return dict(mapping)
+    ready = _json_ready_value(mapping, field_name)
+    if not isinstance(ready, dict):
+        raise StoreCorruptionError(f"{field_name} must be an object")
+    return ready
 
 
 def _require_retention_policy(data: object) -> dict[str, Any]:
@@ -377,25 +379,31 @@ def _require_tombstones(value: object) -> list[dict[str, Any]]:
     return tombstones
 
 
-def _validate_json_value(value: object, field_name: str) -> None:
+def _json_ready_value(value: object, field_name: str) -> object:
     if value is None or isinstance(value, bool | str):
-        return
+        return value
     if isinstance(value, int) and not isinstance(value, bool):
-        return
+        return value
     if isinstance(value, float):
         if value == float("inf") or value == float("-inf") or value != value:
             raise StoreCorruptionError(f"{field_name} must contain finite floats")
-        return
+        return value
     if isinstance(value, Mapping):
+        ready: dict[str, object] = {}
         for key, nested in value.items():
             if not isinstance(key, str):
                 raise StoreCorruptionError(f"{field_name} keys must be strings")
-            _validate_json_value(nested, f"{field_name}.{key}")
-        return
+            if not key:
+                raise StoreCorruptionError(
+                    f"{field_name} keys must be non-empty strings"
+                )
+            ready[key] = _json_ready_value(nested, f"{field_name}.{key}")
+        return ready
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        for index, item in enumerate(value):
-            _validate_json_value(item, f"{field_name}[{index}]")
-        return
+        return [
+            _json_ready_value(item, f"{field_name}[{index}]")
+            for index, item in enumerate(value)
+        ]
     raise StoreCorruptionError(f"{field_name} contains unsupported JSON value")
 
 

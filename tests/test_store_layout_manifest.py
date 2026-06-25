@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from types import MappingProxyType
 from uuid import UUID
 
 import pytest
@@ -108,6 +109,54 @@ def test_index_config_rejects_non_json_safe_direct_params() -> None:
 
     with pytest.raises(StoreCorruptionError, match="index params keys must be strings"):
         IndexConfig("flat", {1: "bad"})
+    with pytest.raises(
+        StoreCorruptionError,
+        match="index params keys must be non-empty strings",
+    ):
+        IndexConfig("flat", {"": "bad"})
+    with pytest.raises(
+        StoreCorruptionError,
+        match="index params.nested keys must be strings",
+    ):
+        IndexConfig("flat", {"nested": {1: "bad"}})
+
+
+def test_index_config_normalizes_nested_json_params() -> None:
+    config = IndexConfig(
+        "flat",
+        {
+            "nested": MappingProxyType({"enabled": True}),
+            "sequence": (1, MappingProxyType({"name": "fixture"})),
+        },
+    )
+
+    assert config.params == {
+        "nested": {"enabled": True},
+        "sequence": [1, {"name": "fixture"}],
+    }
+
+
+def test_init_store_writes_normalized_nested_index_params(tmp_path) -> None:
+    root = tmp_path / "store"
+
+    init_store(
+        root,
+        index_params={
+            "nested": MappingProxyType({"enabled": True}),
+            "sequence": (1, MappingProxyType({"name": "fixture"})),
+        },
+    )
+
+    manifest_json = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    backend_json = json.loads(
+        (root / "index" / "backend.json").read_text(encoding="utf-8")
+    )
+
+    assert manifest_json["index"]["params"] == {
+        "nested": {"enabled": True},
+        "sequence": [1, {"name": "fixture"}],
+    }
+    assert backend_json["params"] == manifest_json["index"]["params"]
 
 
 def test_init_store_rejects_invalid_index_params_before_layout(tmp_path) -> None:
