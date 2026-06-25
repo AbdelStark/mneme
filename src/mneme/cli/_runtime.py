@@ -60,7 +60,7 @@ def print_json(data: object, stream: TextIO | None = None) -> None:
     """Print deterministic, pretty JSON to the provided stream."""
 
     target = sys.stdout if stream is None else stream
-    print(json.dumps(data, sort_keys=True, indent=2), file=target)
+    print(json.dumps(data, sort_keys=True, indent=2, allow_nan=False), file=target)
 
 
 __all__ = [
