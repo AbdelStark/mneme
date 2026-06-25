@@ -313,7 +313,14 @@ v0.1 ships 8.1. v0.2 adds 8.2. 8.3 is available throughout as a baseline.
 
 ### 9.1 Index
 
-The default index is FAISS, configured as HNSW over key vectors with cosine similarity (inner product on L2-normalized keys). FAISS is the de facto standard for similarity search over embeddings in the ML community and provides HNSW, flat exact, IVF, and product quantization behind one dependency, which keeps the swappable-backend story simple. HNSW gives sub-millisecond to low-millisecond search over millions of vectors with recall tunable through the `efSearch` parameter; Python call overhead adds to that but stays within typical manipulation control budgets for the per-real-step mode (Section 9.4). The index is a swappable protocol (Section 11): a flat exact index serves small stores and ground-truth recall measurement, FAISS product quantization handles the memory-bound case, and `hnswlib` is supported as an alternative backend.
+The minimal-install default index is the flat exact backend, which serves small
+stores and ground-truth recall measurement. FAISS HNSW is the first approximate
+backend behind the `index` extra, configured over key vectors with cosine
+similarity (inner product on L2-normalized keys) and recall tunable through the
+`efSearch` parameter. Python call overhead adds to search time but stays within
+typical manipulation control budgets for the per-real-step mode (Section 9.4).
+Later backends can be added behind the same swappable index protocol without
+changing the store contract.
 
 ### 9.2 Storage and footprint
 
@@ -368,11 +375,11 @@ T1 and T2 defend against an operator or an attacker who silently injects, delete
 
 ```text
 mneme.core       types, dataclasses, protocols, errors, canonical serialization
-mneme.index      Index protocol, FAISS backend (HNSW / flat / PQ), hnswlib backend
+mneme.index      Index protocol, flat exact backend, optional FAISS HNSW backend
 mneme.store      MemoryStore, MMR commitment, receipts, retention, persistence
 mneme.condition  Conditioner protocol, KnnCorrector, CrossAttnAdapter, InContext
 mneme.encode     Encoder protocol, PyTorch adapters (V-JEPA 2, LeJEPA, DINO-WM), Summarizer
-mneme.wmcp       WM-RFC-0002 message types, server and client for remote / shared stores
+mneme.remote     schema-versioned messages, validation, HTTP client/server adapters
 ```
 
 ### 11.2 Core interfaces (typed Python)
@@ -459,7 +466,17 @@ The world-model predictor stays external. `mneme.encode` provides PyTorch adapte
 
 ### 11.3 Packaging, tooling, and a native core later
 
-The package installs from PyPI with optional extras: `mneme[faiss]`, `mneme[hnswlib]`, `mneme[verifiable]` (BLAKE3, Ed25519, MMR proofs), and `mneme[wmcp]`. It is developed with uv and linted with ruff, and ships type hints throughout. The launch is pure Python on top of native libraries (FAISS, PyTorch, BLAKE3) that carry the hot paths. If profiling later shows the Python control-loop glue or the commitment path is a bottleneck, a native acceleration core (for example a small Rust extension exposed through PyO3, reusing the author's Rust work) can replace those hot paths without changing the public API, since the protocols above are the contract. That optimization is explicitly out of scope for the initial release.
+The package installs from PyPI with optional extras: `mneme[index]` for FAISS,
+`mneme[ml]` for torch-backed adapter paths, `mneme[receipts]` for optional
+cryptographic receipt helpers, and `mneme[remote]` for serving the HTTP ASGI
+adapter. It is developed with uv and linted with ruff, and ships type hints
+throughout. The launch is pure Python on top of native libraries (FAISS,
+PyTorch, BLAKE3) that carry the hot paths. If profiling later shows the Python
+control-loop glue or the commitment path is a bottleneck, a native acceleration
+core (for example a small Rust extension exposed through PyO3, reusing the
+author's Rust work) can replace those hot paths without changing the public API,
+since the protocols above are the contract. That optimization is explicitly out
+of scope for the initial release.
 
 ---
 

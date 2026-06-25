@@ -12,6 +12,8 @@ All notable user-visible changes are recorded here.
   in-process while preserving a subprocess entrypoint smoke.
 - Centralized eval module entrypoint report writing and moved eval/release
   module command tests in-process.
+- Aligned PRD, architecture, and remote RFC package-boundary docs with the
+  shipped `mneme.remote` package and optional extra names.
 - Raised the CI coverage ratchet to 84% for the full pytest coverage gate.
 
 ## [0.1.0] - 2026-06-25

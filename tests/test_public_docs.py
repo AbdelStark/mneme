@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 
@@ -61,6 +62,30 @@ def test_contributing_lists_local_gates() -> None:
     assert "uv run --group docs mkdocs build --strict" in contributing
     assert "uv build --out-dir dist --clear --no-build-logs" in contributing
     assert "uv run mneme eval fixtures" in contributing
+
+
+def test_docs_use_shipped_remote_package_and_optional_extras() -> None:
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    extras = sorted(pyproject["project"]["optional-dependencies"])
+    docs = "\n".join(
+        [
+            Path("prd.md").read_text(encoding="utf-8"),
+            Path("docs/spec/01-architecture.md").read_text(encoding="utf-8"),
+            Path("docs/rfcs/RFC-0008-remote-store-protocol-messages.md").read_text(
+                encoding="utf-8"
+            ),
+        ]
+    )
+
+    assert extras == ["index", "ml", "receipts", "remote"]
+    for extra in extras:
+        assert f"mneme[{extra}]" in docs
+    assert "`mneme.remote`" in docs
+    assert "mneme.wmcp" not in docs
+    assert "mneme[faiss]" not in docs
+    assert "mneme[hnswlib]" not in docs
+    assert "mneme[verifiable]" not in docs
+    assert "hnswlib backend" not in docs
 
 
 def test_changelog_has_initial_unreleased_section() -> None:

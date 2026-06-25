@@ -39,8 +39,8 @@ Planner consumes z_pred
 `mneme.condition`
 : Owns `Conditioner`, `KnnCorrector`, `InContextConditioner`, and `CrossAttnAdapter`. Conditioners must reduce to the parametric prediction when retrieval is empty or gated off.
 
-`mneme.wmcp`
-: Owns remote message schemas, client/server adapters, and conformance tests. It must call the same core protocols as the local store.
+`mneme.remote`
+: Owns remote message schemas, HTTP client/server adapters, response validation, and conformance tests. It must call the same core protocols as the local store.
 
 `mneme.eval`
 : Owns reproducible evaluation commands and report schemas. It must separate fixture tests from external benchmark runs.

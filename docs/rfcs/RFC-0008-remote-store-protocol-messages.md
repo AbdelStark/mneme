@@ -11,7 +11,7 @@ Mneme defines schema-versioned remote store messages that mirror local `put`, `q
 
 ## Motivation
 
-The PRD requires a local in-process store first and remote/shared stores later. [Architecture](../spec/01-architecture.md#package-boundaries) reserves `mneme.wmcp` for this boundary. This RFC prevents remote behavior from drifting away from local semantics.
+The PRD requires a local in-process store first and remote/shared stores later. [Architecture](../spec/01-architecture.md#package-boundaries) reserves `mneme.remote` for this boundary. This RFC prevents remote behavior from drifting away from local semantics.
 
 ## Goals
 
