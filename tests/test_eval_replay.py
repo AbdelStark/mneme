@@ -22,6 +22,7 @@ from mneme.eval import (
     RECEIPT_REPLAY_REPORT_SCHEMA,
     RECEIPT_REPLAY_TRACE_SCHEMA,
     KnnReplayConfig,
+    ReceiptReplayReport,
     ReceiptReplayTrace,
     build_receipt_replay_trace,
     load_replay_trace_json,
@@ -190,6 +191,51 @@ def test_receipt_replay_loader_rejects_invalid_conditioner_config(
 
     with pytest.raises(EvaluationError, match="tau must be positive"):
         load_replay_trace_json(trace_path)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"schema_version": "mneme.receipt_replay_report.v2"}, "unsupported replay"),
+        ({"ok": "yes"}, "ok must be a bool"),
+        ({"root": object()}, "root must be bytes"),
+        ({"root": b"short"}, "root must be 32 bytes"),
+        ({"ids": object()}, "ids must be a sequence"),
+        ({"ids": (b"short",)}, "ids item must be 32 bytes"),
+        ({"conditioned": "yes"}, "conditioned must be a bool"),
+        ({"mismatch_causes": object()}, "mismatch_causes must be a sequence"),
+        (
+            {"mismatch_causes": ("",)},
+            "mismatch_causes item must be a non-empty string",
+        ),
+        ({"max_abs_error": float("nan")}, "max_abs_error must be finite"),
+        ({"max_abs_error": -1.0}, "max_abs_error must be non-negative"),
+        ({"expected_prediction": object()}, "expected_prediction must be"),
+        ({"replayed_prediction": object()}, "replayed_prediction must be"),
+    ],
+)
+def test_receipt_replay_report_constructor_rejects_malformed_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values = _report_values()
+    values.update(kwargs)
+
+    with pytest.raises(EvaluationError, match=match):
+        ReceiptReplayReport(**values)
+
+
+def _report_values() -> dict[str, object]:
+    return {
+        "ok": True,
+        "root": b"\x00" * 32,
+        "ids": (b"\x01" * 32,),
+        "conditioned": True,
+        "mismatch_causes": (),
+        "max_abs_error": 0.0,
+        "expected_prediction": np.array([1.5, 0.0], dtype=np.float32),
+        "replayed_prediction": np.array([1.5, 0.0], dtype=np.float32),
+    }
 
 
 def _trace(tmp_path: Path) -> ReceiptReplayTrace:

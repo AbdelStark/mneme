@@ -22,7 +22,7 @@ from mneme.core import (
     StoreCorruptionError,
     content_id,
 )
-from mneme.core._ids import cid_from_hex
+from mneme.core._ids import cid_from_hex, require_cid_bytes
 from mneme.core._json import dumps_strict_json, loads_strict_json
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store._value_log import (
@@ -222,6 +222,37 @@ class ReceiptReplayReport:
     expected_prediction: np.ndarray
     replayed_prediction: np.ndarray | None
     schema_version: str = RECEIPT_REPLAY_REPORT_SCHEMA
+
+    def __post_init__(self) -> None:
+        if self.schema_version != RECEIPT_REPLAY_REPORT_SCHEMA:
+            raise EvaluationError("unsupported replay report schema")
+        object.__setattr__(self, "ok", _require_bool(self.ok, "ok"))
+        object.__setattr__(self, "root", _require_digest(self.root, "root"))
+        object.__setattr__(self, "ids", _cid_tuple(self.ids, "ids"))
+        object.__setattr__(
+            self, "conditioned", _require_bool(self.conditioned, "conditioned")
+        )
+        object.__setattr__(
+            self,
+            "mismatch_causes",
+            _string_tuple(self.mismatch_causes, "mismatch_causes"),
+        )
+        object.__setattr__(
+            self,
+            "max_abs_error",
+            _optional_non_negative_float(self.max_abs_error, "max_abs_error"),
+        )
+        object.__setattr__(
+            self,
+            "expected_prediction",
+            _require_array(self.expected_prediction, "expected_prediction"),
+        )
+        if self.replayed_prediction is not None:
+            object.__setattr__(
+                self,
+                "replayed_prediction",
+                _require_array(self.replayed_prediction, "replayed_prediction"),
+            )
 
     def to_json(self) -> dict[str, object]:
         """Return a JSON-ready replay report."""
@@ -486,6 +517,29 @@ def _require_string(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise EvaluationError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
+    return tuple(
+        _require_string(item, f"{field_name} item")
+        for item in _require_sequence(value, field_name)
+    )
+
+
+def _cid_tuple(value: object, field_name: str) -> tuple[Cid, ...]:
+    return tuple(
+        _require_digest(item, f"{field_name} item")
+        for item in _require_sequence(value, field_name)
+    )
+
+
+def _require_digest(value: object, field_name: str) -> bytes:
+    return require_cid_bytes(
+        value,
+        field_name,
+        type_error=EvaluationError,
+        value_error=EvaluationError,
+    )
 
 
 def _require_finite_float(value: object, field_name: str) -> float:
