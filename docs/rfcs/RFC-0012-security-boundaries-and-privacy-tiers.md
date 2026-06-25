@@ -41,7 +41,8 @@ Integrity tiers:
 
 - T0: schema validation, content ids, manifest checks, index rebuild; v0.1.
 - T1: committed content ids and inclusion proofs; v0.3.
-- T2: signed roots and append-history binding; v0.3 to v0.4.
+- T2: append-history binding through committed roots; signed-root publication is
+  reserved until a signing backend is implemented and tested.
 - T3: verifiable search correctness; research only, not promised for v1.0.
 
 Privacy tiers:

@@ -17,6 +17,8 @@ All notable user-visible changes are recorded here.
 - Hardened release artifact validation against packaged Python bytecode.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
+- Aligned receipt security RFCs with the unsigned-only verifier and reserved
+  signing-backend boundary.
 - Raised the CI coverage ratchet to 84% for the full pytest coverage gate.
 
 ## [0.1.0] - 2026-06-25

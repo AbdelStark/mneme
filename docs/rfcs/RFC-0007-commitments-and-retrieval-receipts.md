@@ -11,14 +11,14 @@ Mneme commits memory item content ids in append order and returns retrieval rece
 
 ## Motivation
 
-[Security](../spec/06-security.md#integrity-controls) requires tamper-evident memory. The PRD's verifiability layer depends on content addressing, append-only roots, inclusion proofs, and signed roots. This RFC defines the v0.3 integrity tier and explicitly scopes out verifiable search.
+[Security](../spec/06-security.md#integrity-controls) requires tamper-evident memory. The PRD's verifiability layer depends on content addressing, append-only roots, inclusion proofs, and eventually signed roots. This RFC defines the v0.3 integrity tier and explicitly scopes out verifiable search.
 
 ## Goals
 
 - Commit content ids in append order.
 - Return inclusion proofs for retrieved ids.
 - Bind receipts to query parameters and store root.
-- Support optional root signatures.
+- Reserve optional root-signature fields without claiming signed provenance.
 - Preserve the distinction between membership proof and search correctness.
 
 ## Non-Goals
@@ -75,14 +75,15 @@ Verification:
 1. canonicalize returned items and recompute content ids;
 2. verify each content id is listed in the receipt;
 3. verify each inclusion proof against the root;
-4. verify optional root signature;
+4. reject signed receipts until a signing backend is implemented and tested;
 5. verify query parameters match the replay request.
 
 The receipt does not prove the index returned the true top-k neighbors. It proves returned items were committed and unaltered.
 
-The initial local verifier supports unsigned receipts. Signed-root verification
-is a compatible schema extension and remains separate from membership proof
-semantics.
+The initial local verifier supports unsigned receipts. If `signer` and
+`signature` are present, verification fails closed until a signing backend is
+implemented and tested. Signed-root verification is a compatible schema
+extension and remains separate from membership proof semantics.
 
 ## Alternatives Considered
 
@@ -105,13 +106,16 @@ v0.3 adds commitment files to existing stores through an offline `mneme store co
 
 - MMR append and proof golden tests.
 - Receipt verification success and mutation failure cases.
-- Root mismatch and signature mismatch tests.
+- Root mismatch tests and signed-receipt fail-closed tests.
 - Store upgrade test from uncommitted v0.1 store.
 - Receipt overhead benchmark with proof size as a function of item count.
 
 ## Resolved Bootstrap Decisions
 
-- Optional root signatures use Ed25519 through the `cryptography` package. The receipt schema stores the public key identifier, signature algorithm, signature bytes, and signed root payload version so a later signing backend can be added without changing inclusion-proof semantics.
+- Optional root signatures are reserved for a later signing backend. The current
+  receipt schema stores `signer` and `signature` fields only; any Ed25519
+  payload format, algorithm identifier, key identifier, and verification policy
+  must be added with tests before documentation can claim signed provenance.
 
 ## References
 
