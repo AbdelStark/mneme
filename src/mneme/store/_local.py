@@ -26,6 +26,7 @@ from mneme.core import (
     build_item,
     content_id,
 )
+from mneme.core._ids import require_cid_bytes
 from mneme.core._json import dumps_strict_json, loads_strict_json
 from mneme.index import Index, create_index_backend, search_index
 from mneme.observability import (
@@ -312,6 +313,49 @@ def _optional_non_empty_stats_string(value: object, field_name: str) -> str | No
     return _require_non_empty_stats_string(value, field_name)
 
 
+def _require_local_store_path(value: object) -> Path:
+    if isinstance(value, str) and not value:
+        raise ValidationError("path must not be empty")
+    if isinstance(value, str | Path):
+        path = Path(value)
+    else:
+        raise ValidationError("path must be a path-like value")
+    if not str(path):
+        raise ValidationError("path must not be empty")
+    return path
+
+
+def _require_local_store_items(value: object) -> dict[Cid, MemoryItem]:
+    if not isinstance(value, Mapping):
+        raise ValidationError("_items must be a mapping")
+    items: dict[Cid, MemoryItem] = {}
+    for cid, item in value.items():
+        valid_cid = require_cid_bytes(
+            cid,
+            "_items keys",
+            type_error=ValidationError,
+            value_error=ValidationError,
+        )
+        if not isinstance(item, MemoryItem):
+            raise ValidationError("_items values must be MemoryItem")
+        if valid_cid != (item.content_id or content_id(item)):
+            raise ValidationError("_items keys must match item content ids")
+        items[valid_cid] = item
+    return items
+
+
+def _require_local_store_recovery_events(
+    value: object,
+) -> tuple[StoreRecoveryEvent, ...]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise ValidationError("recovery_events must be a sequence")
+    events = tuple(value)
+    for event in events:
+        if not isinstance(event, StoreRecoveryEvent):
+            raise ValidationError("recovery_events items must be StoreRecoveryEvent")
+    return events
+
+
 @dataclass
 class LocalStore:
     """Local store handle for manifest, write, and query operations."""
@@ -322,6 +366,30 @@ class LocalStore:
     _items: dict[Cid, MemoryItem]
     recovery_events: tuple[StoreRecoveryEvent, ...] = ()
     observability: ObservabilityConfig | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "path", _require_local_store_path(self.path))
+        if not isinstance(self.manifest, StoreManifest):
+            raise ValidationError("manifest must be a StoreManifest")
+        if not isinstance(self.index, Index):
+            raise ValidationError("index must implement Index")
+        object.__setattr__(
+            self,
+            "_items",
+            _require_local_store_items(self._items),
+        )
+        object.__setattr__(
+            self,
+            "recovery_events",
+            _require_local_store_recovery_events(self.recovery_events),
+        )
+        if self.observability is not None and not isinstance(
+            self.observability,
+            ObservabilityConfig,
+        ):
+            raise ValidationError("observability must be an ObservabilityConfig")
+        if len(self.index) != len(visible_cids(self.manifest, self._items)):
+            raise ValidationError("index size must match visible item count")
 
     def stats(self) -> StoreStats:
         value_record_count = sum(log.record_count for log in self.manifest.value_logs)

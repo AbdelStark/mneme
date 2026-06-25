@@ -8,13 +8,16 @@ import pytest
 
 from mneme.core import (
     EncoderFingerprint,
+    Metric,
     SchemaVersionError,
     StoreCorruptionError,
     StoreError,
+    ValidationError,
 )
 from mneme.store import (
     STORE_MANIFEST_SCHEMA,
     IndexConfig,
+    LocalStore,
     init_store,
     load_manifest,
     open_store,
@@ -28,6 +31,94 @@ def _fingerprint() -> EncoderFingerprint:
         weights_digest=None,
         config_digest="blake3:config",
     )
+
+
+class _SizedIndex:
+    def __init__(self, size: int) -> None:
+        self.size = size
+
+    def add(self, _cid: bytes, _key: object) -> None:
+        return None
+
+    def add_batch(self, _items: object) -> None:
+        return None
+
+    def search(
+        self,
+        _q: object,
+        _k: int,
+        *,
+        metric: Metric,
+        ef: int | None = None,
+    ) -> list[tuple[bytes, float]]:
+        return []
+
+    def __len__(self) -> int:
+        return self.size
+
+
+def test_local_store_constructor_normalizes_direct_handle_fields(tmp_path) -> None:
+    store = init_store(tmp_path / "store")
+
+    handle = LocalStore(
+        path=str(store.path),
+        manifest=store.manifest,
+        index=store.index,
+        _items={},
+        recovery_events=[],
+    )
+
+    assert handle.path == store.path
+    assert handle._items == {}
+    assert handle.recovery_events == ()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    (
+        ({"path": object()}, "path must be a path-like value"),
+        ({"path": ""}, "path must not be empty"),
+        ({"manifest": object()}, "manifest must be a StoreManifest"),
+        ({"index": object()}, "index must implement Index"),
+        ({"_items": []}, "_items must be a mapping"),
+        ({"_items": {b"0": object()}}, "_items keys must be 32 bytes"),
+        ({"_items": {b"0" * 32: object()}}, "_items values must be MemoryItem"),
+        ({"recovery_events": object()}, "recovery_events must be a sequence"),
+        (
+            {"recovery_events": (object(),)},
+            "recovery_events items must be StoreRecoveryEvent",
+        ),
+        ({"observability": object()}, "observability must be an ObservabilityConfig"),
+    ),
+)
+def test_local_store_constructor_rejects_malformed_fields(
+    tmp_path,
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    store = init_store(tmp_path / "store")
+    values: dict[str, object] = {
+        "path": store.path,
+        "manifest": store.manifest,
+        "index": store.index,
+        "_items": {},
+    }
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        LocalStore(**values)
+
+
+def test_local_store_constructor_rejects_index_item_count_mismatch(tmp_path) -> None:
+    store = init_store(tmp_path / "store")
+
+    with pytest.raises(ValidationError, match="index size"):
+        LocalStore(
+            path=store.path,
+            manifest=store.manifest,
+            index=_SizedIndex(size=1),
+            _items={},
+        )
 
 
 def test_init_store_creates_layout_and_schema_versioned_manifest(tmp_path) -> None:
