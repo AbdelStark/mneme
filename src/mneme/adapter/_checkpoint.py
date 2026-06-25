@@ -158,6 +158,10 @@ def load_adapter_checkpoint_metadata(path: str | Path) -> AdapterCheckpointMetad
         raise ValidationError(
             f"adapter checkpoint metadata not found: {metadata_path}"
         ) from exc
+    except OSError as exc:
+        raise ValidationError(
+            f"adapter checkpoint metadata could not be read: {metadata_path}"
+        ) from exc
     except ValueError as exc:
         raise ValidationError(
             f"adapter checkpoint metadata is not valid JSON: {metadata_path}"
