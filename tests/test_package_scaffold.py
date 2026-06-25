@@ -10,7 +10,7 @@ import mneme
 
 
 def test_package_exposes_version() -> None:
-    assert mneme.__version__ == "0.1.0.dev0"
+    assert mneme.__version__ == "0.1.0"
 
 
 def test_project_metadata_declares_required_package_surface() -> None:
@@ -23,16 +23,29 @@ def test_project_metadata_declares_required_package_surface() -> None:
     pyproject = tomllib.loads(Path("pyproject.toml").read_text())
     assert pyproject["project"]["license"] == {"file": "LICENSE"}
     assert sorted(pyproject["project"]["optional-dependencies"]) == [
-        "dev",
-        "docs",
         "index",
         "ml",
         "receipts",
         "remote",
     ]
-    assert {"Source", "Issues", "Security", "Changelog"} <= set(
+    assert pyproject["project"]["scripts"]["mneme"] == "mneme.cli.__main__:main"
+    assert sorted(pyproject["dependency-groups"]) == ["dev", "docs"]
+    assert "pytest-cov>=5.0" in pyproject["dependency-groups"]["dev"]
+    assert "mkdocs-material>=9.5" in pyproject["dependency-groups"]["docs"]
+    assert {"Documentation", "Source", "Issues", "Security", "Changelog"} <= set(
         pyproject["project"]["urls"]
     )
+
+
+def test_uv_lock_and_docs_site_are_source_artifacts() -> None:
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    sdist = pyproject["tool"]["hatch"]["build"]["targets"]["sdist"]
+
+    assert Path("uv.lock").exists()
+    assert "/uv.lock" in sdist["include"]
+    assert "/mkdocs.yml" in sdist["include"]
+    assert "/docs" in sdist["include"]
+    assert "/examples" in sdist["include"]
 
 
 def test_core_import_avoids_optional_runtime_dependencies() -> None:

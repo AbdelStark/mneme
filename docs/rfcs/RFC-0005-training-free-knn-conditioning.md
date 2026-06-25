@@ -116,4 +116,4 @@ v0.1 exposes the corrector as the default conditioner. Later releases may add le
 
 - [Public API](../spec/02-public-api.md#numerical-contracts)
 - [Testing Strategy](../spec/07-testing-strategy.md#required-test-groups)
-- [PRD Section 8.1](../../prd.md#81-nonparametric-corrector-default-training-free)
+- [PRD Section 8.1](https://github.com/AbdelStark/mneme/blob/main/prd.md#81-nonparametric-corrector-default-training-free)

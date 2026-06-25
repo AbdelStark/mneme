@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Created: 2026-06-24
-- Source: [../../prd.md](../../prd.md#9-indexing-storage-and-runtime)
+- Source: [https://github.com/AbdelStark/mneme/blob/main/prd.md](https://github.com/AbdelStark/mneme/blob/main/prd.md#9-indexing-storage-and-runtime)
 
 ## Reference Mode
 
@@ -28,7 +28,7 @@ terminal timings without the report envelope.
 The v0.1 local profile command is:
 
 ```bash
-python -m mneme.cli eval profile --store STORE --out reports/profile.json
+mneme eval profile --store STORE --out reports/profile.json
 ```
 
 It writes `mneme.eval_report.v1` with FlatIndex recall ground truth, query and
@@ -38,7 +38,7 @@ for exact-only runs when an approximate backend is unavailable.
 The receipt overhead command is:
 
 ```bash
-python -m mneme.cli eval receipts --store STORE --out reports/receipts.json
+mneme eval receipts --store STORE --out reports/receipts.json
 ```
 
 It writes `mneme.eval_report.v1` with receipt-disabled query latency,
@@ -51,7 +51,7 @@ cite the generated report path or release artifact.
 External benchmark runs are opt-in. The dry-run interface command is:
 
 ```bash
-python -m mneme.cli eval benchmark --dry-run --dataset DATASET.json --checkpoint CHECKPOINT --out reports/benchmark.json
+mneme eval benchmark --dry-run --dataset DATASET.json --checkpoint CHECKPOINT --out reports/benchmark.json
 ```
 
 `DATASET.json` must be a `DatasetRef` with `kind: external` and a non-empty

@@ -11,7 +11,7 @@ Mneme adds a trained cross-attention memory adapter after the v0.1 corrector. Th
 
 ## Motivation
 
-The PRD identifies the trained adapter as the accuracy path. [Overview](../spec/00-overview.md#milestone-map) places it in v0.2 because v0.1 must remain training-free. This RFC locks the adapter boundary so future implementation does not mutate base-model weights or conflate adapter success with base retraining.
+The PRD identifies the trained adapter as the accuracy path. [Overview](../spec/00-overview.md#v01-scope) keeps production trained-adapter checkpoints outside the v0.1 release boundary. This RFC locks the adapter boundary so future implementation does not mutate base-model weights or conflate adapter success with base retraining.
 
 ## Goals
 
@@ -111,7 +111,7 @@ Checkpoint metadata:
   },
   "training_report_uri": "reports/adapter-training.json",
   "weights_file": "adapter.safetensors",
-  "package_version": "0.1.0.dev0"
+  "package_version": "0.1.0"
 }
 ```
 
@@ -185,4 +185,4 @@ retrieved value tokens without modifying predictor weights.
 
 - [Overview](../spec/00-overview.md#v10-completion-criteria)
 - [Testing Strategy](../spec/07-testing-strategy.md#ml-specific-hygiene)
-- [PRD Section 8.2](../../prd.md#82-parametric-memory-adapter-trained-accuracy-path)
+- [PRD Section 8.2](https://github.com/AbdelStark/mneme/blob/main/prd.md#82-parametric-memory-adapter-trained-accuracy-path)

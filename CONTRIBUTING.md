@@ -1,32 +1,54 @@
 # Contributing
 
-Mneme is pre-1.0. Keep changes small, evidence-bound, and easy to review.
+Mneme 0.1.0 is a typed Python ML infrastructure library. Keep changes small,
+evidence-bound, and easy to review.
 
 ## Setup
 
+Use uv as the project environment and task runner:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -e ".[dev]"
+uv sync --locked --group dev
+uv run mneme --help
+```
+
+Docs contributors also need the docs group:
+
+```bash
+uv sync --locked --group docs
+uv run mkdocs serve
+```
+
+Optional runtime extras remain host-owned and lazy:
+
+```bash
+uv sync --locked --extra index
+uv sync --locked --extra ml
+uv sync --locked --extra receipts
+uv sync --locked --extra remote
 ```
 
 ## Local Gates
 
-Run the relevant focused tests while editing, then run the full local gate before
-opening a pull request:
+Run focused tests while editing, then run the full local gate before opening a
+pull request:
 
 ```bash
-.venv/bin/ruff check .
-.venv/bin/ruff format --check .
-.venv/bin/pytest
-.venv/bin/mypy src/mneme
-.venv/bin/python -m build
+uv lock --check
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest --cov=mneme --cov-report=term-missing
+uv run mypy src/mneme
+uv run --group docs mkdocs build --strict
+uv build --out-dir dist --clear --no-build-logs
 ```
 
 When touching evaluation or release evidence, also run:
 
 ```bash
-.venv/bin/python -m mneme.eval.fixtures --out .artifacts/fixtures.json
+uv run mneme eval fixtures --out .artifacts/fixtures.json
+uv run mneme eval remote-conformance --out .artifacts/remote-conformance.json
+uv run mneme eval cross-source --out .artifacts/cross-source.json
 ```
 
 ## CI Reproduction
@@ -35,21 +57,26 @@ Hosted CI runs on pull requests and pushes to `main`. To reproduce the hosted
 release gate locally from a clean checkout:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -e ".[dev]"
-.venv/bin/ruff check .
-.venv/bin/ruff format --check .
-.venv/bin/pytest
-.venv/bin/mypy src/mneme
+uv sync --locked --group dev
+uv lock --check
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest --cov=mneme --cov-report=term-missing
+uv run mypy src/mneme
 rm -rf dist .artifacts/ci .ci-install
-.venv/bin/python -m build
-python3 -m venv .ci-install
-.ci-install/bin/python -m pip install --upgrade pip
-.ci-install/bin/python -m pip install dist/*.whl
+uv build --out-dir dist --clear --no-build-logs
+uv venv .ci-install
+uv pip install --python .ci-install/bin/python dist/*.whl
 .ci-install/bin/python -c "import mneme; print(mneme.__version__)"
-.ci-install/bin/python -m mneme.cli eval fixtures --out .artifacts/ci/fixtures.json
+.ci-install/bin/mneme eval fixtures --out .artifacts/ci/fixtures.json
 .ci-install/bin/python -m mneme.release.validate_artifacts --dist dist --fixture-report .artifacts/ci/fixtures.json --out .artifacts/ci/release-artifacts.json
+```
+
+To reproduce the docs workflow:
+
+```bash
+uv sync --locked --group docs
+uv run mkdocs build --strict
 ```
 
 ## Pull Request Discipline
@@ -63,6 +90,6 @@ python3 -m venv .ci-install
 
 ## Security And Privacy
 
-Do not commit raw stores, private datasets, run outputs, secrets, or local
-credentials. Store directories are not confidential by default; see
-[SECURITY.md](SECURITY.md).
+Do not commit raw stores, private datasets, run outputs, secrets, local
+credentials, generated coverage HTML, or local caches. Store directories are not
+confidential by default; see [SECURITY.md](SECURITY.md).

@@ -168,4 +168,4 @@ v0.4 adds remote message models and a conformance suite. The first transport ada
 
 - [Architecture](../spec/01-architecture.md#package-boundaries)
 - [Security](../spec/06-security.md#trust-boundaries)
-- [PRD Section 7.4](../../prd.md#74-json-message-schema-abridged)
+- [PRD Section 7.4](https://github.com/AbdelStark/mneme/blob/main/prd.md#74-json-message-schema-abridged)

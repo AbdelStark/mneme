@@ -57,10 +57,10 @@ CI gates:
 ruff check .
 ruff format --check .
 pytest
-python -m build
-python -m pip install dist/*.whl
+uv build
+uv pip install dist/*.whl
 python -c "import mneme; print(mneme.__version__)"
-python -m mneme.eval.fixtures --out reports/fixtures.json
+mneme eval fixtures --out reports/fixtures.json
 ```
 
 Documentation gates:
@@ -104,4 +104,4 @@ v0.1 creates package scaffolding and minimal CI. Optional extras are tested in a
 
 - [Release and Versioning](../spec/09-release-and-versioning.md)
 - [Testing Strategy](../spec/07-testing-strategy.md#ci-gates)
-- [PRD Section 11.3](../../prd.md#113-packaging-tooling-and-a-native-core-later)
+- [PRD Section 11.3](https://github.com/AbdelStark/mneme/blob/main/prd.md#113-packaging-tooling-and-a-native-core-later)

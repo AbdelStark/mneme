@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Created: 2026-06-24
-- Source: [../../prd.md](../../prd.md#13-evaluation-plan)
+- Source: [https://github.com/AbdelStark/mneme/blob/main/prd.md](https://github.com/AbdelStark/mneme/blob/main/prd.md#13-evaluation-plan)
 
 ## Test Pyramid
 
@@ -86,8 +86,8 @@ v0.1 required gates:
 ruff check .
 ruff format --check .
 pytest
-python -m mneme.eval.fixtures --out reports/fixtures.json
-python -m mneme.cli store verify tests/fixtures/store
+mneme eval fixtures --out reports/fixtures.json
+mneme store verify tests/fixtures/store
 ```
 
 The exact command module names may change during implementation, but the gates above define the required coverage.

@@ -32,7 +32,7 @@ def _report() -> EvalReport:
     return EvalReport(
         report_id="report-fixture",
         command=("mneme", "eval", "gate", "--fixture"),
-        package_version="0.1.0.dev0",
+        package_version="0.1.0",
         git_commit="abcdef0",
         created_at="2026-06-24T00:00:00Z",
         platform={"system": "test", "python": "3.12"},
@@ -72,7 +72,7 @@ def test_missing_caveats_fail_for_fixture_reports() -> None:
         EvalReport(
             report_id="missing-caveat",
             command=("mneme", "eval", "fixtures"),
-            package_version="0.1.0.dev0",
+            package_version="0.1.0",
             git_commit=None,
             created_at="2026-06-24T00:00:00Z",
             platform={"system": "test"},

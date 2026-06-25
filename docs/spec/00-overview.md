@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Created: 2026-06-24
-- Source: [../../prd.md](../../prd.md)
+- Source: [https://github.com/AbdelStark/mneme/blob/main/prd.md](https://github.com/AbdelStark/mneme/blob/main/prd.md)
 
 ## Thesis
 
@@ -49,10 +49,20 @@ v0.1 includes:
 - `mneme.index`: flat exact index and one approximate nearest-neighbor backend.
 - `mneme.store`: local append-mostly memory store, persistence manifest, retention policies.
 - `mneme.condition`: training-free kNN corrector with distance-gated fallback.
-- `mneme.eval`: fixture-scale drift, gate, recall, and latency checks.
-- Package metadata, linting, typing, unit tests, documentation, and CI.
+- `mneme.receipts`: local MMR commitments, inclusion proofs, retrieval receipts,
+  and receipt-backed replay helpers.
+- `mneme.remote`: schema-versioned HTTP JSON messages, response validation, and
+  an in-process ASGI conformance path.
+- `mneme.adapter`: optional trained-adapter building blocks and checkpoint
+  metadata behind the `ml` extra.
+- `mneme.eval`: fixture-scale drift, gate, recall, latency, receipt,
+  remote-conformance, cross-source, and benchmark-runner plumbing reports.
+- Package metadata, `uv.lock`, a `mneme` console script, linting, typing, unit
+  tests, documentation, GitHub Pages, and CI.
 
-v0.1 excludes commitments, signatures, remote store messages, trained adapters, large external datasets, and public benchmark claims beyond fixture-scale validation.
+v0.1 excludes large external datasets, production trained-adapter checkpoints,
+hosted authentication services, encrypted storage, private retrieval, and public
+benchmark claims beyond fixture-scale validation.
 
 ## v1.0 Completion Criteria
 

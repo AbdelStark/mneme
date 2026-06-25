@@ -249,7 +249,7 @@
     "mneme.store.STORE_VERIFICATION_SCHEMA": "mneme.store_verification.v1"
   },
   "signatures": {
-    "mneme.adapter.AdapterCheckpointMetadata": "(adapter_kind: 'str', adapter_config: 'Mapping[str, Any]', base_fingerprint: 'EncoderFingerprint', training_report_uri: 'str', weights_file: 'str' = 'adapter.safetensors', package_version: 'str' = '0.1.0.dev0', schema_version: 'str' = 'mneme.adapter_checkpoint.v1') -> None",
+    "mneme.adapter.AdapterCheckpointMetadata": "(adapter_kind: 'str', adapter_config: 'Mapping[str, Any]', base_fingerprint: 'EncoderFingerprint', training_report_uri: 'str', weights_file: 'str' = 'adapter.safetensors', package_version: 'str' = '0.1.0', schema_version: 'str' = 'mneme.adapter_checkpoint.v1') -> None",
     "mneme.adapter.AdapterTrainingBatch": "(predictor_input: 'object', retrieved_values: 'object', target_hidden: 'object', attention_mask: 'object | None' = None) -> None",
     "mneme.adapter.load_adapter_checkpoint": "(path: 'str | Path', *, expected_base_fingerprint: 'EncoderFingerprint | None' = None, require_weights: 'bool' = True) -> 'AdapterCheckpoint'",
     "mneme.condition.CondCtx": "(current_latent: 'Latent | None', step: 'int | None' = None, goal_latent: 'Latent | None' = None, metadata: 'Mapping[str, Any] | None' = None, schema_version: 'str' = 'mneme.cond_ctx.v1') -> None",
@@ -272,7 +272,7 @@
     "mneme.eval.DatasetRef": "(dataset_id: 'str', kind: 'DatasetKind', split: 'str | None' = None, version: 'str | None' = None, uri: 'str | None' = None, metadata: 'Mapping[str, Any]' = <factory>, schema_version: 'str' = 'mneme.dataset_ref.v1') -> None",
     "mneme.eval.EvalReport": "(report_id: 'str', command: 'Sequence[str]', package_version: 'str', git_commit: 'str | None', created_at: 'str', platform: 'Mapping[str, str]', seed: 'int | None', dataset: 'DatasetRef', metrics: 'Mapping[str, EvalMetric]', artifacts: 'Mapping[str, str]', caveats: 'Sequence[str]', passed: 'bool', schema_version: 'str' = 'mneme.eval_report.v1') -> None",
     "mneme.eval.run_cross_source_transfer_evaluation": "(*, seed: 'int' = 0, command: 'Sequence[str]' = ('mneme', 'eval', 'cross-source'), created_at: 'str | None' = None, git_commit: 'str | None' = None) -> 'EvalReport'",
-    "mneme.eval.run_external_benchmark": "(runner: 'BenchmarkRunner', spec: 'BenchmarkSpec', *, created_at: 'str | None' = None, git_commit: 'str | None' = None, package_version: 'str' = '0.1.0.dev0') -> 'EvalReport'",
+    "mneme.eval.run_external_benchmark": "(runner: 'BenchmarkRunner', spec: 'BenchmarkSpec', *, created_at: 'str | None' = None, git_commit: 'str | None' = None, package_version: 'str' = '0.1.0') -> 'EvalReport'",
     "mneme.eval.run_fixture_evaluation": "(*, seed: 'int' = 0, command: 'Sequence[str]' = ('mneme', 'eval', 'fixtures'), created_at: 'str | None' = None, git_commit: 'str | None' = None, observability: 'ObservabilityConfig | None' = None) -> 'EvalReport'",
     "mneme.eval.validate_report_json": "(data: 'object') -> 'EvalReport'",
     "mneme.eval.write_report_json": "(report: 'EvalReport', path: 'str | Path') -> 'None'",

@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Created: 2026-06-24
-- Source: [../../prd.md](../../prd.md#16-security-and-privacy-considerations)
+- Source: [https://github.com/AbdelStark/mneme/blob/main/prd.md](https://github.com/AbdelStark/mneme/blob/main/prd.md#16-security-and-privacy-considerations)
 
 ## Security Boundary
 

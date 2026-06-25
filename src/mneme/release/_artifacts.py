@@ -19,17 +19,27 @@ RELEASE_ARTIFACT_REPORT_SCHEMA: Final = "mneme.release_artifact_report.v1"
 PACKAGE_NAME: Final = "mneme"
 DIST_INFO_PREFIX: Final = "mneme-"
 
-REQUIRED_PROJECT_URLS: Final = ("Source", "Issues", "Security", "Changelog")
+REQUIRED_PROJECT_URLS: Final = (
+    "Documentation",
+    "Source",
+    "Issues",
+    "Security",
+    "Changelog",
+)
 REQUIRED_RUNTIME_DEPENDENCIES: Final = ("blake3>=0.4", "numpy>=1.26")
 REQUIRED_SDIST_FILES: Final = (
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "LICENSE",
+    "mkdocs.yml",
     "README.md",
     "SECURITY.md",
+    "docs/index.md",
     "docs/release/RELEASE_CHECKLIST.md",
     "docs/spec/09-release-and-versioning.md",
+    "examples/README.md",
     "pyproject.toml",
+    "uv.lock",
 )
 REQUIRED_WHEEL_SUFFIXES: Final = (
     "mneme/py.typed",
