@@ -86,6 +86,19 @@ class HttpJsonResponse:
     status_code: int
     payload: JsonObject
 
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.status_code, bool)
+            or not isinstance(self.status_code, int)
+            or self.status_code < 100
+            or self.status_code > 599
+        ):
+            raise ValidationError("remote HTTP status_code must be an HTTP status")
+        if not isinstance(self.payload, Mapping):
+            raise ValidationError("remote HTTP payload must be a JSON object")
+        if not all(isinstance(key, str) for key in self.payload):
+            raise ValidationError("remote HTTP payload keys must be strings")
+
 
 class HttpJsonRequester(Protocol):
     """Synchronous JSON requester used by RemoteHttpClient."""

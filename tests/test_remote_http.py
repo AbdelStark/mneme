@@ -172,6 +172,21 @@ def test_remote_http_asgi_app_validates_bearer_token(tmp_path: Path) -> None:
         MemoryStoreASGIApp(store, bearer_token=object())  # type: ignore[arg-type]
 
 
+def test_http_json_response_validates_status_and_payload() -> None:
+    invalid_cases = [
+        (True, {}, "status_code"),
+        ("200", {}, "status_code"),
+        (99, {}, "status_code"),
+        (600, {}, "status_code"),
+        (200, [], "payload"),
+        (200, {1: "ok"}, "payload keys"),
+    ]
+
+    for status_code, payload, match in invalid_cases:
+        with pytest.raises(ValidationError, match=match):
+            HttpJsonResponse(status_code, payload)  # type: ignore[arg-type]
+
+
 def test_remote_http_malformed_server_response_fails_closed() -> None:
     def requester(
         method: str,
