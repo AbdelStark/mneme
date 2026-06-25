@@ -8,7 +8,9 @@ def test_hosted_ci_workflow_runs_required_gates() -> None:
 
     assert "pull_request:" in workflow
     assert "push:" in workflow
+    assert "actions/checkout@v7.0.0" in workflow
     assert "astral-sh/setup-uv@v8.2.0" in workflow
+    assert "actions/setup-python@v6.3.0" in workflow
     assert "uv lock --check" in workflow
     assert "uv sync --locked --group dev" in workflow
     assert "uv run ruff check ." in workflow
@@ -28,7 +30,7 @@ def test_hosted_ci_workflow_runs_required_gates() -> None:
     assert "Validate release artifacts against checklist" in workflow
     assert "mneme.release.validate_artifacts --dist dist" in workflow
     assert "release-artifacts.json" in workflow
-    assert "actions/upload-artifact@v4" in workflow
+    assert "actions/upload-artifact@v7.0.1" in workflow
 
 
 def test_docs_workflow_builds_and_deploys_github_pages() -> None:
@@ -39,7 +41,9 @@ def test_docs_workflow_builds_and_deploys_github_pages() -> None:
     assert "push:" in workflow
     assert "pages: write" in workflow
     assert "id-token: write" in workflow
+    assert "actions/checkout@v7.0.0" in workflow
     assert "astral-sh/setup-uv@v8.2.0" in workflow
+    assert "actions/setup-python@v6.3.0" in workflow
     assert "uv lock --check" in workflow
     assert "uv sync --locked --group docs" in workflow
     assert "uv run mkdocs build --strict" in workflow
