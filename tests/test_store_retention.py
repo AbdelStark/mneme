@@ -156,6 +156,18 @@ def test_count_retention_helper_uses_deterministic_tie_breaks() -> None:
 def test_retention_helper_rejects_unvalidated_policy_numbers() -> None:
     item = _prepared_item(_item(1.0, step=1))
 
+    with pytest.raises(StoreCorruptionError, match="policy is unsupported"):
+        apply_retention_policy(
+            {"policy": "density", "tombstones": []},
+            {_prepared_cid(item): item},
+            transaction_id="txn-invalid",
+        )
+    with pytest.raises(StoreCorruptionError, match="policy is unsupported"):
+        apply_retention_policy(
+            {"policy": False, "tombstones": []},
+            {_prepared_cid(item): item},
+            transaction_id="txn-invalid",
+        )
     with pytest.raises(StoreCorruptionError, match="max_items"):
         apply_retention_policy(
             {"policy": "count", "max_items": True, "tombstones": []},
@@ -168,6 +180,18 @@ def test_retention_helper_rejects_unvalidated_policy_numbers() -> None:
             {_prepared_cid(item): item},
             transaction_id="txn-invalid",
         )
+
+
+def test_retention_helper_defaults_missing_policy_to_none() -> None:
+    item = _prepared_item(_item(1.0, step=1))
+
+    policy = apply_retention_policy(
+        {"tombstones": []},
+        {_prepared_cid(item): item},
+        transaction_id="txn-default",
+    )
+
+    assert policy == {"policy": "none", "tombstones": []}
 
 
 def _fingerprint() -> EncoderFingerprint:

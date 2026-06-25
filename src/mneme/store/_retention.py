@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Final
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError
 from mneme.core._ids import cid_from_hex
 from mneme.store._manifest import StoreManifest
+
+_RETENTION_POLICIES: Final = frozenset({"none", "count", "age"})
 
 
 def visible_cids(
@@ -34,7 +36,7 @@ def apply_retention_policy(
 ) -> dict[str, Any]:
     """Apply a normalized manifest retention policy to the current item set."""
 
-    policy_name = str(policy.get("policy", "none"))
+    policy_name = _retention_policy_name(policy)
     tombstones = _retention_tombstones(policy)
     live = {cid: item for cid, item in all_items.items() if cid not in tombstones}
     if policy_name == "count":
@@ -60,6 +62,13 @@ def apply_retention_policy(
             "tombstones": _sorted_tombstones(tombstones),
         }
     return {"policy": "none", "tombstones": _sorted_tombstones(tombstones)}
+
+
+def _retention_policy_name(policy: Mapping[str, Any]) -> str:
+    policy_name = policy.get("policy", "none")
+    if not isinstance(policy_name, str) or policy_name not in _RETENTION_POLICIES:
+        raise StoreCorruptionError("retention_policy policy is unsupported")
+    return policy_name
 
 
 def _retention_tombstones(policy: Mapping[str, Any]) -> dict[Cid, dict[str, Any]]:
