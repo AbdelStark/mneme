@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import http.client
 import importlib
 import math
 import urllib.error
@@ -309,12 +310,21 @@ def _stdlib_request_json(
             )
     except urllib.error.HTTPError as exc:
         return HttpJsonResponse(status_code=exc.code, payload=_json_body(exc.read()))
-    except urllib.error.URLError as exc:
-        raise StoreError(f"remote HTTP request failed: {exc.reason}") from exc
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
+        raise StoreError(
+            f"remote HTTP request failed: {_request_failure_reason(exc)}"
+        ) from exc
 
 
 def _url(base_url: str, path: str) -> str:
     return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
+
+
+def _request_failure_reason(exc: BaseException) -> str:
+    if isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        return str(reason) or type(exc).__name__
+    return str(exc) or type(exc).__name__
 
 
 def _validate_http_base_url(base_url: str) -> None:

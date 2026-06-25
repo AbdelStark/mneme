@@ -22,6 +22,7 @@ from mneme.core import (
     OptionalDependencyError,
     QuerySpec,
     Retrieval,
+    StoreError,
     Transition,
     UnsupportedOperationError,
     ValidationError,
@@ -285,6 +286,32 @@ def test_stdlib_request_json_rejects_nonfinite_payload_before_network(
         )
 
     assert called is False
+
+
+@pytest.mark.parametrize(
+    ("failure", "match"),
+    (
+        (TimeoutError("timed out"), "timed out"),
+        (remote_http.http.client.HTTPException("bad status line"), "bad status line"),
+    ),
+)
+def test_stdlib_request_json_wraps_transport_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    failure: BaseException,
+    match: str,
+) -> None:
+    def urlopen(*_args: object, **_kwargs: object) -> object:
+        raise failure
+
+    monkeypatch.setattr(remote_http.urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(StoreError, match=f"remote HTTP request failed: {match}"):
+        remote_http._stdlib_request_json(
+            "POST",
+            "/stats",
+            {"schema_version": "mneme.stats.request.v1"},
+            RemoteHttpConfig("http://testserver"),
+        )
 
 
 def test_serve_asgi_app_missing_uvicorn_is_actionable(
