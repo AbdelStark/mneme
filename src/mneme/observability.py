@@ -179,17 +179,25 @@ def content_id_prefix(cid: bytes, config: ObservabilityConfig | None) -> str | N
 def distance_min(distances: Sequence[float]) -> float | None:
     """Return the minimum finite distance, or None for empty input."""
 
-    if not distances:
+    finite = _finite_distances(distances)
+    if not finite:
         return None
-    return float(min(float(distance) for distance in distances))
+    return min(finite)
 
 
 def distance_mean(distances: Sequence[float]) -> float | None:
     """Return the mean finite distance, or None for empty input."""
 
-    if not distances:
+    finite = _finite_distances(distances)
+    if not finite:
         return None
-    return float(sum(float(distance) for distance in distances) / len(distances))
+    return sum(finite) / len(finite)
+
+
+def _finite_distances(distances: Sequence[float]) -> tuple[float, ...]:
+    return tuple(
+        numeric for distance in distances if math.isfinite(numeric := float(distance))
+    )
 
 
 def _duration_ms(started: float | None) -> float:

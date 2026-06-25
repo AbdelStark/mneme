@@ -26,6 +26,8 @@ from mneme.observability import (
     EVENT_SCHEMA_VERSION,
     REQUIRED_EVENT_NAMES,
     ObservabilityConfig,
+    distance_mean,
+    distance_min,
     emit_event,
     has_event_sink,
 )
@@ -98,6 +100,17 @@ def test_observability_config_and_required_event_names() -> None:
 
     with pytest.raises(ValueError, match="content_id_prefix_bytes"):
         ObservabilityConfig(content_id_prefix_bytes=-1)
+
+
+def test_distance_summaries_ignore_nonfinite_values() -> None:
+    distances = (float("nan"), 3.0, float("inf"), 1.0, float("-inf"))
+
+    assert distance_min(()) is None
+    assert distance_mean(()) is None
+    assert distance_min((float("nan"), float("inf"))) is None
+    assert distance_mean((float("nan"), float("inf"))) is None
+    assert distance_min(distances) == 1.0
+    assert distance_mean(distances) == 2.0
 
 
 def test_index_search_event_snapshot_contains_required_fields() -> None:
