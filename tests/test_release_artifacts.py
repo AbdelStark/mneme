@@ -52,6 +52,34 @@ def test_release_artifact_validator_requires_fixture_report(tmp_path: Path) -> N
     assert any("fixture report is invalid" in error for error in report.errors)
 
 
+def test_release_artifact_validator_rejects_generated_python_artifacts(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(
+        tmp_path,
+        version=mneme.__version__,
+        wheel_extra_files={"mneme/__pycache__/__init__.cpython-312.pyc": "bytecode\n"},
+        sdist_extra_files={
+            "src/mneme/__pycache__/_version.cpython-312.pyc": "bytecode\n"
+        },
+    )
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any(
+        "wheel contains generated Python artifact" in error for error in report.errors
+    )
+    assert any(
+        "sdist contains generated Python artifact" in error for error in report.errors
+    )
+
+
 def test_release_artifact_validation_command_returns_json(tmp_path: Path) -> None:
     dist = _write_fake_dist(tmp_path, version=mneme.__version__)
     fixture_report = _write_fixture_report(tmp_path)
@@ -87,7 +115,13 @@ def _write_fixture_report(tmp_path: Path) -> Path:
     return path
 
 
-def _write_fake_dist(tmp_path: Path, *, version: str) -> Path:
+def _write_fake_dist(
+    tmp_path: Path,
+    *,
+    version: str,
+    wheel_extra_files: dict[str, str] | None = None,
+    sdist_extra_files: dict[str, str] | None = None,
+) -> Path:
     dist = tmp_path / "dist"
     dist.mkdir()
     metadata = _metadata(version)
@@ -100,6 +134,8 @@ def _write_fake_dist(tmp_path: Path, *, version: str) -> Path:
         archive.writestr(f"{dist_info}/WHEEL", "Wheel-Version: 1.0\n")
         archive.writestr(f"{dist_info}/RECORD", "")
         archive.writestr(f"{dist_info}/licenses/LICENSE", "Apache-2.0\n")
+        for name, text in (wheel_extra_files or {}).items():
+            archive.writestr(name, text)
 
     root = f"mneme-{version}"
     sdist = dist / f"{root}.tar.gz"
@@ -123,6 +159,8 @@ def _write_fake_dist(tmp_path: Path, *, version: str) -> Path:
             "uv.lock",
         ):
             _add_tar_text(archive, f"{root}/{name}", f"{name}\n")
+        for name, text in (sdist_extra_files or {}).items():
+            _add_tar_text(archive, f"{root}/{name}", text)
     return dist
 
 

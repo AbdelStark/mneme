@@ -166,6 +166,7 @@ def _validate_wheel(
     try:
         with zipfile.ZipFile(path) as archive:
             names = set(archive.namelist())
+            _reject_generated_python_artifacts(names, "wheel", errors)
             _require_suffixes(names, REQUIRED_WHEEL_SUFFIXES, "wheel", errors)
             metadata_name = _single_name_with_suffix(
                 names,
@@ -200,6 +201,7 @@ def _validate_sdist(
     try:
         with tarfile.open(path, "r:gz") as archive:
             names = set(archive.getnames())
+            _reject_generated_python_artifacts(names, "sdist", errors)
             root = _sdist_root(names, errors)
             if root is not None:
                 for required in REQUIRED_SDIST_FILES:
@@ -274,6 +276,17 @@ def _require_suffixes(
     for suffix in suffixes:
         if not any(name.endswith(suffix) for name in names):
             errors.append(f"{source} missing required path suffix: {suffix}")
+
+
+def _reject_generated_python_artifacts(
+    names: set[str],
+    source: str,
+    errors: list[str],
+) -> None:
+    for name in sorted(names):
+        parts = name.split("/")
+        if "__pycache__" in parts or name.endswith((".pyc", ".pyo")):
+            errors.append(f"{source} contains generated Python artifact: {name}")
 
 
 def _single_name_with_suffix(
