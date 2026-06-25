@@ -288,7 +288,10 @@ async def _call_asgi(
     status = start.get("status")
     if not isinstance(status, int):
         raise EvaluationError("ASGI response status must be an integer")
-    decoded = loads_strict_json(response_body)
+    try:
+        decoded = loads_strict_json(response_body)
+    except ValueError as exc:
+        raise EvaluationError("ASGI response body must be valid JSON") from exc
     if not isinstance(decoded, Mapping):
         raise EvaluationError("ASGI response body must be a JSON object")
     return HttpJsonResponse(status, decoded)

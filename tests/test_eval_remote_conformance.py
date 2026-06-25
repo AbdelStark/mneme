@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 
+import pytest
 from _entrypoint_runner import run_entrypoint
 
 from mneme._version import __version__
+from mneme.core import EvaluationError
 from mneme.eval import run_remote_conformance_evaluation, validate_report_json
+from mneme.eval._remote_conformance import _call_asgi
 from mneme.eval.remote_conformance import main as remote_conformance_main
+from mneme.remote import RemoteHttpConfig
 
 
 def test_remote_conformance_report_validates_and_records_transport() -> None:
@@ -81,3 +86,21 @@ def test_remote_conformance_eval_module_writes_valid_report_json(
     assert report.command[:3] == ("mneme", "eval", "remote-conformance")
     assert report.artifacts["transport"] == "http-json-asgi"
     assert report.passed is True
+
+
+def test_remote_conformance_asgi_call_wraps_malformed_json_body() -> None:
+    class MalformedJsonApp:
+        async def __call__(self, scope, receive, send) -> None:
+            await send({"type": "http.response.start", "status": 200})
+            await send({"type": "http.response.body", "body": b"{not-json"})
+
+    with pytest.raises(EvaluationError, match="ASGI response body must be valid JSON"):
+        asyncio.run(
+            _call_asgi(
+                MalformedJsonApp(),
+                "POST",
+                "/stats",
+                {},
+                RemoteHttpConfig("http://mneme-conformance"),
+            )
+        )
