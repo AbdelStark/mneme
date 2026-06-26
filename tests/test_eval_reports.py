@@ -76,6 +76,7 @@ def test_write_report_json_rejects_nonfinite_runtime_payload(tmp_path: Path) -> 
         write_report_json(report, output)
 
     assert not output.exists()
+    assert not output.parent.exists()
 
 
 def test_missing_caveats_fail_for_fixture_reports() -> None:

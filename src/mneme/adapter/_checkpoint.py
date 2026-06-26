@@ -16,7 +16,7 @@ from mneme.core import (
     SchemaVersionError,
     ValidationError,
 )
-from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._json import loads_strict_json, write_strict_json_file
 
 ADAPTER_CHECKPOINT_SCHEMA: Final = "mneme.adapter_checkpoint.v1"
 ADAPTER_CHECKPOINT_METADATA_FILE: Final = "adapter.json"
@@ -140,12 +140,12 @@ def save_adapter_checkpoint_metadata(
     if not isinstance(metadata, AdapterCheckpointMetadata):
         raise ValidationError("metadata must be AdapterCheckpointMetadata")
     metadata_path = _metadata_path(path)
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.write_text(
-        dumps_strict_json(metadata.to_json(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    return write_strict_json_file(
+        metadata_path,
+        metadata.to_json(),
+        indent=2,
+        sort_keys=True,
     )
-    return metadata_path
 
 
 def load_adapter_checkpoint_metadata(path: str | Path) -> AdapterCheckpointMetadata:

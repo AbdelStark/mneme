@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
 from typing import NoReturn
 
 
@@ -34,6 +35,31 @@ def loads_strict_json(value: str | bytes | bytearray) -> object:
         parse_float=_parse_json_float,
     )
     return decoded
+
+
+def write_strict_json_file(
+    path: str | Path,
+    value: object,
+    *,
+    sort_keys: bool = False,
+    indent: int | str | None = None,
+    separators: tuple[str, str] | None = None,
+) -> Path:
+    """Write strict JSON after serialization succeeds."""
+
+    payload = (
+        dumps_strict_json(
+            value,
+            sort_keys=sort_keys,
+            indent=indent,
+            separators=separators,
+        )
+        + "\n"
+    )
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(payload, encoding="utf-8")
+    return target
 
 
 def _reject_json_constant(value: str) -> NoReturn:

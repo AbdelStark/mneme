@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._json import (
+    dumps_strict_json,
+    loads_strict_json,
+    write_strict_json_file,
+)
 
 
 def test_dumps_strict_json_rejects_nonstandard_constants() -> None:
@@ -27,3 +31,26 @@ def test_strict_json_preserves_deterministic_formatting() -> None:
     assert dumps_strict_json({"b": 1, "a": True}, sort_keys=True, indent=2) == (
         '{\n  "a": true,\n  "b": 1\n}'
     )
+
+
+def test_write_strict_json_file_serializes_before_filesystem_side_effects(
+    tmp_path,
+) -> None:
+    output = tmp_path / "reports" / "bad.json"
+
+    with pytest.raises(ValueError, match="Out of range float values"):
+        write_strict_json_file(output, {"metric": float("nan")}, indent=2)
+
+    assert not output.exists()
+    assert not output.parent.exists()
+
+
+def test_write_strict_json_file_writes_deterministic_json_with_newline(
+    tmp_path,
+) -> None:
+    output = tmp_path / "reports" / "ok.json"
+
+    written = write_strict_json_file(output, {"b": 1, "a": True}, sort_keys=True)
+
+    assert written == output
+    assert output.read_text(encoding="utf-8") == '{"a": true, "b": 1}\n'

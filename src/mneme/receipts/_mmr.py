@@ -15,7 +15,7 @@ from mneme.core import (
     SchemaVersionError,
     ValidationError,
 )
-from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._json import loads_strict_json, write_strict_json_file
 
 COMMITMENT_SCHEMA: Final = "mneme.commitment.v1"
 INCLUSION_PROOF_SCHEMA: Final = "mneme.inclusion_proof.v1"
@@ -266,13 +266,7 @@ def save_commitment_state(path: str | Path, state: CommitmentState) -> Path:
 
     if not isinstance(state, CommitmentState):
         raise ValidationError("state must be a CommitmentState")
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        dumps_strict_json(state.to_json(), sort_keys=True, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return target
+    return write_strict_json_file(path, state.to_json(), sort_keys=True, indent=2)
 
 
 def load_commitment_state(path: str | Path) -> CommitmentState:

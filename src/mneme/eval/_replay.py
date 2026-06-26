@@ -24,7 +24,7 @@ from mneme.core import (
     content_id,
 )
 from mneme.core._ids import cid_from_hex, require_cid_bytes
-from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._json import loads_strict_json, write_strict_json_file
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store._value_log import (
     _array_from_json,
@@ -532,12 +532,7 @@ def _max_abs_error(left: np.ndarray, right: np.ndarray) -> float | None:
 
 
 def _write_json(path: str | Path, data: Mapping[str, object]) -> None:
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        dumps_strict_json(data, sort_keys=True, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_strict_json_file(path, data, sort_keys=True, indent=2)
 
 
 def _require_mapping(value: object, field_name: str) -> Mapping[str, Any]:
