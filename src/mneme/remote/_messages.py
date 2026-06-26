@@ -553,9 +553,11 @@ def _array_shape(value: object) -> tuple[int, ...]:
     for dim in value:
         if isinstance(dim, bool) or not isinstance(dim, int):
             raise ValidationError("array shape must be a sequence of integers")
-        if dim < 0:
-            raise ValidationError("array shape dimensions must be non-negative")
+        if dim <= 0:
+            raise ValidationError("array shape dimensions must be positive")
         shape.append(dim)
+    if not shape:
+        raise ValidationError("array shape must include at least one dimension")
     return tuple(shape)
 
 

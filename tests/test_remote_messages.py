@@ -71,6 +71,32 @@ def test_remote_array_rejects_boolean_shape_dimensions() -> None:
         RemoteArray.from_json(payload)
 
 
+def test_remote_array_rejects_empty_shapes_and_dimensions() -> None:
+    with pytest.raises(ValidationError, match="at least one dimension"):
+        RemoteArray(
+            dtype="float32",
+            shape=(),
+            byte_order="little",
+            data=base64.b64encode(np.array([], dtype=np.float32).tobytes()).decode(
+                "ascii"
+            ),
+        )
+
+    with pytest.raises(ValidationError, match="dimensions must be positive"):
+        RemoteArray.from_array(np.array([], dtype=np.float32))
+
+    payload = RemoteArray.from_array(np.array([1.0], dtype=np.float32)).to_json()
+    payload["shape"] = [0]
+
+    with pytest.raises(ValidationError, match="dimensions must be positive"):
+        RemoteArray.from_json(payload)
+
+    payload["shape"] = []
+
+    with pytest.raises(ValidationError, match="at least one dimension"):
+        RemoteArray.from_json(payload)
+
+
 @pytest.mark.parametrize("shape", ([1], [3]))
 def test_remote_array_rejects_byte_count_mismatches(shape: list[int]) -> None:
     payload = RemoteArray.from_array(np.array([1.0, 2.0], dtype=np.float32)).to_json()
