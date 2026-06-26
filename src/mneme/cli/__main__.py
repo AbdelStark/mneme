@@ -29,6 +29,7 @@ from mneme.core import (
     cli_exit_code,
     content_id,
 )
+from mneme.core._ids import cid_from_hex
 from mneme.core._json import loads_strict_json
 from mneme.eval import (
     BenchmarkSpec,
@@ -480,8 +481,8 @@ def _write_replay_report(report: ReceiptReplayReport, out: Path) -> None:
 
 
 def _handle_receipts_verify(args: argparse.Namespace) -> object:
-    receipt = _load_receipt(args.receipt_file)
     root = _root_from_hex(args.root)
+    receipt = _load_receipt(args.receipt_file)
     ok = verify_retrieval_receipt(receipt, root=root)
     return JsonResult(
         ok=ok,
@@ -540,13 +541,7 @@ def _load_receipt(path: Path) -> RetrievalReceipt:
 
 
 def _root_from_hex(value: str) -> bytes:
-    try:
-        root = bytes.fromhex(value)
-    except ValueError as exc:
-        raise ReceiptVerificationError("root must be hex bytes") from exc
-    if len(root) != 32:
-        raise ReceiptVerificationError("root must be 32 bytes")
-    return root
+    return cid_from_hex(value, "root", error_type=ReceiptVerificationError)
 
 
 def _add_eval_profile_args(parser: argparse.ArgumentParser) -> None:

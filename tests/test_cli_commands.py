@@ -578,6 +578,24 @@ def test_receipts_verify_cli_verifies_committed_receipt(tmp_path: Path) -> None:
     assert _stdout_json(wrong_root)["ok"] is False
 
 
+def test_receipts_verify_cli_rejects_empty_root(
+    tmp_path: Path,
+) -> None:
+    receipt_path = tmp_path / "receipt.json"
+    receipt_path.write_text(
+        json.dumps({"schema_version": "mneme.receipt.v1"}),
+        encoding="utf-8",
+    )
+
+    result = run_cli("receipts", "verify", receipt_path, "--root", "")
+
+    assert result.returncode == int(CliExitCode.DATA_VALIDATION)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "ReceiptVerificationError"
+    assert error["errors"] == ["root must be a non-empty string"]
+
+
 def test_receipts_verify_cli_rejects_nonstandard_receipt_json(
     tmp_path: Path,
 ) -> None:
