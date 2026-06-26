@@ -38,6 +38,7 @@ All notable user-visible changes are recorded here.
   non-serializable runtime payloads.
 - Hardened CLI output rendering so malformed handler payloads return structured
   CLI error JSON instead of leaking raw serialization errors.
+- Hardened CLI handler result normalization against invalid JSON object keys.
 - Hardened store manifest and retention tombstone validation against malformed
   or non-UTC timestamps.
 - Hardened store verification against malformed persisted index snapshot item

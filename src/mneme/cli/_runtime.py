@@ -45,7 +45,10 @@ def report_to_json(report: object) -> dict[str, Any]:
         data = report
     if not isinstance(data, dict):
         raise TypeError("command handler returned non-object JSON")
-    return data
+    for key in data:
+        if not isinstance(key, str) or not key:
+            raise TypeError("command handler returned invalid JSON object keys")
+    return dict(data)
 
 
 def success_exit_code(payload: dict[str, Any]) -> int:

@@ -7,7 +7,7 @@ from io import StringIO
 import pytest
 
 import mneme.cli.__main__ as cli_main_module
-from mneme.cli._runtime import JsonResult, print_json
+from mneme.cli._runtime import JsonResult, print_json, report_to_json
 from mneme.core import CliExitCode, ValidationError
 
 
@@ -64,6 +64,21 @@ def test_print_json_rejects_nonfinite_numbers() -> None:
     assert stream.getvalue() == ""
 
 
+def test_report_to_json_copies_valid_payloads() -> None:
+    payload = {"schema_version": "mneme.fixture.v1"}
+
+    normalized = report_to_json(payload)
+    payload["schema_version"] = "mutated"
+
+    assert normalized == {"schema_version": "mneme.fixture.v1"}
+
+
+@pytest.mark.parametrize("payload", ([], {"": "empty"}, {1: "numeric"}))
+def test_report_to_json_rejects_malformed_payloads(payload: object) -> None:
+    with pytest.raises(TypeError, match="command handler returned"):
+        report_to_json(payload)
+
+
 def test_main_wraps_output_serialization_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -73,6 +88,23 @@ def test_main_wraps_output_serialization_failures(
         command="fixture",
         handler=lambda _args: {"schema_version": "mneme.fixture.v1", "bad": object()},
     )
+    monkeypatch.setattr(cli_main_module, "_build_parser", lambda: parser)
+
+    returncode = cli_main_module.main([], stdout=stream)
+
+    assert returncode == int(CliExitCode.INTERNAL)
+    payload = json.loads(stream.getvalue())
+    assert payload["schema_version"] == "mneme.cli_error.v1"
+    assert payload["ok"] is False
+    assert payload["error_type"] == "TypeError"
+
+
+def test_main_wraps_invalid_output_key_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stream = StringIO()
+    parser = argparse.ArgumentParser(prog="mneme")
+    parser.set_defaults(command="fixture", handler=lambda _args: {"": "empty"})
     monkeypatch.setattr(cli_main_module, "_build_parser", lambda: parser)
 
     returncode = cli_main_module.main([], stdout=stream)
