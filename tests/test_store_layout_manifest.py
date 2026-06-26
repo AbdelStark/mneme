@@ -411,6 +411,72 @@ def test_manifest_rejects_commitment_file_path_traversal(tmp_path) -> None:
         open_store(root)
 
 
+@pytest.mark.parametrize(
+    ("commitment", "match"),
+    (
+        (
+            {
+                "enabled": True,
+                "backend": None,
+                "root": None,
+                "files": [],
+            },
+            "commitment backend must be set when enabled",
+        ),
+        (
+            {
+                "enabled": True,
+                "backend": "mmr-v1",
+                "root": "00",
+                "files": ["receipts/commitment-mmr-v1.json"],
+            },
+            "commitment root must be 32 bytes",
+        ),
+        (
+            {
+                "enabled": True,
+                "backend": "mmr-v1",
+                "root": "zz" * 32,
+                "files": ["receipts/commitment-mmr-v1.json"],
+            },
+            "commitment root must be hex bytes",
+        ),
+        (
+            {
+                "enabled": True,
+                "backend": "mmr-v1",
+                "root": "00" * 32,
+                "files": [],
+            },
+            "commitment files must not be empty when enabled",
+        ),
+        (
+            {
+                "enabled": False,
+                "backend": "mmr-v1",
+                "root": None,
+                "files": [],
+            },
+            "disabled commitment must not set backend, root, or files",
+        ),
+    ),
+)
+def test_manifest_rejects_incoherent_commitment_state(
+    tmp_path,
+    commitment: dict[str, object],
+    match: str,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    manifest_path = root / "manifest.json"
+    manifest_json = json.loads(manifest_path.read_text())
+    manifest_json["commitment"] = commitment
+    manifest_path.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+    with pytest.raises(StoreCorruptionError, match=match):
+        open_store(root)
+
+
 def test_init_store_refuses_existing_manifest_without_exist_ok(tmp_path) -> None:
     root = tmp_path / "store"
     init_store(root)

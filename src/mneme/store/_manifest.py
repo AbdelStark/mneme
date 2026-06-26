@@ -19,6 +19,7 @@ from mneme.core._time import require_utc_timestamp
 
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
 _SUPPORTED_MAJOR: Final = 1
+_COMMITMENT_ROOT_BYTES: Final = 32
 _RETENTION_POLICIES: Final = frozenset({"none", "count", "age"})
 
 
@@ -56,6 +57,24 @@ def _require_non_negative_int(value: object, field_name: str) -> int:
     if value < 0:
         raise StoreCorruptionError(f"{field_name} must be >= 0")
     return value
+
+
+def _require_commitment_root(value: object) -> str:
+    if not isinstance(value, str) or not value:
+        raise StoreCorruptionError("commitment root must be set when enabled")
+    if len(value) != _COMMITMENT_ROOT_BYTES * 2:
+        raise StoreCorruptionError(
+            f"commitment root must be {_COMMITMENT_ROOT_BYTES} bytes"
+        )
+    try:
+        root = bytes.fromhex(value)
+    except ValueError as exc:
+        raise StoreCorruptionError("commitment root must be hex bytes") from exc
+    if len(root) != _COMMITMENT_ROOT_BYTES:
+        raise StoreCorruptionError(
+            f"commitment root must be {_COMMITMENT_ROOT_BYTES} bytes"
+        )
+    return root.hex()
 
 
 def count_retention(max_items: int) -> dict[str, Any]:
@@ -151,14 +170,26 @@ class CommitmentState:
             self.files, Sequence
         ):
             raise StoreCorruptionError("commitment files must be a sequence")
-        object.__setattr__(
-            self,
-            "files",
-            tuple(
-                _require_store_relative_path(item, "commitment file")
-                for item in self.files
-            ),
+        files = tuple(
+            _require_store_relative_path(item, "commitment file") for item in self.files
         )
+        object.__setattr__(self, "files", files)
+        if self.enabled:
+            if self.backend is None:
+                raise StoreCorruptionError(
+                    "commitment backend must be set when enabled"
+                )
+            backend = _require_string(self.backend, "commitment backend")
+            if not files:
+                raise StoreCorruptionError(
+                    "commitment files must not be empty when enabled"
+                )
+            object.__setattr__(self, "backend", backend)
+            object.__setattr__(self, "root", _require_commitment_root(self.root))
+        elif self.backend is not None or self.root is not None or files:
+            raise StoreCorruptionError(
+                "disabled commitment must not set backend, root, or files"
+            )
 
     @classmethod
     def from_json(cls, data: object) -> CommitmentState:
