@@ -438,6 +438,8 @@ local `MemoryStore`-compatible object through the same message schema for ASGI
 servers. Running the ASGI app with the bundled helper requires the `remote`
 extra, which provides `uvicorn`; missing serving dependencies raise
 `OptionalDependencyError(extra="remote", package="uvicorn")`.
+The helper validates `host` and TCP `port` before importing optional serving
+dependencies, raising `ValidationError` for malformed bind inputs.
 
 ## Command-Line Surface
 

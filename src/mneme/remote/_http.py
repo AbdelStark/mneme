@@ -263,6 +263,7 @@ def serve_asgi_app(
 ) -> None:
     """Serve a remote store ASGI app with uvicorn from the remote extra."""
 
+    _validate_asgi_bind(host, port)
     try:
         uvicorn = importlib.import_module("uvicorn")
     except ModuleNotFoundError as exc:
@@ -279,6 +280,13 @@ def serve_asgi_app(
             package="uvicorn",
         )
     runner(app, host=host, port=port)
+
+
+def _validate_asgi_bind(host: object, port: object) -> None:
+    if not isinstance(host, str) or not host.strip():
+        raise ValidationError("remote HTTP serve host must be a non-empty string")
+    if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
+        raise ValidationError("remote HTTP serve port must be an integer 0..65535")
 
 
 def _stdlib_request_json(

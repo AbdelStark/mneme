@@ -8,6 +8,7 @@ import tomllib
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import numpy as np
@@ -329,6 +330,58 @@ def test_serve_asgi_app_missing_uvicorn_is_actionable(
 
     assert raised.value.extra == "remote"
     assert raised.value.package == "uvicorn"
+
+
+@pytest.mark.parametrize(
+    ("host", "port", "match"),
+    (
+        ("", 8000, "host"),
+        ("   ", 8000, "host"),
+        (object(), 8000, "host"),
+        ("127.0.0.1", True, "port"),
+        ("127.0.0.1", -1, "port"),
+        ("127.0.0.1", 65536, "port"),
+        ("127.0.0.1", "8000", "port"),
+    ),
+)
+def test_serve_asgi_app_validates_bind_before_optional_import(
+    monkeypatch: pytest.MonkeyPatch,
+    host: object,
+    port: object,
+    match: str,
+) -> None:
+    def import_module(name: str) -> object:
+        raise AssertionError(f"unexpected optional import: {name}")
+
+    monkeypatch.setattr(remote_http.importlib, "import_module", import_module)
+
+    with pytest.raises(ValidationError, match=match):
+        serve_asgi_app(
+            MemoryStoreASGIApp(object()),  # type: ignore[arg-type]
+            host=host,  # type: ignore[arg-type]
+            port=port,  # type: ignore[arg-type]
+        )
+
+
+def test_serve_asgi_app_forwards_valid_bind_to_uvicorn(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[object, str, int]] = []
+
+    def run(app: object, *, host: str, port: int) -> None:
+        calls.append((app, host, port))
+
+    def import_module(name: str) -> object:
+        if name == "uvicorn":
+            return SimpleNamespace(run=run)
+        raise AssertionError(name)
+
+    monkeypatch.setattr(remote_http.importlib, "import_module", import_module)
+    app = MemoryStoreASGIApp(object())  # type: ignore[arg-type]
+
+    serve_asgi_app(app, host="0.0.0.0", port=0)
+
+    assert calls == [(app, "0.0.0.0", 0)]
 
 
 def test_remote_extra_declares_uvicorn_and_import_stays_lazy() -> None:
