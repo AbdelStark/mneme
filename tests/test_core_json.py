@@ -84,7 +84,7 @@ def test_write_strict_json_file_rejects_malformed_output_paths() -> None:
     with pytest.raises(ValueError, match="JSON output path must not be empty"):
         write_strict_json_file("", {"ok": True})
 
-    with pytest.raises(TypeError, match="JSON output path must be path-like"):
+    with pytest.raises(TypeError, match="JSON output path must be a path-like value"):
         write_strict_json_file(object(), {"ok": True})  # type: ignore[arg-type]
 
 

@@ -7,7 +7,6 @@ import platform as platform_module
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from os import PathLike, fspath
 from pathlib import Path
 from types import MappingProxyType
 from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
@@ -15,6 +14,7 @@ from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
 from mneme._version import __version__
 from mneme.core import EvaluationError, MnemeError
 from mneme.core._json import loads_strict_json
+from mneme.core._paths import coerce_text_path
 from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport, write_report_json
 
@@ -328,14 +328,12 @@ def _require_non_empty_str(value: object, field_name: str) -> str:
 
 
 def _require_path(value: object, field_name: str) -> Path:
-    if not isinstance(value, str | PathLike):
-        raise EvaluationError(f"{field_name} must be a path-like value")
-    raw = fspath(value)
-    if not isinstance(raw, str):
-        raise EvaluationError(f"{field_name} must resolve to a text path")
-    if not raw:
-        raise EvaluationError(f"{field_name} must not be empty")
-    return Path(raw)
+    return coerce_text_path(
+        value,
+        field_name,
+        type_error=EvaluationError,
+        value_error=EvaluationError,
+    )
 
 
 def _benchmark_platform_summary(hardware: Mapping[str, str]) -> dict[str, str]:

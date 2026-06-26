@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from os import PathLike, fspath
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any, Final
@@ -18,6 +17,7 @@ from mneme.core import (
     ValidationError,
 )
 from mneme.core._json import loads_strict_json, write_strict_json_file
+from mneme.core._paths import coerce_text_path
 
 ADAPTER_CHECKPOINT_SCHEMA: Final = "mneme.adapter_checkpoint.v1"
 ADAPTER_CHECKPOINT_METADATA_FILE: Final = "adapter.json"
@@ -275,14 +275,12 @@ def _require_relative_file(value: object, field_name: str) -> str:
 
 
 def _require_path(value: object, field_name: str) -> Path:
-    if not isinstance(value, str | PathLike):
-        raise ValidationError(f"{field_name} must be a path-like value")
-    raw = fspath(value)
-    if not isinstance(raw, str):
-        raise ValidationError(f"{field_name} must resolve to a text path")
-    if not raw:
-        raise ValidationError(f"{field_name} must not be empty")
-    return Path(raw)
+    return coerce_text_path(
+        value,
+        field_name,
+        type_error=ValidationError,
+        value_error=ValidationError,
+    )
 
 
 def _freeze_json_mapping(

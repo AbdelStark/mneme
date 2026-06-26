@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Mapping, Sequence
-from os import PathLike, fspath
+from os import PathLike
 from pathlib import Path
 from typing import NoReturn
+
+from mneme.core._paths import coerce_text_path
 
 
 def dumps_strict_json(
@@ -71,14 +73,7 @@ def write_strict_json_file(
 
 
 def _json_output_path(path: object) -> Path:
-    if not isinstance(path, str | PathLike):
-        raise TypeError("JSON output path must be path-like")
-    raw = fspath(path)
-    if not isinstance(raw, str):
-        raise TypeError("JSON output path must resolve to a text path")
-    if not raw:
-        raise ValueError("JSON output path must not be empty")
-    return Path(raw)
+    return coerce_text_path(path, "JSON output path")
 
 
 def _reject_json_constant(value: str) -> NoReturn:

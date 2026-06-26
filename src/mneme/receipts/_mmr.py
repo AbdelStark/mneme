@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from os import PathLike, fspath
 from pathlib import Path
 from typing import Final, Literal
 
@@ -17,6 +16,7 @@ from mneme.core import (
     ValidationError,
 )
 from mneme.core._json import loads_strict_json, write_strict_json_file
+from mneme.core._paths import coerce_text_path
 
 COMMITMENT_SCHEMA: Final = "mneme.commitment.v1"
 INCLUSION_PROOF_SCHEMA: Final = "mneme.inclusion_proof.v1"
@@ -446,14 +446,12 @@ def _require_string(value: object, field_name: str) -> str:
 
 
 def _require_path(value: object, field_name: str) -> Path:
-    if not isinstance(value, str | PathLike):
-        raise ValidationError(f"{field_name} must be a path-like value")
-    raw = fspath(value)
-    if not isinstance(raw, str):
-        raise ValidationError(f"{field_name} must resolve to a text path")
-    if not raw:
-        raise ValidationError(f"{field_name} must not be empty")
-    return Path(raw)
+    return coerce_text_path(
+        value,
+        field_name,
+        type_error=ValidationError,
+        value_error=ValidationError,
+    )
 
 
 def _require_mapping(value: object, field_name: str) -> Mapping[str, object]:
