@@ -48,9 +48,9 @@ Initial constraints:
 
 ## Adapter Checkpoint Artifacts
 
-Adapter checkpoints use a JSON sidecar named `adapter.json` plus a relative
-weights file reference. The sidecar schema is `mneme.adapter_checkpoint.v1` and
-must include:
+Adapter checkpoints use a JSON sidecar named `adapter.json` plus a POSIX-style
+relative weights file reference. The sidecar schema is
+`mneme.adapter_checkpoint.v1` and must include:
 
 - `adapter_kind`;
 - JSON-compatible `adapter_config`;
@@ -60,8 +60,9 @@ must include:
 - `package_version`.
 
 Loaders must validate the sidecar before exposing the checkpoint, reject missing
-required fields, reject absolute or parent-traversing weight paths, require the
-weights file by default, and fail closed when the expected base fingerprint does
+required fields, reject absolute, drive-qualified, backslash, or
+parent-traversing weight paths, require the weights file by default, and fail
+closed when the expected base fingerprint does
 not match the sidecar.
 
 ## Release Gates

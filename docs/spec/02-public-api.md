@@ -353,7 +353,8 @@ records `schema_version`, `adapter_kind`, JSON-compatible `adapter_config`,
 `base_fingerprint`, `training_report_uri`, `weights_file`, and
 `package_version`. `load_adapter_checkpoint` accepts either a checkpoint
 directory containing `adapter.json` or a metadata JSON path, validates the
-sidecar, rejects absolute or parent-traversing weight paths, checks that the
+sidecar, resolves POSIX-style relative weight paths, rejects absolute,
+drive-qualified, backslash, or parent-traversing weight paths, checks that the
 weight file exists by default, and raises `FingerprintMismatchError` when
 `expected_base_fingerprint` does not match the sidecar. The `require_weights`
 option must be a real `bool` value.

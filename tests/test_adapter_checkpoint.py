@@ -210,22 +210,46 @@ def test_load_checkpoint_rejects_nonstandard_json_constants(tmp_path: Path) -> N
         load_adapter_checkpoint_metadata(tmp_path)
 
 
-def test_load_checkpoint_rejects_unsupported_schema_and_bad_weight_paths(
-    tmp_path: Path,
-) -> None:
+def test_load_checkpoint_rejects_unsupported_schema() -> None:
     payload = _metadata().to_json()
     payload["schema_version"] = "mneme.adapter_checkpoint.v2"
 
     with pytest.raises(SchemaVersionError, match="unsupported adapter checkpoint"):
         AdapterCheckpointMetadata.from_json(payload)
 
+
+def test_checkpoint_metadata_accepts_nested_relative_weight_path() -> None:
+    metadata = AdapterCheckpointMetadata(
+        adapter_kind="cross_attention",
+        adapter_config={"latent_dim": 3},
+        base_fingerprint=_fingerprint(),
+        training_report_uri="reports/adapter-training.json",
+        weights_file="weights/adapter.safetensors",
+    )
+
+    assert metadata.weights_file == "weights/adapter.safetensors"
+
+
+@pytest.mark.parametrize(
+    "weights_file",
+    (
+        "../adapter.safetensors",
+        "/tmp/adapter.safetensors",
+        "C:/Users/abdel/adapter.safetensors",
+        "\\\\server\\share\\adapter.safetensors",
+        "weights\\adapter.safetensors",
+        "~/adapter.safetensors",
+        "weights/",
+    ),
+)
+def test_checkpoint_metadata_rejects_unsafe_weight_paths(weights_file: str) -> None:
     with pytest.raises(ValidationError, match="weights_file"):
         AdapterCheckpointMetadata(
             adapter_kind="cross_attention",
             adapter_config={"latent_dim": 3},
             base_fingerprint=_fingerprint(),
             training_report_uri="reports/adapter-training.json",
-            weights_file="../adapter.safetensors",
+            weights_file=weights_file,
         )
 
 

@@ -115,9 +115,10 @@ Checkpoint metadata:
 }
 ```
 
-`load_adapter_checkpoint` validates this sidecar, resolves `weights_file`
-relative to the sidecar directory, rejects absolute or parent-traversing paths,
-requires the weights file by default, and fails closed with
+`load_adapter_checkpoint` validates this sidecar, resolves POSIX-style
+`weights_file` values relative to the sidecar directory, rejects absolute,
+drive-qualified, backslash, or parent-traversing paths, requires the weights file
+by default, and fails closed with
 `FingerprintMismatchError` when the expected base fingerprint differs from the
 checkpoint metadata.
 

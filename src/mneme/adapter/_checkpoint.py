@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any, Final
 
@@ -257,10 +257,18 @@ def _require_mapping_field(
 
 def _require_relative_file(value: object, field_name: str) -> str:
     text = _require_non_empty_str(value, field_name)
-    path = Path(text)
-    if path.is_absolute() or ".." in path.parts or not path.name:
+    path = PurePosixPath(text)
+    if (
+        path.is_absolute()
+        or ".." in path.parts
+        or "\\" in text
+        or ":" in text
+        or text.startswith("~")
+        or text.endswith(("/", "/."))
+        or not path.name
+    ):
         raise ValidationError(f"{field_name} must be a relative file path")
-    return text
+    return path.as_posix()
 
 
 def _require_path(value: object, field_name: str) -> Path:
