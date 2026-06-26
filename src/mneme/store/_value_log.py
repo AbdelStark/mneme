@@ -249,11 +249,17 @@ def _array_from_json(data: object) -> np.ndarray:
     if not np.issubdtype(dtype, np.number):
         raise StoreCorruptionError("array dtype must be numeric")
     shape_data = mapping.get("shape")
-    if not isinstance(shape_data, list) or not all(
-        isinstance(dim, int) and not isinstance(dim, bool) and dim >= 0
-        for dim in shape_data
+    if (
+        not isinstance(shape_data, list)
+        or not shape_data
+        or not all(
+            isinstance(dim, int) and not isinstance(dim, bool) and dim > 0
+            for dim in shape_data
+        )
     ):
-        raise StoreCorruptionError("array shape must be a list of non-negative ints")
+        raise StoreCorruptionError(
+            "array shape must be a non-empty list of positive ints"
+        )
     try:
         raw = base64.b64decode(
             _require_string(mapping.get("data"), "array data"),
