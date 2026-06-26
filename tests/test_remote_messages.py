@@ -73,6 +73,9 @@ def test_remote_array_rejects_boolean_shape_dimensions() -> None:
 
 def test_remote_array_rejects_empty_shapes_and_dimensions() -> None:
     with pytest.raises(ValidationError, match="at least one dimension"):
+        RemoteArray.from_array(np.array(1.0, dtype=np.float32))
+
+    with pytest.raises(ValidationError, match="at least one dimension"):
         RemoteArray(
             dtype="float32",
             shape=(),

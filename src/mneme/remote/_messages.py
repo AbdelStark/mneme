@@ -75,10 +75,11 @@ class RemoteArray:
             raise ValidationError("array dtype must be numeric")
         if not bool(np.isfinite(value).all()):
             raise ValidationError("array values must be finite")
+        shape = _array_shape(value.shape)
         array = np.ascontiguousarray(value)
         return cls(
             dtype=str(array.dtype),
-            shape=tuple(int(dim) for dim in array.shape),
+            shape=shape,
             byte_order=_byte_order(array.dtype),
             data=base64.b64encode(array.tobytes(order="C")).decode("ascii"),
         )
