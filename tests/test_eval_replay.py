@@ -93,6 +93,30 @@ def test_receipt_replay_shape_mismatch_writes_strict_json(tmp_path: Path) -> Non
     assert written["max_abs_error"] is None
 
 
+def test_receipt_replay_writers_wrap_output_filesystem_errors(
+    tmp_path: Path,
+) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+    trace = _trace(tmp_path)
+    report = ReceiptReplayReport(**_report_values())
+
+    with pytest.raises(
+        EvaluationError,
+        match="replay trace could not be written",
+    ) as trace_error:
+        write_replay_trace_json(trace, blocked_parent / "trace.json")
+    with pytest.raises(
+        EvaluationError,
+        match="replay report could not be written",
+    ) as report_error:
+        write_replay_report_json(report, blocked_parent / "report.json")
+
+    assert isinstance(trace_error.value.__cause__, OSError)
+    assert isinstance(report_error.value.__cause__, OSError)
+    assert blocked_parent.is_file()
+
+
 def test_receipt_replay_cli_writes_report(tmp_path: Path) -> None:
     trace = _trace(tmp_path)
     trace_path = tmp_path / "trace.json"

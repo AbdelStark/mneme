@@ -375,7 +375,7 @@ def replay_receipt_trace(
 def write_replay_trace_json(trace: ReceiptReplayTrace, path: str | Path) -> None:
     """Write a replay trace JSON artifact."""
 
-    _write_json(path, trace.to_json())
+    _write_json(path, trace.to_json(), artifact_name="replay trace")
 
 
 def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
@@ -395,7 +395,7 @@ def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
 def write_replay_report_json(report: ReceiptReplayReport, path: str | Path) -> None:
     """Write a replay report JSON artifact."""
 
-    _write_json(path, report.to_json())
+    _write_json(path, report.to_json(), artifact_name="replay report")
 
 
 def _condition(
@@ -531,8 +531,16 @@ def _max_abs_error(left: np.ndarray, right: np.ndarray) -> float | None:
     return float(np.max(np.abs(left - right)))
 
 
-def _write_json(path: str | Path, data: Mapping[str, object]) -> None:
-    write_strict_json_file(path, data, sort_keys=True, indent=2)
+def _write_json(
+    path: str | Path,
+    data: Mapping[str, object],
+    *,
+    artifact_name: str,
+) -> None:
+    try:
+        write_strict_json_file(path, data, sort_keys=True, indent=2)
+    except OSError as exc:
+        raise EvaluationError(f"{artifact_name} could not be written: {path}") from exc
 
 
 def _require_mapping(value: object, field_name: str) -> Mapping[str, Any]:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mneme.core import SchemaVersionError, ValidationError
+from mneme.core import EvaluationError, SchemaVersionError, ValidationError
 from mneme.eval import (
     DATASET_REF_SCHEMA,
     EVAL_REPORT_SCHEMA,
@@ -77,6 +77,21 @@ def test_write_report_json_rejects_nonfinite_runtime_payload(tmp_path: Path) -> 
 
     assert not output.exists()
     assert not output.parent.exists()
+
+
+def test_write_report_json_wraps_output_filesystem_errors(tmp_path: Path) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+    output = blocked_parent / "gate.json"
+
+    with pytest.raises(
+        EvaluationError,
+        match="evaluation report could not be written",
+    ) as exc_info:
+        write_report_json(_report(), output)
+
+    assert isinstance(exc_info.value.__cause__, OSError)
+    assert blocked_parent.is_file()
 
 
 def test_missing_caveats_fail_for_fixture_reports() -> None:

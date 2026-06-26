@@ -9,7 +9,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Final, Literal, TypeAlias
 
-from mneme.core import SchemaVersionError, ValidationError
+from mneme.core import EvaluationError, SchemaVersionError, ValidationError
 from mneme.core._json import write_strict_json_file
 
 DATASET_REF_SCHEMA: Final = "mneme.dataset_ref.v1"
@@ -189,7 +189,12 @@ def validate_report_json(data: object) -> EvalReport:
 def write_report_json(report: EvalReport, path: str | Path) -> None:
     """Write a schema-versioned evaluation report as deterministic JSON."""
 
-    write_strict_json_file(path, report.to_json(), sort_keys=True, indent=2)
+    try:
+        write_strict_json_file(path, report.to_json(), sort_keys=True, indent=2)
+    except OSError as exc:
+        raise EvaluationError(
+            f"evaluation report could not be written: {path}"
+        ) from exc
 
 
 def _validate_schema(schema_version: str, expected: str, name: str) -> None:

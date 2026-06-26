@@ -33,6 +33,8 @@ from mneme.core._json import loads_strict_json
 from mneme.eval import (
     BenchmarkSpec,
     DryRunBenchmarkRunner,
+    EvalReport,
+    ReceiptReplayReport,
     load_benchmark_dataset_ref,
     load_replay_trace_json,
     parse_benchmark_modes,
@@ -309,10 +311,7 @@ def _handle_eval_fixtures(args: argparse.Namespace) -> object:
         str(args.seed),
     )
     report = run_fixture_evaluation(seed=args.seed, command=command)
-    try:
-        write_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(f"failed to write fixture report: {args.out}") from exc
+    _write_eval_report(report, args.out, report_name="fixture")
     return report
 
 
@@ -352,10 +351,7 @@ def _handle_eval_profile(args: argparse.Namespace) -> object:
         seed=args.seed,
         command=command,
     )
-    try:
-        write_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(f"failed to write profile report: {args.out}") from exc
+    _write_eval_report(report, args.out, report_name="profile")
     return report
 
 
@@ -391,22 +387,14 @@ def _handle_eval_receipts(args: argparse.Namespace) -> object:
         seed=args.seed,
         command=command,
     )
-    try:
-        write_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(
-            f"failed to write receipt profile report: {args.out}"
-        ) from exc
+    _write_eval_report(report, args.out, report_name="receipt profile")
     return report
 
 
 def _handle_eval_replay(args: argparse.Namespace) -> object:
     trace = load_replay_trace_json(args.trace)
     report = replay_receipt_trace(trace, atol=args.atol)
-    try:
-        write_replay_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(f"failed to write replay report: {args.out}") from exc
+    _write_replay_report(report, args.out)
     return report
 
 
@@ -421,12 +409,7 @@ def _handle_eval_remote_conformance(args: argparse.Namespace) -> object:
         str(args.seed),
     )
     report = run_remote_conformance_evaluation(seed=args.seed, command=command)
-    try:
-        write_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(
-            f"failed to write remote conformance report: {args.out}"
-        ) from exc
+    _write_eval_report(report, args.out, report_name="remote conformance")
     return report
 
 
@@ -441,12 +424,7 @@ def _handle_eval_cross_source(args: argparse.Namespace) -> object:
         str(args.seed),
     )
     report = run_cross_source_transfer_evaluation(seed=args.seed, command=command)
-    try:
-        write_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(
-            f"failed to write cross-source transfer report: {args.out}"
-        ) from exc
+    _write_eval_report(report, args.out, report_name="cross-source transfer")
     return report
 
 
@@ -481,11 +459,22 @@ def _handle_eval_benchmark(args: argparse.Namespace) -> object:
         seed=args.seed,
     )
     report = run_external_benchmark(DryRunBenchmarkRunner(), spec)
-    try:
-        write_report_json(report, args.out)
-    except OSError as exc:
-        raise EvaluationError(f"failed to write benchmark report: {args.out}") from exc
+    _write_eval_report(report, args.out, report_name="benchmark")
     return report
+
+
+def _write_eval_report(report: EvalReport, out: Path, *, report_name: str) -> None:
+    try:
+        write_report_json(report, out)
+    except (EvaluationError, OSError) as exc:
+        raise EvaluationError(f"failed to write {report_name} report: {out}") from exc
+
+
+def _write_replay_report(report: ReceiptReplayReport, out: Path) -> None:
+    try:
+        write_replay_report_json(report, out)
+    except (EvaluationError, OSError) as exc:
+        raise EvaluationError(f"failed to write replay report: {out}") from exc
 
 
 def _handle_receipts_verify(args: argparse.Namespace) -> object:
