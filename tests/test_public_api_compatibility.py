@@ -30,6 +30,19 @@ def test_public_exports_signatures_and_schema_versions_match_snapshot() -> None:
     )
 
 
+def test_public_index_concrete_api_signatures_are_pinned() -> None:
+    snapshot = _load_mapping(SNAPSHOT)
+    signatures = _mapping(snapshot["signatures"])
+    index_module = importlib.import_module("mneme.index")
+    expected = {
+        f"mneme.index.{name}"
+        for name in index_module.__all__
+        if _requires_signature_pin(getattr(index_module, name))
+    }
+
+    assert expected <= set(signatures)
+
+
 def test_documented_protocols_remain_public_protocols() -> None:
     snapshot = _load_mapping(SNAPSHOT)
 
@@ -98,6 +111,12 @@ def _resolve(path: str) -> Any:
     module_name, _, name = path.rpartition(".")
     module = importlib.import_module(module_name)
     return getattr(module, name)
+
+
+def _requires_signature_pin(symbol: object) -> bool:
+    if getattr(symbol, "_is_protocol", False):
+        return False
+    return inspect.isclass(symbol) or inspect.isfunction(symbol)
 
 
 def _load_mapping(path: Path) -> Mapping[str, Any]:
