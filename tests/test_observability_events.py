@@ -104,6 +104,8 @@ def test_observability_config_and_required_event_names() -> None:
     assert not has_event_sink(ObservabilityConfig())
 
     invalid_configs = (
+        {"event_sink": object()},
+        {"event_sink": type("NonCallableSink", (), {"emit": object()})()},
         {"redact_metadata": "yes"},
         {"include_content_id_prefixes": 1},
         {"content_id_prefix_bytes": True},

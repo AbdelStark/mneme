@@ -69,6 +69,10 @@ class ObservabilityConfig:
     content_id_prefix_bytes: int = 6
 
     def __post_init__(self) -> None:
+        if self.event_sink is not None and not callable(
+            getattr(self.event_sink, "emit", None)
+        ):
+            raise ValidationError("event_sink must expose a callable emit method")
         if not isinstance(self.redact_metadata, bool):
             raise ValidationError("redact_metadata must be a bool")
         if not isinstance(self.include_content_id_prefixes, bool):

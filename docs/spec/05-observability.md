@@ -21,8 +21,9 @@ Events are JSON-serializable dictionaries with:
 - `error_type` when failed
 
 Library embedders configure event emission with `mneme.observability.ObservabilityConfig`
-and an `EventSink`. When no sink is configured, core operations do not construct
-or dispatch events. Malformed observability configuration raises
+and an `EventSink` exposing a callable `emit(event)` method. When no sink is
+configured, core operations do not construct or dispatch events. Malformed
+observability configuration raises
 `ValidationError` before any event is emitted. Event sink dispatch is best
 effort: sink failures must not fail core operations or mask the original typed
 error from an operation.
