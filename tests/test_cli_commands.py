@@ -198,6 +198,65 @@ def test_query_cli_rejects_nonstandard_vector_json(tmp_path: Path) -> None:
     error = _stdout_json(result)
     assert error["schema_version"] == "mneme.cli_error.v1"
     assert error["error_type"] == "QueryError"
+    assert "vector file is not valid JSON" in str(error["errors"][0])
+    assert str(vector_path) in str(error["errors"][0])
+
+
+def test_query_cli_rejects_vector_object_without_vector_field(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    vector_path = tmp_path / "query.json"
+    init_store(root)
+    vector_path.write_text('{"query": [1.0, 0.0]}', encoding="utf-8")
+
+    result = run_cli(
+        "query",
+        root,
+        "--vector",
+        vector_path,
+        "--k",
+        "1",
+        "--metric",
+        "l2",
+        "--json",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "QueryError"
+    assert "must include a 'vector' field" in str(error["errors"][0])
+    assert str(vector_path) in str(error["errors"][0])
+
+
+def test_query_cli_rejects_nonnumeric_vector_payload(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    vector_path = tmp_path / "query.json"
+    init_store(root)
+    vector_path.write_text('{"vector": ["bad", 0.0]}', encoding="utf-8")
+
+    result = run_cli(
+        "query",
+        root,
+        "--vector",
+        vector_path,
+        "--k",
+        "1",
+        "--metric",
+        "l2",
+        "--json",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "QueryError"
+    assert "vector file must contain a numeric JSON array" in str(error["errors"][0])
+    assert str(vector_path) in str(error["errors"][0])
+    assert "could not convert" in str(error["errors"][0])
 
 
 def test_query_cli_wraps_unreadable_vector_path_as_query_error(

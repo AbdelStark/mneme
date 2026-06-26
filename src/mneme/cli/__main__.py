@@ -505,11 +505,17 @@ def _load_vector(path: Path) -> np.ndarray:
     except ValueError as exc:
         raise QueryError(f"vector file is not valid JSON: {path}") from exc
     if isinstance(data, dict):
-        data = data.get("vector")
+        if "vector" not in data:
+            raise QueryError(
+                f"vector file object must include a 'vector' field: {path}"
+            )
+        data = data["vector"]
     try:
         return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
     except (TypeError, ValueError) as exc:
-        raise QueryError("vector file must contain a numeric JSON array") from exc
+        raise QueryError(
+            f"vector file must contain a numeric JSON array: {path}: {exc}"
+        ) from exc
 
 
 def _load_receipt(path: Path) -> RetrievalReceipt:
