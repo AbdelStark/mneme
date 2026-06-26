@@ -458,6 +458,44 @@ def test_eval_receipts_cli_rejects_negative_warmup_count(
     assert "argument --warmup: must be a non-negative integer" in result.stderr
 
 
+def test_eval_replay_cli_rejects_invalid_atol_before_trace_io(
+    tmp_path: Path,
+) -> None:
+    result = run_cli(
+        "eval",
+        "replay",
+        "--trace",
+        tmp_path / "missing-trace.json",
+        "--out",
+        tmp_path / "replay.json",
+        "--atol",
+        "nan",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    assert result.stdout == ""
+    assert "argument --atol: must be a finite number" in result.stderr
+
+
+def test_eval_replay_cli_rejects_negative_atol_before_trace_io(
+    tmp_path: Path,
+) -> None:
+    result = run_cli(
+        "eval",
+        "replay",
+        "--trace",
+        tmp_path / "missing-trace.json",
+        "--out",
+        tmp_path / "replay.json",
+        "--atol",
+        "-0.1",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    assert result.stdout == ""
+    assert "argument --atol: must be a non-negative finite number" in result.stderr
+
+
 def test_eval_remote_conformance_cli_writes_and_prints_valid_report(
     tmp_path: Path,
 ) -> None:

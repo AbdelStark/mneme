@@ -49,7 +49,7 @@ from mneme.eval import (
     write_replay_report_json,
     write_report_json,
 )
-from mneme.eval._entrypoints import non_negative_int, positive_int
+from mneme.eval._entrypoints import non_negative_float, non_negative_int, positive_int
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import (
     StoreStats,
@@ -190,7 +190,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     replay_parser.add_argument("--trace", required=True, type=Path)
     replay_parser.add_argument("--out", required=True, type=Path)
-    replay_parser.add_argument("--atol", default=1e-6, type=float)
+    replay_parser.add_argument("--atol", default=1e-6, type=non_negative_float)
     replay_parser.set_defaults(command="eval replay", handler=_handle_eval_replay)
 
     remote_conformance_parser = eval_subparsers.add_parser(
