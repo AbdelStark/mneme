@@ -738,7 +738,7 @@ def init_store(
     """Create a local store layout and schema-versioned manifest."""
 
     exist_ok = _require_bool(exist_ok, "exist_ok")
-    root = Path(path)
+    root = _require_local_store_path(path)
     manifest_path = root / _MANIFEST_FILE
     if manifest_path.exists() and not exist_ok:
         raise StoreError(f"store manifest already exists at {manifest_path}")
@@ -791,7 +791,7 @@ def open_store(
     """Open a local store, optionally initializing it when absent."""
 
     create = _require_bool(create, "create")
-    root = Path(path)
+    root = _require_local_store_path(path)
     manifest_path = root / _MANIFEST_FILE
     if not manifest_path.exists():
         if create:
@@ -810,7 +810,7 @@ def open_store(
 def load_manifest(path: str | Path) -> StoreManifest:
     """Load and validate manifest.json from a store path or manifest path."""
 
-    candidate = Path(path)
+    candidate = _require_local_store_path(path)
     manifest_path = (
         candidate if candidate.name == _MANIFEST_FILE else candidate / _MANIFEST_FILE
     )

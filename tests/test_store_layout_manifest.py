@@ -195,6 +195,36 @@ def test_store_open_and_init_bool_flags_reject_non_bool_values(tmp_path) -> None
         init_store(root, exist_ok="yes")  # type: ignore[arg-type]
 
 
+def test_store_path_entrypoints_reject_empty_paths_without_layout_side_effects(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValidationError, match="path must not be empty"):
+        init_store("")
+    with pytest.raises(ValidationError, match="path must not be empty"):
+        open_store("", create=True)
+    with pytest.raises(ValidationError, match="path must not be empty"):
+        load_manifest("")
+
+    assert not (tmp_path / "manifest.json").exists()
+    assert not (tmp_path / "values").exists()
+    assert not (tmp_path / "index").exists()
+    assert not (tmp_path / "transactions").exists()
+    assert not (tmp_path / "receipts").exists()
+
+
+@pytest.mark.parametrize("path_value", (object(),))
+def test_store_path_entrypoints_reject_non_path_like_values(path_value: object) -> None:
+    with pytest.raises(ValidationError, match="path must be a path-like value"):
+        init_store(path_value)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must be a path-like value"):
+        open_store(path_value)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must be a path-like value"):
+        load_manifest(path_value)  # type: ignore[arg-type]
+
+
 def test_load_manifest_reconstructs_fingerprints_and_index_config(tmp_path) -> None:
     root = tmp_path / "store"
     init_store(root, active_fingerprints=[_fingerprint()])
