@@ -72,9 +72,13 @@ def test_write_report_json_rejects_nonfinite_runtime_payload(tmp_path: Path) -> 
     report = _report()
     object.__setattr__(report, "metrics", {"bad": float("nan")})
 
-    with pytest.raises(ValueError, match="Out of range float values"):
+    with pytest.raises(
+        EvaluationError,
+        match="evaluation report could not be serialized",
+    ) as exc_info:
         write_report_json(report, output)
 
+    assert isinstance(exc_info.value.__cause__, ValueError)
     assert not output.exists()
     assert not output.parent.exists()
 
