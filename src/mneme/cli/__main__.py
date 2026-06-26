@@ -73,15 +73,15 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
         return int(CliExitCode.USER_INPUT)
     try:
         report = args.handler(args)
+        payload = report_to_json(report)
+        print_json(payload, stdout)
+        return success_exit_code(payload)
     except MnemeError as exc:
         print_json(error_json(exc), stdout)
         return cli_exit_code(exc)
     except Exception as exc:
         print_json(error_json(exc), stdout)
         return int(CliExitCode.INTERNAL)
-    payload = report_to_json(report)
-    print_json(payload, stdout)
-    return success_exit_code(payload)
 
 
 def _build_parser() -> argparse.ArgumentParser:

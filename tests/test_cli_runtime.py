@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import argparse
+import json
 from io import StringIO
 
 import pytest
 
+import mneme.cli.__main__ as cli_main_module
 from mneme.cli._runtime import JsonResult, print_json
-from mneme.core import ValidationError
+from mneme.core import CliExitCode, ValidationError
 
 
 def test_json_result_copies_payload_and_keeps_wrapper_ok_authoritative() -> None:
@@ -59,3 +62,23 @@ def test_print_json_rejects_nonfinite_numbers() -> None:
         print_json({"metric": float("nan")}, stream)
 
     assert stream.getvalue() == ""
+
+
+def test_main_wraps_output_serialization_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stream = StringIO()
+    parser = argparse.ArgumentParser(prog="mneme")
+    parser.set_defaults(
+        command="fixture",
+        handler=lambda _args: {"schema_version": "mneme.fixture.v1", "bad": object()},
+    )
+    monkeypatch.setattr(cli_main_module, "_build_parser", lambda: parser)
+
+    returncode = cli_main_module.main([], stdout=stream)
+
+    assert returncode == int(CliExitCode.INTERNAL)
+    payload = json.loads(stream.getvalue())
+    assert payload["schema_version"] == "mneme.cli_error.v1"
+    assert payload["ok"] is False
+    assert payload["error_type"] == "TypeError"
