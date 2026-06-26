@@ -88,4 +88,5 @@ def test_fixture_eval_module_reports_typed_write_error(tmp_path: Path) -> None:
     assert completed.returncode == int(CliExitCode.INTERNAL)
     assert completed.stdout == ""
     assert "EvaluationError: failed to write fixture report" in completed.stderr
+    assert "evaluation report could not be written" in completed.stderr
     assert "Traceback" not in completed.stderr

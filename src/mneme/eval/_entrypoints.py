@@ -53,7 +53,9 @@ def write_report_for_entrypoint(
     try:
         write_report_json(report, out)
     except (EvaluationError, OSError) as exc:
-        raise EvaluationError(f"failed to write {report_name} report: {out}") from exc
+        raise EvaluationError(
+            f"failed to write {report_name} report: {out}: {exc}"
+        ) from exc
     if echo_path:
         target = sys.stdout if stdout is None else stdout
         print(out, file=target)

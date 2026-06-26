@@ -467,14 +467,16 @@ def _write_eval_report(report: EvalReport, out: Path, *, report_name: str) -> No
     try:
         write_report_json(report, out)
     except (EvaluationError, OSError) as exc:
-        raise EvaluationError(f"failed to write {report_name} report: {out}") from exc
+        raise EvaluationError(
+            f"failed to write {report_name} report: {out}: {exc}"
+        ) from exc
 
 
 def _write_replay_report(report: ReceiptReplayReport, out: Path) -> None:
     try:
         write_replay_report_json(report, out)
     except (EvaluationError, OSError) as exc:
-        raise EvaluationError(f"failed to write replay report: {out}") from exc
+        raise EvaluationError(f"failed to write replay report: {out}: {exc}") from exc
 
 
 def _handle_receipts_verify(args: argparse.Namespace) -> object:

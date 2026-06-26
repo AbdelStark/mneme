@@ -250,6 +250,7 @@ def test_eval_fixtures_cli_reports_typed_write_error(tmp_path: Path) -> None:
     error = _stdout_json(result)
     assert error["schema_version"] == "mneme.cli_error.v1"
     assert error["error_type"] == "EvaluationError"
+    assert "evaluation report could not be written" in str(error["errors"][0])
 
 
 def test_eval_profile_cli_writes_and_prints_valid_report(tmp_path: Path) -> None:
