@@ -36,7 +36,8 @@ Out of scope for v0.x:
   conditioners, and `raise_for_remote_error` maps remote failures to local typed
   exceptions.
 - The first HTTP JSON adapter supports bearer-token checks at the ASGI wrapper
-  boundary, but deployment must still provide authenticated transport. Bearer
+  boundary. Bearer tokens must be non-empty ASCII token values without
+  whitespace, but deployment must still provide authenticated transport. Bearer
   tokens do not add confidentiality on an unauthenticated plaintext channel.
 
 ## Integrity Controls

@@ -52,6 +52,9 @@ AsgiScope: TypeAlias = Mapping[str, object]
 AsgiMessage: TypeAlias = dict[str, object]
 AsgiReceive: TypeAlias = Callable[[], Awaitable[AsgiMessage]]
 AsgiSend: TypeAlias = Callable[[AsgiMessage], Awaitable[None]]
+_BEARER_TOKEN_ERROR = (
+    "remote HTTP bearer_token must be a non-empty ASCII token without whitespace"
+)
 
 
 @dataclass(frozen=True)
@@ -66,12 +69,8 @@ class RemoteHttpConfig:
         if not isinstance(self.base_url, str) or not self.base_url:
             raise ValidationError("remote HTTP base_url must be non-empty")
         _validate_http_base_url(self.base_url)
-        if self.bearer_token is not None and (
-            not isinstance(self.bearer_token, str) or not self.bearer_token
-        ):
-            raise ValidationError(
-                "remote HTTP bearer_token must be a non-empty string or None"
-            )
+        if self.bearer_token is not None:
+            _require_bearer_token(self.bearer_token)
         if (
             isinstance(self.timeout_seconds, bool)
             or not isinstance(self.timeout_seconds, int | float)
@@ -195,12 +194,8 @@ class MemoryStoreASGIApp:
         *,
         bearer_token: str | None = None,
     ) -> None:
-        if bearer_token is not None and (
-            not isinstance(bearer_token, str) or not bearer_token
-        ):
-            raise ValidationError(
-                "remote HTTP bearer_token must be a non-empty string or None"
-            )
+        if bearer_token is not None:
+            _require_bearer_token(bearer_token)
         self.store = store
         self.bearer_token = bearer_token
 
@@ -288,6 +283,18 @@ def _validate_asgi_bind(host: object, port: object) -> None:
         raise ValidationError("remote HTTP serve host must be a non-empty string")
     if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
         raise ValidationError("remote HTTP serve port must be an integer 0..65535")
+
+
+def _require_bearer_token(value: object) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValidationError(_BEARER_TOKEN_ERROR)
+    try:
+        encoded = value.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise ValidationError(_BEARER_TOKEN_ERROR) from exc
+    if any(byte <= 0x20 or byte == 0x7F for byte in encoded):
+        raise ValidationError(_BEARER_TOKEN_ERROR)
+    return value
 
 
 def _stdlib_request_json(

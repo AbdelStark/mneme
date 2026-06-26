@@ -164,7 +164,7 @@ v0.4 adds remote message models and a conformance suite. The first transport ada
 ## Resolved Bootstrap Decisions
 
 - First supported transport: v0.4 implements HTTP JSON over an ASGI-compatible service boundary. The message schema remains transport-independent, but the first adapter uses request/response semantics that match `put`, `query`, `prove`, `root`, and `stats`.
-- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. `MemoryStoreASGIApp` can require a bearer token at the application boundary, but TLS, network policy, credential storage, root publication, log retention, backup controls, and key rotation are operator responsibilities. Anonymous writable stores are not a supported deployment pattern.
+- Minimum shared-store authentication guidance: remote/shared examples must require authenticated transport, operator-managed bearer credentials or equivalent deployment authentication, and signed roots for provenance claims. `MemoryStoreASGIApp` can require a non-empty ASCII bearer token without whitespace at the application boundary, but TLS, network policy, credential storage, root publication, log retention, backup controls, and key rotation are operator responsibilities. Anonymous writable stores are not a supported deployment pattern.
 
 ## References
 

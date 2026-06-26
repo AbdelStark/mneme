@@ -438,7 +438,8 @@ adapter. It sends HTTP JSON messages for `put`, `query`, `prove`, `root`, and
 `stats`, and always applies `validate_query_response` before returning query
 results to callers. `MemoryStoreASGIApp(store, bearer_token=...)` exposes a
 local `MemoryStore`-compatible object through the same message schema for ASGI
-servers. Running the ASGI app with the bundled helper requires the `remote`
+servers. Bearer tokens must be non-empty ASCII token values without whitespace.
+Running the ASGI app with the bundled helper requires the `remote`
 extra, which provides `uvicorn`; missing serving dependencies raise
 `OptionalDependencyError(extra="remote", package="uvicorn")`.
 The helper validates `host` and TCP `port` before importing optional serving

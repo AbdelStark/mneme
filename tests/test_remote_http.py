@@ -73,10 +73,11 @@ def test_remote_http_client_asgi_smoke_put_query_root_stats(tmp_path: Path) -> N
 def test_remote_http_config_normalizes_and_validates_inputs() -> None:
     config = RemoteHttpConfig(
         "http://testserver",
-        bearer_token="secret",
+        bearer_token="secret-._~+/=",
         timeout_seconds=5,
     )
 
+    assert config.bearer_token == "secret-._~+/="
     assert config.timeout_seconds == 5.0
 
     invalid_cases = [
@@ -89,6 +90,19 @@ def test_remote_http_config_normalizes_and_validates_inputs() -> None:
         ({"base_url": "http://testserver?token=secret"}, "base_url"),
         ({"base_url": "http://testserver#fragment"}, "base_url"),
         ({"base_url": "http://testserver", "bearer_token": ""}, "bearer_token"),
+        ({"base_url": "http://testserver", "bearer_token": " "}, "bearer_token"),
+        (
+            {"base_url": "http://testserver", "bearer_token": "secret token"},
+            "bearer_token",
+        ),
+        (
+            {"base_url": "http://testserver", "bearer_token": "secret\nvalue"},
+            "bearer_token",
+        ),
+        (
+            {"base_url": "http://testserver", "bearer_token": "secrét"},
+            "bearer_token",
+        ),
         (
             {"base_url": "http://testserver", "bearer_token": object()},
             "bearer_token",
@@ -192,10 +206,9 @@ def test_remote_http_duplicate_authorization_headers_fail_closed(
 def test_remote_http_asgi_app_validates_bearer_token(tmp_path: Path) -> None:
     store = init_store(tmp_path / "store")
 
-    with pytest.raises(ValidationError, match="bearer_token"):
-        MemoryStoreASGIApp(store, bearer_token="")
-    with pytest.raises(ValidationError, match="bearer_token"):
-        MemoryStoreASGIApp(store, bearer_token=object())  # type: ignore[arg-type]
+    for token in ("", " ", "secret token", "secret\nvalue", "secrét", object()):
+        with pytest.raises(ValidationError, match="bearer_token"):
+            MemoryStoreASGIApp(store, bearer_token=token)  # type: ignore[arg-type]
 
 
 def test_http_json_response_validates_status_and_payload() -> None:
