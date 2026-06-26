@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, is_dataclass
@@ -17,6 +16,7 @@ from mneme.core import (
     FingerprintMismatchError,
     ValidationError,
 )
+from mneme.core._json import dumps_strict_json
 from mneme.encode._protocols import Summarizer
 
 _DIGEST_PREFIX = "blake3:"
@@ -26,12 +26,11 @@ _CHUNK_SIZE = 1024 * 1024
 def digest_config(config: Mapping[str, Any]) -> str:
     """Digest JSON-compatible configuration with stable key ordering."""
 
-    canonical = json.dumps(
+    canonical = dumps_strict_json(
         _json_ready(config),
+        ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
-        ensure_ascii=False,
-        allow_nan=False,
     ).encode("utf-8")
     return _digest_bytes(canonical)
 

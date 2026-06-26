@@ -12,15 +12,17 @@ from typing import NoReturn
 def dumps_strict_json(
     value: object,
     *,
+    ensure_ascii: bool = True,
     sort_keys: bool = False,
     indent: int | str | None = None,
     separators: tuple[str, str] | None = None,
 ) -> str:
-    """Serialize JSON while rejecting non-standard NaN and Infinity constants."""
+    """Serialize JSON while rejecting weak object keys and non-standard constants."""
 
     _require_string_object_keys(value)
     return json.dumps(
         value,
+        ensure_ascii=ensure_ascii,
         sort_keys=sort_keys,
         indent=indent,
         separators=separators,
@@ -44,6 +46,7 @@ def write_strict_json_file(
     path: str | Path,
     value: object,
     *,
+    ensure_ascii: bool = True,
     sort_keys: bool = False,
     indent: int | str | None = None,
     separators: tuple[str, str] | None = None,
@@ -53,6 +56,7 @@ def write_strict_json_file(
     payload = (
         dumps_strict_json(
             value,
+            ensure_ascii=ensure_ascii,
             sort_keys=sort_keys,
             indent=indent,
             separators=separators,

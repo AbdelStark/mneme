@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import numpy as np
 import pytest
+from blake3 import blake3
 
 from mneme.core import (
     FingerprintMismatchError,
@@ -43,6 +44,12 @@ def test_config_digest_is_stable_and_order_independent() -> None:
 
     assert left == right
     assert left.startswith("blake3:")
+
+
+def test_config_digest_uses_utf8_canonical_bytes() -> None:
+    expected = "blake3:" + blake3('{"label":"caf\u00e9"}'.encode("utf-8")).hexdigest()
+
+    assert digest_config({"label": "caf\u00e9"}) == expected
 
 
 def test_fingerprint_changes_when_summarizer_config_changes() -> None:
@@ -135,3 +142,11 @@ def test_fingerprint_is_included_in_content_id_input() -> None:
 def test_digest_config_rejects_unsupported_values() -> None:
     with pytest.raises(ValidationError, match="unsupported configuration"):
         digest_config({"raw": b"bytes"})
+
+
+def test_digest_config_rejects_invalid_json_boundaries() -> None:
+    with pytest.raises(ValidationError, match="configuration keys"):
+        digest_config({"nested": {1: "coerced"}})
+
+    with pytest.raises(ValidationError, match="configuration floats must be finite"):
+        digest_config({"scale": float("inf")})

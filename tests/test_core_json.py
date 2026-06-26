@@ -49,6 +49,13 @@ def test_strict_json_preserves_deterministic_formatting() -> None:
     )
 
 
+def test_strict_json_exposes_ascii_escape_policy() -> None:
+    payload = {"label": "caf\u00e9"}
+
+    assert dumps_strict_json(payload) == '{"label": "caf\\u00e9"}'
+    assert dumps_strict_json(payload, ensure_ascii=False) == '{"label": "caf\u00e9"}'
+
+
 def test_write_strict_json_file_serializes_before_filesystem_side_effects(
     tmp_path,
 ) -> None:
