@@ -522,13 +522,15 @@ def _load_receipt(path: Path) -> RetrievalReceipt:
             f"receipt file could not be read: {path}"
         ) from exc
     except ValueError as exc:
-        raise ReceiptVerificationError("receipt file is not valid JSON") from exc
+        raise ReceiptVerificationError(
+            f"receipt file is not valid JSON: {path}"
+        ) from exc
     try:
         return RetrievalReceipt.from_json(data)
     except MnemeError as exc:
-        raise ReceiptVerificationError("receipt file is invalid") from exc
+        raise ReceiptVerificationError(f"receipt file is invalid: {exc}") from exc
     except (TypeError, ValueError) as exc:
-        raise ReceiptVerificationError("receipt file is invalid") from exc
+        raise ReceiptVerificationError(f"receipt file is invalid: {exc}") from exc
 
 
 def _root_from_hex(value: str) -> bytes:
