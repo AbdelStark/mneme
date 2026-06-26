@@ -110,6 +110,14 @@ def test_public_api_core_types_block_has_unique_declarations() -> None:
     assert 'schema_version: str = "mneme.query_spec.v1"' in code_block
 
 
+def test_data_model_metadata_boundary_matches_core_validation() -> None:
+    data_model = Path("docs/spec/03-data-model.md").read_text(encoding="utf-8")
+
+    assert "JSON-compatible scalars, arrays, or objects" in data_model
+    assert "`bytes` and `bytearray` metadata are rejected" in data_model
+    assert "Binary metadata is stored as base64" not in data_model
+
+
 def test_changelog_has_initial_unreleased_section() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
 

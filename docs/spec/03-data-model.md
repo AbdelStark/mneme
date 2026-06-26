@@ -98,7 +98,10 @@ Canonical content-id input order:
 5. value bytes
 6. normalized metadata
 
-Metadata values must be JSON-compatible scalars, arrays, or objects after normalization. Binary metadata is stored as base64 with an explicit encoding tag.
+Metadata values must be JSON-compatible scalars, arrays, or objects after
+normalization. `bytes` and `bytearray` metadata are rejected rather than
+implicitly base64-encoded; callers that need binary metadata must encode it into
+an explicit JSON object or string before constructing a `MemoryItem`.
 
 Invariants:
 
