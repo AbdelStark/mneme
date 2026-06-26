@@ -17,6 +17,7 @@ from mneme.core import (
     Metric,
     QuerySpec,
     Transition,
+    ValidationError,
 )
 from mneme.eval import (
     RECEIPT_REPLAY_REPORT_SCHEMA,
@@ -115,6 +116,39 @@ def test_receipt_replay_writers_wrap_output_filesystem_errors(
     assert isinstance(trace_error.value.__cause__, OSError)
     assert isinstance(report_error.value.__cause__, OSError)
     assert blocked_parent.is_file()
+
+
+def test_receipt_replay_writers_wrap_runtime_serialization_errors(
+    tmp_path: Path,
+) -> None:
+    trace = _trace(tmp_path)
+    report = ReceiptReplayReport(**_report_values())
+    trace_output = tmp_path / "reports" / "trace.json"
+    report_output = tmp_path / "reports" / "report.json"
+
+    object.__setattr__(trace, "distances", (float("nan"), *trace.distances[1:]))
+    object.__setattr__(
+        report,
+        "expected_prediction",
+        np.array([float("nan"), 0.0], dtype=np.float32),
+    )
+
+    with pytest.raises(
+        EvaluationError,
+        match="replay trace could not be serialized",
+    ) as trace_error:
+        write_replay_trace_json(trace, trace_output)
+    with pytest.raises(
+        EvaluationError,
+        match="replay report could not be serialized",
+    ) as report_error:
+        write_replay_report_json(report, report_output)
+
+    assert isinstance(trace_error.value.__cause__, ValueError)
+    assert isinstance(report_error.value.__cause__, ValidationError)
+    assert not trace_output.exists()
+    assert not report_output.exists()
+    assert not trace_output.parent.exists()
 
 
 def test_receipt_replay_cli_writes_report(tmp_path: Path) -> None:

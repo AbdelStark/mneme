@@ -32,6 +32,8 @@ All notable user-visible changes are recorded here.
 - Hardened remote conformance ASGI response validation for malformed response
   messages and HTTP statuses.
 - Hardened evaluation report writing against non-serializable runtime payloads.
+- Hardened receipt replay artifact writing against non-serializable runtime
+  payloads.
 - Hardened store manifest and retention tombstone validation against malformed
   or non-UTC timestamps.
 - Hardened store verification against malformed persisted index snapshot item

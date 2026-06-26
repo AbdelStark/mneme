@@ -375,7 +375,11 @@ def replay_receipt_trace(
 def write_replay_trace_json(trace: ReceiptReplayTrace, path: str | Path) -> None:
     """Write a replay trace JSON artifact."""
 
-    _write_json(path, trace.to_json(), artifact_name="replay trace")
+    try:
+        data = trace.to_json()
+    except (MnemeError, TypeError, ValueError) as exc:
+        raise EvaluationError(f"replay trace could not be serialized: {path}") from exc
+    _write_json(path, data, artifact_name="replay trace")
 
 
 def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
@@ -395,7 +399,11 @@ def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
 def write_replay_report_json(report: ReceiptReplayReport, path: str | Path) -> None:
     """Write a replay report JSON artifact."""
 
-    _write_json(path, report.to_json(), artifact_name="replay report")
+    try:
+        data = report.to_json()
+    except (MnemeError, TypeError, ValueError) as exc:
+        raise EvaluationError(f"replay report could not be serialized: {path}") from exc
+    _write_json(path, data, artifact_name="replay report")
 
 
 def _condition(
@@ -539,6 +547,10 @@ def _write_json(
 ) -> None:
     try:
         write_strict_json_file(path, data, sort_keys=True, indent=2)
+    except (TypeError, ValueError) as exc:
+        raise EvaluationError(
+            f"{artifact_name} could not be serialized: {path}"
+        ) from exc
     except OSError as exc:
         raise EvaluationError(f"{artifact_name} could not be written: {path}") from exc
 

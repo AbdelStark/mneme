@@ -83,6 +83,22 @@ def test_write_report_json_rejects_nonfinite_runtime_payload(tmp_path: Path) -> 
     assert not output.parent.exists()
 
 
+def test_write_report_json_rejects_non_json_runtime_payload(tmp_path: Path) -> None:
+    output = tmp_path / "reports" / "gate.json"
+    report = _report()
+    object.__setattr__(report, "metrics", {"bad": object()})
+
+    with pytest.raises(
+        EvaluationError,
+        match="evaluation report could not be serialized",
+    ) as exc_info:
+        write_report_json(report, output)
+
+    assert isinstance(exc_info.value.__cause__, TypeError)
+    assert not output.exists()
+    assert not output.parent.exists()
+
+
 def test_write_report_json_wraps_output_filesystem_errors(tmp_path: Path) -> None:
     blocked_parent = tmp_path / "not-a-directory"
     blocked_parent.write_text("occupied", encoding="utf-8")

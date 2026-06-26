@@ -195,7 +195,7 @@ def write_report_json(report: EvalReport, path: str | Path) -> None:
 
     try:
         write_strict_json_file(path, report.to_json(), sort_keys=True, indent=2)
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise EvaluationError(
             f"evaluation report could not be serialized: {path}"
         ) from exc
