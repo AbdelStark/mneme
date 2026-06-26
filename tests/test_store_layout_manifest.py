@@ -452,6 +452,15 @@ def test_manifest_rejects_commitment_file_path_traversal(tmp_path) -> None:
         ),
         (
             {
+                "enabled": True,
+                "backend": "sha256-tree-v1",
+                "root": "00" * 32,
+                "files": ["receipts/commitment-mmr-v1.json"],
+            },
+            "commitment backend is unsupported",
+        ),
+        (
+            {
                 "enabled": False,
                 "backend": "mmr-v1",
                 "root": None,

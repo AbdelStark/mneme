@@ -65,9 +65,9 @@ class RetrievalReceipt:
 
 The store appends content ids to a Merkle Mountain Range. `commit()` seals the current peak set, persists a sidecar, updates manifest commitment fields, and returns the root. `prove(ids)` returns inclusion proofs for ids present at the current root. `query(with_receipt=True)` snapshots the current root, builds proofs for returned ids, and attaches query parameters sufficient for deterministic replay.
 
-Enabled manifest commitments require a non-empty backend, a 32-byte hex root,
-and at least one relative sidecar file. Disabled commitments keep backend, root,
-and files empty.
+Enabled manifest commitments require backend `mmr-v1`, a 32-byte hex root, and
+at least one relative sidecar file. Disabled commitments keep backend, root, and
+files empty.
 
 The implemented local receipt binds query parameters with a vector digest,
 vector shape and dtype, `k`, metric, optional `ef`, filters, temporal decay, and

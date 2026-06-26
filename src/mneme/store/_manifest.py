@@ -20,6 +20,7 @@ from mneme.core._time import require_utc_timestamp
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
 _SUPPORTED_MAJOR: Final = 1
 _COMMITMENT_ROOT_BYTES: Final = 32
+_SUPPORTED_COMMITMENT_BACKENDS: Final = frozenset({"mmr-v1"})
 _RETENTION_POLICIES: Final = frozenset({"none", "count", "age"})
 
 
@@ -75,6 +76,16 @@ def _require_commitment_root(value: object) -> str:
             f"commitment root must be {_COMMITMENT_ROOT_BYTES} bytes"
         )
     return root.hex()
+
+
+def _require_supported_commitment_backend(value: object) -> str:
+    backend = _require_string(value, "commitment backend")
+    if backend not in _SUPPORTED_COMMITMENT_BACKENDS:
+        supported = ", ".join(sorted(_SUPPORTED_COMMITMENT_BACKENDS))
+        raise StoreCorruptionError(
+            f"commitment backend is unsupported; expected one of: {supported}"
+        )
+    return backend
 
 
 def count_retention(max_items: int) -> dict[str, Any]:
@@ -179,7 +190,7 @@ class CommitmentState:
                 raise StoreCorruptionError(
                     "commitment backend must be set when enabled"
                 )
-            backend = _require_string(self.backend, "commitment backend")
+            backend = _require_supported_commitment_backend(self.backend)
             if not files:
                 raise StoreCorruptionError(
                     "commitment files must not be empty when enabled"

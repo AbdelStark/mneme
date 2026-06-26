@@ -149,7 +149,8 @@ def test_commitment_docs_state_manifest_coherence_boundary() -> None:
     )
     normalized_rfc = " ".join(rfc.split())
 
-    assert "including backend, 32-byte root, and sidecar files" in data_model
+    assert "including the supported `mmr-v1` backend" in data_model
+    assert "Enabled manifest commitments require backend `mmr-v1`" in normalized_rfc
     assert "Disabled commitments keep backend, root, and files empty." in normalized_rfc
 
 

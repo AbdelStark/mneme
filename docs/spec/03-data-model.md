@@ -155,7 +155,8 @@ The manifest records:
 - value log file names and offsets
 - index backend and backend parameters
 - retention policy
-- commitment state when enabled, including backend, 32-byte root, and sidecar files
+- commitment state when enabled, including the supported `mmr-v1` backend, a
+  32-byte root, and sidecar files
 - last completed transaction id
 
 ## Resolved Bootstrap Decisions
