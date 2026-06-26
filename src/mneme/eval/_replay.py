@@ -528,6 +528,8 @@ def _require_array(value: object, field_name: str) -> np.ndarray:
         raise EvaluationError(f"{field_name} must have a floating dtype")
     if value.shape == ():
         raise EvaluationError(f"{field_name} must have at least one dimension")
+    if any(dim <= 0 for dim in value.shape):
+        raise EvaluationError(f"{field_name} dimensions must be positive")
     if not bool(np.isfinite(value).all()):
         raise EvaluationError(f"{field_name} must contain only finite values")
     return np.ascontiguousarray(value)

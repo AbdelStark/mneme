@@ -256,6 +256,19 @@ def test_receipt_replay_loader_wraps_invalid_array_payloads(
         load_replay_trace_json(trace_path)
 
 
+def test_receipt_replay_loader_rejects_empty_array_shapes(
+    tmp_path: Path,
+) -> None:
+    trace_path = tmp_path / "trace.json"
+    trace = _trace(tmp_path)
+    payload = trace.to_json()
+    payload["expected_prediction"]["shape"] = [0]
+    trace_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(EvaluationError, match="expected_prediction is invalid"):
+        load_replay_trace_json(trace_path)
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
@@ -316,6 +329,14 @@ def test_receipt_replay_report_constructor_rejects_malformed_fields(
     values.update(kwargs)
 
     with pytest.raises(EvaluationError, match=match):
+        ReceiptReplayReport(**values)
+
+
+def test_receipt_replay_report_rejects_empty_prediction_arrays() -> None:
+    values = _report_values()
+    values["expected_prediction"] = np.array([], dtype=np.float32)
+
+    with pytest.raises(EvaluationError, match="dimensions must be positive"):
         ReceiptReplayReport(**values)
 
 
