@@ -340,6 +340,28 @@ def test_release_artifact_validation_command_reports_write_error(
     assert "failed to write release artifact report" in result.stderr
 
 
+def test_release_artifact_validation_command_rejects_empty_output_path(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(tmp_path, version=mneme.__version__)
+    fixture_report = _write_fixture_report(tmp_path)
+
+    result = run_entrypoint(
+        validate_artifacts_main,
+        "--dist",
+        dist,
+        "--fixture-report",
+        fixture_report,
+        "--out",
+        "",
+    )
+
+    assert result.returncode == int(CliExitCode.INTERNAL)
+    assert "failed to write release artifact report" in result.stderr
+    assert "JSON output path must not be empty" in result.stderr
+    assert result.stdout == ""
+
+
 def test_release_artifact_report_constructor_normalizes_sequences() -> None:
     report = ReleaseArtifactReport(
         ok=True,

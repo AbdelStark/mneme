@@ -5,11 +5,10 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
-from pathlib import Path
 from typing import NoReturn, TextIO
 
 from mneme.core import CliExitCode
-from mneme.core._json import dumps_strict_json
+from mneme.core._json import dumps_strict_json, write_strict_json_file
 from mneme.release import validate_release_artifacts
 
 
@@ -30,14 +29,17 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
         fixture_report=args.fixture_report,
     )
     output = dumps_strict_json(report.to_json(), sort_keys=True, indent=2) + "\n"
-    if args.out:
-        target = Path(args.out)
+    if args.out is not None:
         try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(output, encoding="utf-8")
-        except OSError:
+            write_strict_json_file(
+                args.out,
+                report.to_json(),
+                sort_keys=True,
+                indent=2,
+            )
+        except (OSError, TypeError, ValueError) as exc:
             print(
-                f"failed to write release artifact report: {target}",
+                f"failed to write release artifact report: {args.out}: {exc}",
                 file=sys.stderr,
             )
             return int(CliExitCode.INTERNAL)
