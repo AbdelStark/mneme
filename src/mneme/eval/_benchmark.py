@@ -275,6 +275,8 @@ def _mode_tuple(values: object) -> tuple[BenchmarkMode, ...]:
 def _freeze_metrics(metrics: Mapping[str, EvalMetric]) -> Mapping[str, EvalMetric]:
     if not isinstance(metrics, Mapping):
         raise EvaluationError("metrics must be a mapping")
+    if not metrics:
+        raise EvaluationError("metrics must include at least one metric")
     frozen: dict[str, EvalMetric] = {}
     for key, value in metrics.items():
         _require_non_empty_str(key, "metric name")

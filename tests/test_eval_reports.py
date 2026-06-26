@@ -157,6 +157,11 @@ def test_invalid_report_schema_and_metrics_fail_closed() -> None:
     with pytest.raises(ValidationError, match="metric bad"):
         validate_report_json(data)
 
+    data = _report().to_json()
+    data["metrics"] = {}
+    with pytest.raises(ValidationError, match="at least one metric"):
+        validate_report_json(data)
+
 
 @pytest.mark.parametrize(
     "created_at",
@@ -203,6 +208,7 @@ def test_eval_report_accepts_explicit_zero_offset_created_at() -> None:
     (
         ({"command": object()}, "command must be a sequence"),
         ({"metrics": []}, "metrics must be an object"),
+        ({"metrics": {}}, "metrics must include at least one metric"),
         ({"caveats": object()}, "caveats must be a sequence"),
     ),
 )

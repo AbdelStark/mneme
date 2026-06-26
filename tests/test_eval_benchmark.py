@@ -190,6 +190,7 @@ def test_benchmark_spec_constructor_rejects_malformed_fields(
     ("kwargs", "match"),
     (
         ({"metrics": []}, "metrics must be a mapping"),
+        ({"metrics": {}}, "metrics must include at least one metric"),
         ({"artifacts": []}, "artifacts must be a mapping"),
         ({"caveats": object()}, "caveats must be a sequence"),
         ({"passed": "yes"}, "passed must be a bool"),

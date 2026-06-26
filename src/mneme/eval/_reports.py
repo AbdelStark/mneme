@@ -283,6 +283,8 @@ def _freeze_string_mapping(data: object, field_name: str) -> Mapping[str, str]:
 
 def _freeze_metrics(metrics: object) -> Mapping[str, EvalMetric]:
     mapping = _require_mapping(metrics, "metrics")
+    if not mapping:
+        raise ValidationError("metrics must include at least one metric")
     frozen: dict[str, EvalMetric] = {}
     for key, value in mapping.items():
         metric_name = _require_string(key, "metric name")
