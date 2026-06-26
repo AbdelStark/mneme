@@ -198,6 +198,8 @@ def test_transition_validation_rejects_invalid_shape_dtype_uuid_and_step() -> No
         Transition(**(valid | {"t": -1}))
     with pytest.raises(ValidationError, match="episode_id must be a UUID"):
         Transition(**(valid | {"episode_id": str(uuid4())}))
+    with pytest.raises(ValidationError, match="reward must be finite"):
+        Transition(**(valid | {"reward": float("nan")}))
 
 
 def test_query_validation_rejects_bad_k_ef_metric_and_temporal_decay() -> None:
@@ -276,7 +278,11 @@ def test_memory_item_rejects_malformed_content_ids() -> None:
 def test_retrieval_validation_rejects_length_mismatch_and_nonfinite_distance() -> None:
     item = _item()
 
-    with pytest.raises(ValueError, match="matching lengths"):
+    with pytest.raises(ValidationError, match="MemoryItem"):
+        Retrieval(items=[object()], distances=[0.25])
+    with pytest.raises(ValidationError, match="matching lengths"):
         Retrieval(items=[item], distances=[])
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(ValidationError, match="distance must be a finite number"):
+        Retrieval(items=[item], distances=[object()])
+    with pytest.raises(ValidationError, match="finite"):
         Retrieval(items=[item], distances=[float("inf")])

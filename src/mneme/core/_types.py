@@ -167,11 +167,11 @@ class Retrieval:
         distances = _as_tuple(self.distances, "distances")
         for item in items:
             if not isinstance(item, MemoryItem):
-                raise TypeError("items must contain only MemoryItem instances")
+                raise ValidationError("items must contain only MemoryItem instances")
         for distance in distances:
             _validate_finite_number(distance, "distance")
         if len(items) != len(distances):
-            raise ValueError("items and distances must have matching lengths")
+            raise ValidationError("items and distances must have matching lengths")
         object.__setattr__(self, "items", items)
         object.__setattr__(self, "distances", distances)
 
@@ -280,9 +280,9 @@ def _validate_non_negative_int(value: object, field_name: str) -> None:
 
 def _validate_finite_number(value: object, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, int | float):
-        raise TypeError(f"{field_name} must be a finite number")
+        raise ValidationError(f"{field_name} must be a finite number")
     if not math.isfinite(float(value)):
-        raise ValueError(f"{field_name} must be finite")
+        raise ValidationError(f"{field_name} must be finite")
 
 
 def _validate_non_negative_number(value: object, field_name: str) -> None:
