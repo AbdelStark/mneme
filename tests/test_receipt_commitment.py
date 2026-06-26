@@ -142,6 +142,40 @@ def test_commitment_state_json_round_trips_and_validates(tmp_path: Path) -> None
         load_commitment_state(path)
 
 
+@pytest.mark.parametrize(
+    ("path", "match"),
+    (
+        ("", "path must not be empty"),
+        (object(), "path must be a path-like value"),
+    ),
+)
+def test_commitment_state_helpers_reject_malformed_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    path: object,
+    match: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValidationError, match=match):
+        save_commitment_state(path, CommitmentState.empty())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match=match):
+        load_commitment_state(path)  # type: ignore[arg-type]
+
+    assert not (tmp_path / "commitment.json").exists()
+
+
+def test_commitment_state_helpers_reject_bytes_pathlike() -> None:
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"commitment.json"
+
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        save_commitment_state(BytesPath(), CommitmentState.empty())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        load_commitment_state(BytesPath())  # type: ignore[arg-type]
+
+
 def test_commitment_state_rejects_nonstandard_json_constants(tmp_path: Path) -> None:
     path = tmp_path / "commitment.json"
     path.write_text('{"schema_version": NaN}', encoding="utf-8")

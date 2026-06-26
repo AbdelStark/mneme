@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from os import PathLike, fspath
 from pathlib import Path
 from typing import Final, Literal
 
@@ -266,7 +267,7 @@ def save_commitment_state(path: str | Path, state: CommitmentState) -> Path:
 
     if not isinstance(state, CommitmentState):
         raise ValidationError("state must be a CommitmentState")
-    target = Path(path)
+    target = _require_path(path, "path")
     try:
         return write_strict_json_file(target, state.to_json(), sort_keys=True, indent=2)
     except (AttributeError, TypeError, ValueError, ValidationError) as exc:
@@ -282,7 +283,7 @@ def save_commitment_state(path: str | Path, state: CommitmentState) -> Path:
 def load_commitment_state(path: str | Path) -> CommitmentState:
     """Load and validate a commitment state sidecar."""
 
-    target = Path(path)
+    target = _require_path(path, "path")
     try:
         data = loads_strict_json(target.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
@@ -442,6 +443,17 @@ def _require_string(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValidationError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _require_path(value: object, field_name: str) -> Path:
+    if not isinstance(value, str | PathLike):
+        raise ValidationError(f"{field_name} must be a path-like value")
+    raw = fspath(value)
+    if not isinstance(raw, str):
+        raise ValidationError(f"{field_name} must resolve to a text path")
+    if not raw:
+        raise ValidationError(f"{field_name} must not be empty")
+    return Path(raw)
 
 
 def _require_mapping(value: object, field_name: str) -> Mapping[str, object]:
