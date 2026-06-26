@@ -135,7 +135,7 @@ Required fields:
 - `proofs`
 - `params`
 - `store_id`
-- `created_at`
+- `created_at` as an ISO 8601 UTC timestamp
 - `signer`
 - `signature`
 

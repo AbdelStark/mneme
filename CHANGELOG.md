@@ -25,6 +25,8 @@ All notable user-visible changes are recorded here.
 - Hardened remote query response validation against result-count expansion beyond
   the requested `k`.
 - Hardened remote query response validation against unsorted result distances.
+- Hardened retrieval receipt validation against malformed or non-UTC
+  `created_at` timestamps.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
 from typing import Any, Final
 
@@ -184,7 +184,7 @@ class RetrievalReceipt:
         if not isinstance(self.params, QueryReceiptParams):
             raise ValidationError("params must be QueryReceiptParams")
         _require_string(self.store_id, "store_id")
-        _require_string(self.created_at, "created_at")
+        _require_utc_timestamp(self.created_at, "created_at")
         if (self.signer is None) != (self.signature is None):
             raise ValidationError("signer and signature must both be set or both null")
         if self.signer is not None:
@@ -373,6 +373,20 @@ def _optional_string(value: object, field_name: str) -> str | None:
     if value is None:
         return None
     return _require_string(value, field_name)
+
+
+def _require_utc_timestamp(value: object, field_name: str) -> str:
+    text = _require_string(value, field_name)
+    iso_text = text[:-1] + "+00:00" if text.endswith("Z") else text
+    try:
+        parsed = datetime.fromisoformat(iso_text)
+    except ValueError as exc:
+        raise ValidationError(
+            f"{field_name} must be an ISO 8601 UTC timestamp",
+        ) from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        raise ValidationError(f"{field_name} must be an ISO 8601 UTC timestamp")
+    return text
 
 
 def _require_shape(value: object, field_name: str) -> tuple[int, ...]:

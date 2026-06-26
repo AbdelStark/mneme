@@ -380,6 +380,41 @@ def test_retrieval_receipt_direct_constructor_requires_signature_bytes() -> None
         )
 
 
+@pytest.mark.parametrize(
+    "created_at",
+    [
+        "not-a-timestamp",
+        "2026-06-24T00:00:00",
+        "2026-06-24T01:00:00+01:00",
+    ],
+)
+def test_retrieval_receipt_requires_utc_created_at(created_at: str) -> None:
+    root, cid, proof, params = _receipt_parts()
+
+    with pytest.raises(
+        ValidationError,
+        match="created_at must be an ISO 8601 UTC timestamp",
+    ):
+        RetrievalReceipt(
+            root=root,
+            ids=(cid,),
+            proofs=(proof,),
+            params=params,
+            store_id="store-fixture",
+            created_at=created_at,
+        )
+
+    receipt = RetrievalReceipt(
+        root=root,
+        ids=(cid,),
+        proofs=(proof,),
+        params=params,
+        store_id="store-fixture",
+        created_at="2026-06-24T00:00:00+00:00",
+    )
+    assert receipt.created_at == "2026-06-24T00:00:00+00:00"
+
+
 def test_build_retrieval_receipt_requires_matching_ids_and_proofs(
     tmp_path: Path,
 ) -> None:
