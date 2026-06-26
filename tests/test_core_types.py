@@ -23,6 +23,7 @@ from mneme.core import (
     SchemaVersionError,
     SummaryVec,
     Transition,
+    ValidationError,
 )
 
 
@@ -140,6 +141,32 @@ def test_schema_version_must_be_a_string() -> None:
             config_digest="sha256:config",
             schema_version=1,  # type: ignore[arg-type]
         )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"encoder_id": object()}, "encoder_id must be a string"),
+        ({"encoder_id": ""}, "encoder_id must not be empty"),
+        ({"summarizer_id": ""}, "summarizer_id must not be empty"),
+        ({"config_digest": ""}, "config_digest must not be empty"),
+        ({"weights_digest": ""}, "weights_digest must not be empty"),
+    ],
+)
+def test_encoder_fingerprint_rejects_invalid_identity_fields(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {
+        "encoder_id": "encoder",
+        "summarizer_id": "mean_pool",
+        "weights_digest": None,
+        "config_digest": "sha256:config",
+    }
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        EncoderFingerprint(**values)  # type: ignore[arg-type]
 
 
 def test_summary_vec_validation_rejects_invalid_dtype_shape_and_values() -> None:

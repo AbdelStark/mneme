@@ -13,7 +13,7 @@ from uuid import UUID
 import numpy as np
 import numpy.typing as npt
 
-from mneme.core._errors import QueryError, SchemaVersionError
+from mneme.core._errors import QueryError, SchemaVersionError, ValidationError
 from mneme.core._ids import require_cid_bytes
 
 Latent: TypeAlias = Any
@@ -190,9 +190,9 @@ def _validate_schema_version(schema_version: str, expected: str) -> None:
 
 def _require_non_empty_str(value: str, field_name: str) -> None:
     if not isinstance(value, str):
-        raise TypeError(f"{field_name} must be a string")
+        raise ValidationError(f"{field_name} must be a string")
     if not value:
-        raise ValueError(f"{field_name} must not be empty")
+        raise ValidationError(f"{field_name} must not be empty")
 
 
 def _validate_summary_vec(value: object, field_name: str) -> None:
