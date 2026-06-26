@@ -101,6 +101,7 @@ Client validation:
 - recompute content ids for returned items;
 - reject fingerprint mismatch;
 - reject query responses with more items than the requested `QuerySpec.k`;
+- reject query responses with distances out of nondecreasing order;
 - verify receipt when requested;
 - map remote errors to local typed errors.
 

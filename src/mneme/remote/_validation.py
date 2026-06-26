@@ -53,6 +53,7 @@ def validate_query_response(
     retrieval = parsed.retrieval
     if len(retrieval.items) > spec.k:
         raise ValidationError("remote query response returned more than requested k")
+    _ensure_distances_sorted(retrieval.distances)
     for item in retrieval.items:
         cid = content_id(item)
         if item.content_id != cid:
@@ -73,6 +74,14 @@ def validate_query_response(
     ):
         raise ReceiptVerificationError("remote receipt verification failed")
     return retrieval
+
+
+def _ensure_distances_sorted(distances: tuple[float, ...]) -> None:
+    previous: float | None = None
+    for distance in distances:
+        if previous is not None and distance < previous:
+            raise ValidationError("remote query response distances must be sorted")
+        previous = distance
 
 
 def raise_for_remote_error(error: RemoteErrorPayload) -> None:

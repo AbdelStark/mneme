@@ -101,6 +101,17 @@ def test_validate_query_response_rejects_more_items_than_requested() -> None:
         )
 
 
+def test_validate_query_response_rejects_unsorted_distances() -> None:
+    items = (_built_item(1.0), _built_item(2.0))
+    response = QueryResponse(Retrieval(items=items, distances=(1.0, 0.0)))
+
+    with pytest.raises(ValidationError, match="distances must be sorted"):
+        validate_query_response(
+            response.to_json(),
+            QuerySpec(items[0].key, k=2, metric=Metric.L2),
+        )
+
+
 def test_validate_query_response_maps_receipt_failure_to_typed_error() -> None:
     item = _built_item(1.0)
     spec = QuerySpec(
