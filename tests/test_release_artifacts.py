@@ -20,6 +20,11 @@ from mneme.release import (
 from mneme.release.validate_artifacts import main as validate_artifacts_main
 
 
+class _BytesPath:
+    def __fspath__(self) -> bytes:
+        return b"dist"
+
+
 def test_release_artifact_validator_accepts_valid_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -59,6 +64,7 @@ def test_release_artifact_validator_requires_fixture_report(tmp_path: Path) -> N
     (
         ("", "dist must not be empty"),
         (object(), "dist must be a path-like value"),
+        (_BytesPath(), "dist must resolve to a text path"),
     ),
 )
 def test_release_artifact_validator_rejects_malformed_dist_paths(
@@ -84,6 +90,7 @@ def test_release_artifact_validator_rejects_malformed_dist_paths(
     (
         ("", "fixture_report must not be empty"),
         (object(), "fixture_report must be a path-like value"),
+        (_BytesPath(), "fixture_report must resolve to a text path"),
     ),
 )
 def test_release_artifact_validator_rejects_malformed_fixture_report_paths(

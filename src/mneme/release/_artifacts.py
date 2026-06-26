@@ -14,6 +14,7 @@ from typing import Any, Final
 
 from mneme.core import ValidationError
 from mneme.core._json import loads_strict_json
+from mneme.core._paths import coerce_text_path
 from mneme.eval import validate_report_json
 
 RELEASE_ARTIFACT_REPORT_SCHEMA: Final = "mneme.release_artifact_report.v1"
@@ -231,17 +232,16 @@ def _single_artifact(
 
 
 def _path_input(value: object, field_name: str, errors: list[str]) -> Path | None:
-    if isinstance(value, str) and not value:
-        errors.append(f"{field_name} must not be empty")
+    try:
+        return coerce_text_path(
+            value,
+            field_name,
+            type_error=ValidationError,
+            value_error=ValidationError,
+        )
+    except ValidationError as exc:
+        errors.append(str(exc))
         return None
-    if isinstance(value, str | Path):
-        path = Path(value)
-        if not str(path):
-            errors.append(f"{field_name} must not be empty")
-            return None
-        return path
-    errors.append(f"{field_name} must be a path-like value")
-    return None
 
 
 def _validate_wheel(
