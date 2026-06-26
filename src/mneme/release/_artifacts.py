@@ -237,17 +237,25 @@ def _validate_wheel(
                 errors,
             )
             if metadata_name is not None:
-                message = Parser().parsestr(archive.read(metadata_name).decode("utf-8"))
-                _validate_metadata(
-                    message,
-                    source="wheel",
-                    version=version,
-                    errors=errors,
-                )
-                checked.append("wheel metadata")
+                try:
+                    message = Parser().parsestr(
+                        archive.read(metadata_name).decode("utf-8")
+                    )
+                except (KeyError, OSError, UnicodeDecodeError) as exc:
+                    errors.append(f"wheel metadata could not be read: {exc}")
+                else:
+                    _validate_metadata(
+                        message,
+                        source="wheel",
+                        version=version,
+                        errors=errors,
+                    )
+                    checked.append("wheel metadata")
             checked.append("wheel contents")
     except zipfile.BadZipFile as exc:
         errors.append(f"wheel is not a valid zip archive: {exc}")
+    except OSError as exc:
+        errors.append(f"wheel could not be read: {exc}")
 
 
 def _validate_sdist(
@@ -272,21 +280,34 @@ def _validate_sdist(
                     if candidate not in names:
                         errors.append(f"sdist missing required file: {required}")
                 metadata_name = f"{root}/PKG-INFO"
-                member = archive.extractfile(metadata_name)
-                if member is None:
+                if metadata_name not in names:
                     errors.append("sdist missing PKG-INFO metadata")
                 else:
-                    message = Parser().parsestr(member.read().decode("utf-8"))
-                    _validate_metadata(
-                        message,
-                        source="sdist",
-                        version=version,
-                        errors=errors,
-                    )
-                    checked.append("sdist metadata")
+                    try:
+                        member = archive.extractfile(metadata_name)
+                        if member is None:
+                            errors.append("sdist missing PKG-INFO metadata")
+                        else:
+                            message = Parser().parsestr(member.read().decode("utf-8"))
+                            _validate_metadata(
+                                message,
+                                source="sdist",
+                                version=version,
+                                errors=errors,
+                            )
+                            checked.append("sdist metadata")
+                    except (
+                        KeyError,
+                        OSError,
+                        tarfile.TarError,
+                        UnicodeDecodeError,
+                    ) as exc:
+                        errors.append(f"sdist metadata could not be read: {exc}")
                 checked.append("sdist contents")
     except tarfile.TarError as exc:
         errors.append(f"sdist is not a valid tar.gz archive: {exc}")
+    except OSError as exc:
+        errors.append(f"sdist could not be read: {exc}")
 
 
 def _sdist_root(names: set[str], errors: list[str]) -> str | None:

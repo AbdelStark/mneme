@@ -128,6 +128,46 @@ def test_release_artifact_validator_rejects_unsafe_archive_paths(
     )
 
 
+def test_release_artifact_validator_reports_missing_sdist_metadata(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(
+        tmp_path,
+        version=mneme.__version__,
+        include_sdist_metadata=False,
+    )
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any("sdist missing PKG-INFO metadata" in error for error in report.errors)
+
+
+def test_release_artifact_validator_reports_unreadable_archive_paths(
+    tmp_path: Path,
+) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / f"mneme-{mneme.__version__}-py3-none-any.whl").mkdir()
+    (dist / f"mneme-{mneme.__version__}.tar.gz").mkdir()
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any("wheel could not be read" in error for error in report.errors)
+    assert any("sdist could not be read" in error for error in report.errors)
+
+
 def test_release_artifact_validation_command_returns_json(tmp_path: Path) -> None:
     dist = _write_fake_dist(tmp_path, version=mneme.__version__)
     fixture_report = _write_fixture_report(tmp_path)
@@ -251,6 +291,7 @@ def _write_fake_dist(
     tmp_path: Path,
     *,
     version: str,
+    include_sdist_metadata: bool = True,
     wheel_extra_files: dict[str, str] | None = None,
     sdist_extra_files: dict[str, str] | None = None,
 ) -> Path:
@@ -272,7 +313,8 @@ def _write_fake_dist(
     root = f"mneme-{version}"
     sdist = dist / f"{root}.tar.gz"
     with tarfile.open(sdist, "w:gz") as archive:
-        _add_tar_text(archive, f"{root}/PKG-INFO", metadata)
+        if include_sdist_metadata:
+            _add_tar_text(archive, f"{root}/PKG-INFO", metadata)
         for name in (
             "CITATION.cff",
             "CHANGELOG.md",
