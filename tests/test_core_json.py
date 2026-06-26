@@ -80,6 +80,23 @@ def test_write_strict_json_file_rejects_non_string_keys_before_side_effects(
     assert not output.parent.exists()
 
 
+def test_write_strict_json_file_rejects_malformed_output_paths() -> None:
+    with pytest.raises(ValueError, match="JSON output path must not be empty"):
+        write_strict_json_file("", {"ok": True})
+
+    with pytest.raises(TypeError, match="JSON output path must be path-like"):
+        write_strict_json_file(object(), {"ok": True})  # type: ignore[arg-type]
+
+
+def test_write_strict_json_file_rejects_bytes_pathlike_output() -> None:
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"out.json"
+
+    with pytest.raises(TypeError, match="must resolve to a text path"):
+        write_strict_json_file(BytesPath(), {"ok": True})  # type: ignore[arg-type]
+
+
 def test_write_strict_json_file_writes_deterministic_json_with_newline(
     tmp_path,
 ) -> None:

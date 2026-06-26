@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Mapping, Sequence
+from os import PathLike, fspath
 from pathlib import Path
 from typing import NoReturn
 
@@ -43,7 +44,7 @@ def loads_strict_json(value: str | bytes | bytearray) -> object:
 
 
 def write_strict_json_file(
-    path: str | Path,
+    path: str | PathLike[str],
     value: object,
     *,
     ensure_ascii: bool = True,
@@ -63,10 +64,21 @@ def write_strict_json_file(
         )
         + "\n"
     )
-    target = Path(path)
+    target = _json_output_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(payload, encoding="utf-8")
     return target
+
+
+def _json_output_path(path: object) -> Path:
+    if not isinstance(path, str | PathLike):
+        raise TypeError("JSON output path must be path-like")
+    raw = fspath(path)
+    if not isinstance(raw, str):
+        raise TypeError("JSON output path must resolve to a text path")
+    if not raw:
+        raise ValueError("JSON output path must not be empty")
+    return Path(raw)
 
 
 def _reject_json_constant(value: str) -> NoReturn:
