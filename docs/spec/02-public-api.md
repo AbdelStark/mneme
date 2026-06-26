@@ -39,17 +39,6 @@ class EncoderFingerprint:
     schema_version: str = "mneme.encoder_fingerprint.v1"
 
 @dataclass(frozen=True)
-class QuerySpec:
-    vector: SummaryVec
-    k: int
-    metric: Metric = Metric.COSINE
-    ef: int | None = None
-    filters: Mapping[str, Any] | None = None
-    temporal_decay: float | None = None
-    with_receipt: bool = False
-    encoder_fp: EncoderFingerprint | None = None
-
-@dataclass(frozen=True)
 class Transition:
     z_src: Latent
     action: np.ndarray

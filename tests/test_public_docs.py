@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import tomllib
+from collections import Counter
 from pathlib import Path
 
 
@@ -86,6 +88,26 @@ def test_docs_use_shipped_remote_package_and_optional_extras() -> None:
     assert "mneme[hnswlib]" not in docs
     assert "mneme[verifiable]" not in docs
     assert "hnswlib backend" not in docs
+
+
+def test_public_api_core_types_block_has_unique_declarations() -> None:
+    public_api = Path("docs/spec/02-public-api.md").read_text(encoding="utf-8")
+    core_types = public_api.split("## Core Types", maxsplit=1)[1].split(
+        "## Protocols",
+        maxsplit=1,
+    )[0]
+    code_block = core_types.split("```python", maxsplit=1)[1].split(
+        "```",
+        maxsplit=1,
+    )[0]
+    tree = ast.parse(code_block)
+    classes = [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
+    duplicates = sorted(
+        class_name for class_name, count in Counter(classes).items() if count > 1
+    )
+
+    assert duplicates == []
+    assert 'schema_version: str = "mneme.query_spec.v1"' in code_block
 
 
 def test_changelog_has_initial_unreleased_section() -> None:
