@@ -217,6 +217,33 @@ def test_receipt_replay_loader_wraps_unreadable_trace_path(
         load_replay_trace_json(trace_path)
 
 
+@pytest.mark.parametrize(
+    ("path", "match"),
+    [
+        ("", "replay trace path must not be empty"),
+        (object(), "replay trace path must be a path-like value"),
+    ],
+)
+def test_receipt_replay_loader_rejects_malformed_trace_paths(
+    path: object,
+    match: str,
+) -> None:
+    with pytest.raises(EvaluationError, match=match):
+        load_replay_trace_json(path)  # type: ignore[arg-type]
+
+
+def test_receipt_replay_loader_rejects_bytes_pathlike_trace_paths() -> None:
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"trace.json"
+
+    with pytest.raises(
+        EvaluationError,
+        match="replay trace path must resolve to a text path",
+    ):
+        load_replay_trace_json(BytesPath())  # type: ignore[arg-type]
+
+
 def test_receipt_replay_loader_wraps_invalid_item_payloads(
     tmp_path: Path,
 ) -> None:

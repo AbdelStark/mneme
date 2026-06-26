@@ -25,6 +25,7 @@ from mneme.core import (
 )
 from mneme.core._ids import cid_from_hex, require_cid_bytes
 from mneme.core._json import loads_strict_json, write_strict_json_file
+from mneme.core._paths import coerce_text_path
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store._value_log import (
     _array_from_json,
@@ -385,12 +386,18 @@ def write_replay_trace_json(trace: ReceiptReplayTrace, path: str | Path) -> None
 def load_replay_trace_json(path: str | Path) -> ReceiptReplayTrace:
     """Load and validate a replay trace JSON artifact."""
 
+    trace_path = coerce_text_path(
+        path,
+        "replay trace path",
+        type_error=EvaluationError,
+        value_error=EvaluationError,
+    )
     try:
-        data = loads_strict_json(Path(path).read_text(encoding="utf-8"))
+        data = loads_strict_json(trace_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise EvaluationError(f"replay trace not found: {path}") from exc
+        raise EvaluationError(f"replay trace not found: {trace_path}") from exc
     except OSError as exc:
-        raise EvaluationError(f"replay trace could not be read: {path}") from exc
+        raise EvaluationError(f"replay trace could not be read: {trace_path}") from exc
     except ValueError as exc:
         raise EvaluationError("replay trace is not valid JSON") from exc
     return ReceiptReplayTrace.from_json(data)
