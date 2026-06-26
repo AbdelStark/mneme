@@ -12,6 +12,7 @@ from mneme.core import (
     EncoderFingerprint,
     MemoryItem,
     Transition,
+    ValidationError,
     build_item,
     canonical_bytes,
     content_id,
@@ -180,7 +181,7 @@ print(content_id(item).hex())
 
 
 def test_unsupported_metadata_is_rejected_before_digesting() -> None:
-    with pytest.raises((TypeError, ValueError), match="JSON-compatible"):
+    with pytest.raises(ValidationError, match="JSON-compatible"):
         build_item(
             _transition(),
             np.array([0.6, 0.8], dtype=np.float32),

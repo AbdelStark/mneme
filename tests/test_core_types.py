@@ -190,10 +190,14 @@ def test_transition_validation_rejects_invalid_shape_dtype_uuid_and_step() -> No
 
     with pytest.raises(ValidationError, match="share shape and dtype"):
         Transition(**(valid | {"delta": np.array([[1.0]], dtype=np.float32)}))
-    with pytest.raises(TypeError, match="numeric dtype"):
+    with pytest.raises(ValidationError, match="numeric dtype"):
         Transition(**(valid | {"z_src": np.array(["bad"])}))
-    with pytest.raises(ValueError, match="z_src must contain only finite values"):
+    with pytest.raises(ValidationError, match="z_src must contain only finite values"):
         Transition(**(valid | {"z_src": np.array([float("nan")], dtype=np.float32)}))
+    with pytest.raises(ValidationError, match="action must be one-dimensional"):
+        Transition(**(valid | {"action": np.array([[0.1]], dtype=np.float32)}))
+    with pytest.raises(ValidationError, match="action must contain only finite values"):
+        Transition(**(valid | {"action": np.array([float("inf")], dtype=np.float32)}))
     with pytest.raises(ValidationError, match="t must be >= 0"):
         Transition(**(valid | {"t": -1}))
     with pytest.raises(ValidationError, match="episode_id must be a UUID"):
@@ -214,7 +218,7 @@ def test_query_validation_rejects_bad_k_ef_metric_and_temporal_decay() -> None:
 
 
 def test_memory_item_metadata_rejects_reserved_and_non_json_values() -> None:
-    with pytest.raises(ValueError, match="reserved"):
+    with pytest.raises(ValidationError, match="reserved"):
         MemoryItem(
             content_id=None,
             key=_key(),
@@ -222,12 +226,28 @@ def test_memory_item_metadata_rejects_reserved_and_non_json_values() -> None:
             meta={"schema_version": "bad"},
             encoder_fp=_fingerprint(),
         )
-    with pytest.raises(TypeError, match="JSON-compatible"):
+    with pytest.raises(ValidationError, match="JSON-compatible"):
         MemoryItem(
             content_id=None,
             key=_key(),
             value=_transition(),
             meta={"raw": b"bytes"},
+            encoder_fp=_fingerprint(),
+        )
+    with pytest.raises(ValidationError, match="metadata must be a mapping"):
+        MemoryItem(
+            content_id=None,
+            key=_key(),
+            value=_transition(),
+            meta=object(),
+            encoder_fp=_fingerprint(),
+        )
+    with pytest.raises(ValidationError, match="key must contain only finite values"):
+        MemoryItem(
+            content_id=None,
+            key=np.array([float("nan")], dtype=np.float32),
+            value=_transition(),
+            meta={},
             encoder_fp=_fingerprint(),
         )
 
@@ -257,7 +277,7 @@ def test_memory_item_rejects_invalid_nested_carriers(
 
 
 def test_memory_item_rejects_malformed_content_ids() -> None:
-    with pytest.raises(TypeError, match="content_id must be bytes"):
+    with pytest.raises(ValidationError, match="content_id must be bytes"):
         MemoryItem(
             content_id="not-bytes",
             key=_key(),
@@ -265,7 +285,7 @@ def test_memory_item_rejects_malformed_content_ids() -> None:
             meta={},
             encoder_fp=_fingerprint(),
         )
-    with pytest.raises(ValueError, match="content_id must be 32 bytes"):
+    with pytest.raises(ValidationError, match="content_id must be 32 bytes"):
         MemoryItem(
             content_id=b"short",
             key=_key(),
@@ -280,6 +300,10 @@ def test_retrieval_validation_rejects_length_mismatch_and_nonfinite_distance() -
 
     with pytest.raises(ValidationError, match="MemoryItem"):
         Retrieval(items=[object()], distances=[0.25])
+    with pytest.raises(ValidationError, match="items must be a sequence"):
+        Retrieval(items=object(), distances=[])
+    with pytest.raises(ValidationError, match="distances must be a sequence"):
+        Retrieval(items=[item], distances=object())
     with pytest.raises(ValidationError, match="matching lengths"):
         Retrieval(items=[item], distances=[])
     with pytest.raises(ValidationError, match="distance must be a finite number"):

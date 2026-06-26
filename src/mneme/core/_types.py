@@ -128,7 +128,7 @@ class QuerySpec:
         try:
             _validate_summary_vec(self.vector, "vector")
             _validate_positive_int(self.k, "k")
-        except (TypeError, ValueError) as exc:
+        except (TypeError, ValueError, ValidationError) as exc:
             raise QueryError(str(exc)) from exc
         if not isinstance(self.metric, Metric):
             raise QueryError("metric must be a Metric")
@@ -137,7 +137,7 @@ class QuerySpec:
         if self.filters is not None:
             try:
                 object.__setattr__(self, "filters", _freeze_metadata(self.filters))
-            except (TypeError, ValueError) as exc:
+            except (TypeError, ValueError, ValidationError) as exc:
                 raise QueryError(str(exc)) from exc
         if self.temporal_decay is not None:
             try:
@@ -197,47 +197,47 @@ def _require_non_empty_str(value: str, field_name: str) -> None:
 
 def _validate_summary_vec(value: object, field_name: str) -> None:
     if not isinstance(value, np.ndarray):
-        raise TypeError(f"{field_name} must be a numpy.ndarray")
+        raise ValidationError(f"{field_name} must be a numpy.ndarray")
     if value.dtype != np.float32:
-        raise TypeError(f"{field_name} must have dtype float32")
+        raise ValidationError(f"{field_name} must have dtype float32")
     if value.ndim != 1:
-        raise ValueError(f"{field_name} must be one-dimensional")
+        raise ValidationError(f"{field_name} must be one-dimensional")
     if value.shape[0] <= 0:
-        raise ValueError(f"{field_name} must not be empty")
+        raise ValidationError(f"{field_name} must not be empty")
     if not value.flags.c_contiguous:
-        raise ValueError(f"{field_name} must be contiguous")
+        raise ValidationError(f"{field_name} must be contiguous")
     if not bool(np.isfinite(value).all()):
-        raise ValueError(f"{field_name} must contain only finite values")
+        raise ValidationError(f"{field_name} must contain only finite values")
 
 
 def _validate_action(value: object, field_name: str) -> None:
     if not isinstance(value, np.ndarray):
-        raise TypeError(f"{field_name} must be a numpy.ndarray")
+        raise ValidationError(f"{field_name} must be a numpy.ndarray")
     if value.ndim != 1:
-        raise ValueError(f"{field_name} must be one-dimensional")
+        raise ValidationError(f"{field_name} must be one-dimensional")
     if value.shape[0] <= 0:
-        raise ValueError(f"{field_name} must not be empty")
+        raise ValidationError(f"{field_name} must not be empty")
     if not np.issubdtype(value.dtype, np.number):
-        raise TypeError(f"{field_name} must have a numeric dtype")
+        raise ValidationError(f"{field_name} must have a numeric dtype")
     if not bool(np.isfinite(value).all()):
-        raise ValueError(f"{field_name} must contain only finite values")
+        raise ValidationError(f"{field_name} must contain only finite values")
 
 
 def _validate_cid(value: object, field_name: str) -> None:
     require_cid_bytes(
         value,
         field_name,
-        type_error=TypeError,
-        value_error=ValueError,
+        type_error=ValidationError,
+        value_error=ValidationError,
     )
 
 
 def _validate_latent(value: object, field_name: str) -> tuple[tuple[int, ...], str]:
     if isinstance(value, np.ndarray):
         if not np.issubdtype(value.dtype, np.number):
-            raise TypeError(f"{field_name} must have a numeric dtype")
+            raise ValidationError(f"{field_name} must have a numeric dtype")
         if not bool(np.isfinite(value).all()):
-            raise ValueError(f"{field_name} must contain only finite values")
+            raise ValidationError(f"{field_name} must contain only finite values")
         shape = tuple(int(dim) for dim in value.shape)
         _validate_shape(shape, field_name)
         return shape, str(value.dtype)
@@ -245,23 +245,25 @@ def _validate_latent(value: object, field_name: str) -> tuple[tuple[int, ...], s
     shape_obj = getattr(value, "shape", None)
     dtype_obj = getattr(value, "dtype", None)
     if shape_obj is None or dtype_obj is None:
-        raise TypeError(f"{field_name} must expose shape and dtype")
+        raise ValidationError(f"{field_name} must expose shape and dtype")
     try:
         shape = tuple(int(dim) for dim in shape_obj)
     except (TypeError, ValueError) as exc:
-        raise TypeError(f"{field_name} shape must be an integer sequence") from exc
+        raise ValidationError(
+            f"{field_name} shape must be an integer sequence"
+        ) from exc
     _validate_shape(shape, field_name)
     dtype = str(dtype_obj)
     if not any(token in dtype for token in ("float", "int", "uint")):
-        raise TypeError(f"{field_name} must have a numeric dtype")
+        raise ValidationError(f"{field_name} must have a numeric dtype")
     return shape, dtype
 
 
 def _validate_shape(shape: tuple[int, ...], field_name: str) -> None:
     if not shape:
-        raise ValueError(f"{field_name} must have at least one dimension")
+        raise ValidationError(f"{field_name} must have at least one dimension")
     if any(dim <= 0 for dim in shape):
-        raise ValueError(f"{field_name} shape dimensions must be positive")
+        raise ValidationError(f"{field_name} shape dimensions must be positive")
 
 
 def _validate_positive_int(value: object, field_name: str) -> None:
@@ -301,15 +303,15 @@ def _is_invalid_ef(value: object, k: int) -> bool:
 
 def _freeze_metadata(meta: object) -> Mapping[str, Any]:
     if not isinstance(meta, Mapping):
-        raise TypeError("metadata must be a mapping")
+        raise ValidationError("metadata must be a mapping")
     frozen: dict[str, object] = {}
     for key, value in meta.items():
         if not isinstance(key, str):
-            raise TypeError("metadata keys must be strings")
+            raise ValidationError("metadata keys must be strings")
         if not key:
-            raise ValueError("metadata keys must not be empty")
+            raise ValidationError("metadata keys must not be empty")
         if key in _RESERVED_META_KEYS:
-            raise ValueError(f"metadata key {key!r} is reserved")
+            raise ValidationError(f"metadata key {key!r} is reserved")
         frozen[key] = _freeze_json_value(value, f"metadata[{key!r}]")
     return MappingProxyType(frozen)
 
@@ -321,15 +323,15 @@ def _freeze_json_value(value: object, field_name: str) -> object:
         return value
     if isinstance(value, float):
         if not math.isfinite(value):
-            raise ValueError(f"{field_name} must be finite")
+            raise ValidationError(f"{field_name} must be finite")
         return value
     if isinstance(value, Mapping):
         frozen: dict[str, object] = {}
         for key, nested_value in value.items():
             if not isinstance(key, str):
-                raise TypeError(f"{field_name} mapping keys must be strings")
+                raise ValidationError(f"{field_name} mapping keys must be strings")
             if not key:
-                raise ValueError(f"{field_name} mapping keys must not be empty")
+                raise ValidationError(f"{field_name} mapping keys must not be empty")
             frozen[key] = _freeze_json_value(nested_value, f"{field_name}.{key}")
         return MappingProxyType(frozen)
     if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
@@ -337,12 +339,12 @@ def _freeze_json_value(value: object, field_name: str) -> object:
             _freeze_json_value(item, f"{field_name}[{index}]")
             for index, item in enumerate(value)
         )
-    raise TypeError(f"{field_name} must be JSON-compatible")
+    raise ValidationError(f"{field_name} must be JSON-compatible")
 
 
 def _as_tuple(value: object, field_name: str) -> tuple[Any, ...]:
     if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
-        raise TypeError(f"{field_name} must be a sequence")
+        raise ValidationError(f"{field_name} must be a sequence")
     return tuple(value)
 
 
