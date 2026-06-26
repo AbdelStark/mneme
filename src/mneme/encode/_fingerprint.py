@@ -6,7 +6,6 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, is_dataclass
 from os import PathLike
-from pathlib import Path
 from typing import Any
 
 from blake3 import blake3
@@ -17,6 +16,7 @@ from mneme.core import (
     ValidationError,
 )
 from mneme.core._json import dumps_strict_json
+from mneme.core._paths import coerce_text_path
 from mneme.encode._protocols import Summarizer
 
 _DIGEST_PREFIX = "blake3:"
@@ -41,7 +41,12 @@ def digest_weights(weights: bytes | str | PathLike[str]) -> str:
     if isinstance(weights, bytes):
         return _digest_bytes(weights)
 
-    path = Path(weights)
+    path = coerce_text_path(
+        weights,
+        "weights file",
+        type_error=ValidationError,
+        value_error=ValidationError,
+    )
     hasher = blake3()
     try:
         with path.open("rb") as handle:

@@ -103,6 +103,33 @@ def test_weight_digest_wraps_unreadable_weight_path(tmp_path: Path) -> None:
         digest_weights(path)
 
 
+@pytest.mark.parametrize(
+    ("weights", "match"),
+    [
+        ("", "weights file must not be empty"),
+        (object(), "weights file must be a path-like value"),
+    ],
+)
+def test_weight_digest_rejects_malformed_weight_paths(
+    weights: object,
+    match: str,
+) -> None:
+    with pytest.raises(ValidationError, match=match):
+        digest_weights(weights)  # type: ignore[arg-type]
+
+
+def test_weight_digest_rejects_bytes_pathlike_weight_paths() -> None:
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"weights.bin"
+
+    with pytest.raises(
+        ValidationError,
+        match="weights file must resolve to a text path",
+    ):
+        digest_weights(BytesPath())  # type: ignore[arg-type]
+
+
 def test_mismatched_fingerprints_fail_closed() -> None:
     expected = build_encoder_fingerprint("encoder", "summary", unweighted=True)
     actual = build_encoder_fingerprint("encoder", "other", unweighted=True)
