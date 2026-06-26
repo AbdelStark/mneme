@@ -230,6 +230,30 @@ def test_memory_item_metadata_rejects_reserved_and_non_json_values() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"value": object()}, "value must be a Transition"),
+        ({"encoder_fp": object()}, "encoder_fp must be an EncoderFingerprint"),
+    ],
+)
+def test_memory_item_rejects_invalid_nested_carriers(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    values: dict[str, object] = {
+        "content_id": None,
+        "key": _key(),
+        "value": _transition(),
+        "meta": {},
+        "encoder_fp": _fingerprint(),
+    }
+    values.update(kwargs)
+
+    with pytest.raises(ValidationError, match=match):
+        MemoryItem(**values)  # type: ignore[arg-type]
+
+
 def test_memory_item_rejects_malformed_content_ids() -> None:
     with pytest.raises(TypeError, match="content_id must be bytes"):
         MemoryItem(

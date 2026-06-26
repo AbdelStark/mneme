@@ -103,9 +103,9 @@ class MemoryItem:
             _validate_cid(self.content_id, "content_id")
         _validate_summary_vec(self.key, "key")
         if not isinstance(self.value, Transition):
-            raise TypeError("value must be a Transition")
+            raise ValidationError("value must be a Transition")
         if not isinstance(self.encoder_fp, EncoderFingerprint):
-            raise TypeError("encoder_fp must be an EncoderFingerprint")
+            raise ValidationError("encoder_fp must be an EncoderFingerprint")
         object.__setattr__(self, "meta", _freeze_metadata(self.meta))
 
 
