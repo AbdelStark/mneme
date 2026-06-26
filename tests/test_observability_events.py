@@ -98,8 +98,15 @@ def test_observability_config_and_required_event_names() -> None:
     assert "mneme.receipt.verify" in REQUIRED_EVENT_NAMES
     assert not has_event_sink(ObservabilityConfig())
 
-    with pytest.raises(ValueError, match="content_id_prefix_bytes"):
-        ObservabilityConfig(content_id_prefix_bytes=-1)
+    invalid_configs = (
+        {"redact_metadata": "yes"},
+        {"include_content_id_prefixes": 1},
+        {"content_id_prefix_bytes": True},
+        {"content_id_prefix_bytes": -1},
+    )
+    for kwargs in invalid_configs:
+        with pytest.raises(ValidationError):
+            ObservabilityConfig(**kwargs)  # type: ignore[arg-type]
 
 
 def test_distance_summaries_ignore_nonfinite_values() -> None:

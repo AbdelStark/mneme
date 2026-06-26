@@ -22,7 +22,8 @@ Events are JSON-serializable dictionaries with:
 
 Library embedders configure event emission with `mneme.observability.ObservabilityConfig`
 and an `EventSink`. When no sink is configured, core operations do not construct
-or dispatch events.
+or dispatch events. Malformed observability configuration raises
+`ValidationError` before any event is emitted.
 
 Required events:
 

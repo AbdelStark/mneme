@@ -11,6 +11,8 @@ from typing import Final, Protocol
 
 import numpy as np
 
+from mneme.core import ValidationError
+
 EVENT_SCHEMA_VERSION: Final = "mneme.event.v1"
 REQUIRED_EVENT_NAMES: Final = (
     "mneme.store.put",
@@ -65,15 +67,17 @@ class ObservabilityConfig:
 
     def __post_init__(self) -> None:
         if not isinstance(self.redact_metadata, bool):
-            raise TypeError("redact_metadata must be a bool")
+            raise ValidationError("redact_metadata must be a bool")
         if not isinstance(self.include_content_id_prefixes, bool):
-            raise TypeError("include_content_id_prefixes must be a bool")
+            raise ValidationError("include_content_id_prefixes must be a bool")
         if (
             isinstance(self.content_id_prefix_bytes, bool)
             or not isinstance(self.content_id_prefix_bytes, int)
             or self.content_id_prefix_bytes < 0
         ):
-            raise ValueError("content_id_prefix_bytes must be a non-negative integer")
+            raise ValidationError(
+                "content_id_prefix_bytes must be a non-negative integer"
+            )
 
 
 def has_event_sink(config: ObservabilityConfig | None) -> bool:
