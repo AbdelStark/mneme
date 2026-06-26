@@ -121,7 +121,17 @@ def test_remote_array_rejects_nonnumeric_decoded_dtype() -> None:
     }
 
     with pytest.raises(ValidationError, match="array dtype must be numeric"):
-        RemoteArray.from_json(payload).to_array()
+        RemoteArray.from_json(payload)
+
+
+def test_remote_array_constructor_rejects_invalid_dtype_and_byte_order() -> None:
+    data = base64.b64encode(np.array([1.0], dtype=np.float32).tobytes()).decode("ascii")
+
+    with pytest.raises(ValidationError, match="array dtype is unsupported"):
+        RemoteArray(dtype="not-a-dtype", shape=(1,), byte_order="little", data=data)
+
+    with pytest.raises(ValidationError, match="byte_order does not match"):
+        RemoteArray(dtype="float32", shape=(1,), byte_order="big", data=data)
 
 
 def test_remote_array_rejects_nonfinite_decoded_values() -> None:

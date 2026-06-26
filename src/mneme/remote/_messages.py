@@ -59,9 +59,11 @@ class RemoteArray:
     encoding: Literal["base64"] = "base64"
 
     def __post_init__(self) -> None:
-        _require_string(self.dtype, "array dtype")
+        dtype = _require_array_dtype(_require_string(self.dtype, "array dtype"))
         object.__setattr__(self, "shape", _array_shape(self.shape))
-        _byte_order_value(self.byte_order)
+        byte_order = _byte_order_value(self.byte_order)
+        if _byte_order(dtype) != byte_order:
+            raise ValidationError("array byte_order does not match dtype")
         _encoding(self.encoding)
         _require_string(self.data, "array data")
 
@@ -89,14 +91,7 @@ class RemoteArray:
 
         if self.encoding != "base64":
             raise ValidationError("array encoding must be base64")
-        try:
-            dtype = np.dtype(self.dtype)
-        except TypeError as exc:
-            raise ValidationError("array dtype is unsupported") from exc
-        if not np.issubdtype(dtype, np.number):
-            raise ValidationError("array dtype must be numeric")
-        if _byte_order(dtype) != self.byte_order:
-            raise ValidationError("array byte_order does not match dtype")
+        dtype = _require_array_dtype(self.dtype)
         try:
             raw = base64.b64decode(self.data, validate=True)
         except binascii.Error as exc:
@@ -533,6 +528,16 @@ def _byte_order(dtype: np.dtype[Any]) -> ByteOrder:
         return "not_applicable"
     little = dtype.byteorder == "<" or (dtype.byteorder == "=" and np.little_endian)
     return "little" if little else "big"
+
+
+def _require_array_dtype(value: str) -> np.dtype[Any]:
+    try:
+        dtype = np.dtype(value)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("array dtype is unsupported") from exc
+    if not np.issubdtype(dtype, np.number):
+        raise ValidationError("array dtype must be numeric")
+    return dtype
 
 
 def _byte_order_value(value: object) -> ByteOrder:
