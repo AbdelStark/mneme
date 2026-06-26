@@ -10,6 +10,7 @@ from typing import Any, NoReturn, TextIO
 
 import numpy as np
 
+from mneme.cli._arguments import non_negative_float, non_negative_int, positive_int
 from mneme.cli._runtime import (
     JsonResult,
     error_json,
@@ -49,7 +50,6 @@ from mneme.eval import (
     write_replay_report_json,
     write_report_json,
 )
-from mneme.eval._entrypoints import non_negative_float, non_negative_int, positive_int
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import (
     StoreStats,

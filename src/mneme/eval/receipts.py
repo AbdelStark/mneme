@@ -7,10 +7,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import NoReturn, TextIO
 
+from mneme.cli._arguments import non_negative_int, positive_int
 from mneme.core import Metric
 from mneme.eval._entrypoints import (
-    non_negative_int,
-    positive_int,
     run_eval_entrypoint,
     write_report_for_entrypoint,
 )
