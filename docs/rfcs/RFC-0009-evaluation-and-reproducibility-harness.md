@@ -106,7 +106,9 @@ class BenchmarkResult:
 The built-in `DryRunBenchmarkRunner` exercises report generation for the
 no-memory, corrector, in-context, and adapter comparison modes without touching
 external datasets or model checkpoints. It is a fixture adapter for interface
-validation only.
+validation only. Benchmark mode lists must not contain duplicates, because
+report comparison counts and mode-specific slots are interpreted as unique
+configuration entries.
 
 ## Alternatives Considered
 

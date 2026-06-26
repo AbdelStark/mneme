@@ -147,6 +147,18 @@ def test_benchmark_spec_requires_external_dataset_split_and_valid_modes() -> Non
         )
 
 
+def test_benchmark_modes_must_be_unique() -> None:
+    with pytest.raises(EvaluationError, match="duplicate benchmark modes"):
+        BenchmarkSpec(
+            dataset=_dataset(),
+            checkpoint_uri="checkpoint",
+            modes=("no_memory", "adapter", "no_memory"),
+        )
+
+    with pytest.raises(EvaluationError, match="duplicate benchmark modes"):
+        parse_benchmark_modes("no_memory, adapter, no_memory")
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     (
@@ -228,6 +240,11 @@ def test_custom_runner_protocol_and_mode_parser() -> None:
     assert report.artifacts["runner"] == "custom"
     assert report.artifacts["comparison_modes"] == "no_memory,adapter"
     assert report.passed is False
+
+
+def test_mode_parser_rejects_non_string_input() -> None:
+    with pytest.raises(EvaluationError, match="comma-separated string"):
+        parse_benchmark_modes(object())  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

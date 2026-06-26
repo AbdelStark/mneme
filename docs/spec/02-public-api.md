@@ -364,8 +364,9 @@ weight file exists by default, and raises `FingerprintMismatchError` when
 `BenchmarkRunner` is the opt-in external benchmark interface. `BenchmarkSpec`
 requires an external `DatasetRef`, split, model checkpoint URI, comparison modes
 for no-memory/corrector/in-context/adapter, command, optional seed, and hardware
-metadata. Runner results are wrapped in `mneme.eval_report.v1` with caveats; the
-built-in `DryRunBenchmarkRunner` validates report plumbing only and is not
+metadata. Comparison modes must be unique so report counts and mode slots remain
+unambiguous. Runner results are wrapped in `mneme.eval_report.v1` with caveats;
+the built-in `DryRunBenchmarkRunner` validates report plumbing only and is not
 benchmark evidence.
 
 ## Constructors

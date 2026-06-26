@@ -143,6 +143,8 @@ class DryRunBenchmarkRunner:
 def parse_benchmark_modes(value: str) -> tuple[BenchmarkMode, ...]:
     """Parse a comma-separated benchmark comparison mode list."""
 
+    if not isinstance(value, str):
+        raise EvaluationError("benchmark modes must be a comma-separated string")
     raw_modes = tuple(part.strip() for part in value.split(",") if part.strip())
     return _mode_tuple(raw_modes)
 
@@ -248,14 +250,24 @@ def _mode_tuple(values: object) -> tuple[BenchmarkMode, ...]:
         raise EvaluationError("benchmark modes must include at least one mode")
     modes: list[BenchmarkMode] = []
     unsupported: list[str] = []
+    seen: set[BenchmarkMode] = set()
+    duplicates: list[str] = []
     for value in values:
         if value in BENCHMARK_MODES:
-            modes.append(value)
+            if value in seen:
+                duplicates.append(value)
+            else:
+                seen.add(value)
+                modes.append(value)
         else:
             unsupported.append(str(value))
     if unsupported:
         raise EvaluationError(
             "unsupported benchmark modes: " + ", ".join(sorted(unsupported))
+        )
+    if duplicates:
+        raise EvaluationError(
+            "duplicate benchmark modes: " + ", ".join(sorted(set(duplicates)))
         )
     return tuple(modes)
 
