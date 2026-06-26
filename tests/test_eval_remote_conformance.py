@@ -104,3 +104,37 @@ def test_remote_conformance_asgi_call_wraps_malformed_json_body() -> None:
                 RemoteHttpConfig("http://mneme-conformance"),
             )
         )
+
+
+@pytest.mark.parametrize(
+    ("status", "match"),
+    (
+        (True, "ASGI response status must be an integer"),
+        (99, "ASGI response status must be an HTTP status"),
+        (600, "ASGI response status must be an HTTP status"),
+    ),
+)
+def test_remote_conformance_asgi_call_rejects_malformed_status(
+    status: object,
+    match: str,
+) -> None:
+    class MalformedStatusApp:
+        async def __call__(self, scope, receive, send) -> None:
+            await send({"type": "http.response.start", "status": status})
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": b'{"schema_version": "mneme.stats.response.v1"}',
+                }
+            )
+
+    with pytest.raises(EvaluationError, match=match):
+        asyncio.run(
+            _call_asgi(
+                MalformedStatusApp(),
+                "POST",
+                "/stats",
+                {},
+                RemoteHttpConfig("http://mneme-conformance"),
+            )
+        )

@@ -29,6 +29,8 @@ All notable user-visible changes are recorded here.
   `created_at` timestamps.
 - Hardened evaluation report validation against malformed or non-UTC
   `created_at` timestamps and centralized report timestamp generation.
+- Hardened remote conformance ASGI response validation for malformed HTTP
+  statuses.
 - Hardened store manifest and retention tombstone validation against malformed
   or non-UTC timestamps.
 - Hardened store verification against malformed persisted index snapshot item

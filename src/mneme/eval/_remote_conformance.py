@@ -286,8 +286,10 @@ async def _call_asgi(
     ]
     response_body = b"".join(body for body in bodies if isinstance(body, bytes))
     status = start.get("status")
-    if not isinstance(status, int):
+    if isinstance(status, bool) or not isinstance(status, int):
         raise EvaluationError("ASGI response status must be an integer")
+    if status < 100 or status > 599:
+        raise EvaluationError("ASGI response status must be an HTTP status")
     try:
         decoded = loads_strict_json(response_body)
     except ValueError as exc:
