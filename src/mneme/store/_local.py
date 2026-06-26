@@ -27,6 +27,7 @@ from mneme.core import (
 )
 from mneme.core._ids import require_cid_bytes
 from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._paths import coerce_text_path
 from mneme.core._time import utc_now_iso
 from mneme.index import Index, create_index_backend, search_index
 from mneme.observability import (
@@ -269,15 +270,12 @@ class StoreRecoveryEvent:
 
 
 def _require_stats_path(value: object) -> Path:
-    if isinstance(value, str) and not value:
-        raise ValidationError("path must not be empty")
-    if isinstance(value, str | Path):
-        path = Path(value)
-    else:
-        raise ValidationError("path must be a path-like value")
-    if not str(path):
-        raise ValidationError("path must not be empty")
-    return path
+    return coerce_text_path(
+        value,
+        "path",
+        type_error=ValidationError,
+        value_error=ValidationError,
+    )
 
 
 def _require_bool(value: object, field_name: str) -> bool:
@@ -314,15 +312,12 @@ def _optional_non_empty_stats_string(value: object, field_name: str) -> str | No
 
 
 def _require_local_store_path(value: object) -> Path:
-    if isinstance(value, str) and not value:
-        raise ValidationError("path must not be empty")
-    if isinstance(value, str | Path):
-        path = Path(value)
-    else:
-        raise ValidationError("path must be a path-like value")
-    if not str(path):
-        raise ValidationError("path must not be empty")
-    return path
+    return coerce_text_path(
+        value,
+        "path",
+        type_error=ValidationError,
+        value_error=ValidationError,
+    )
 
 
 def _require_local_store_items(value: object) -> dict[Cid, MemoryItem]:

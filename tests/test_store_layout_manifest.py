@@ -18,6 +18,7 @@ from mneme.store import (
     STORE_MANIFEST_SCHEMA,
     IndexConfig,
     LocalStore,
+    StoreStats,
     init_store,
     load_manifest,
     open_store,
@@ -55,6 +56,11 @@ class _SizedIndex:
 
     def __len__(self) -> int:
         return self.size
+
+
+class _BytesPath:
+    def __fspath__(self) -> bytes:
+        return b"store"
 
 
 def test_local_store_constructor_normalizes_direct_handle_fields(tmp_path) -> None:
@@ -107,6 +113,36 @@ def test_local_store_constructor_rejects_malformed_fields(
 
     with pytest.raises(ValidationError, match=match):
         LocalStore(**values)
+
+
+def test_store_direct_handles_reject_bytes_pathlike(tmp_path) -> None:
+    store = init_store(tmp_path / "store")
+
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        LocalStore(
+            path=_BytesPath(),  # type: ignore[arg-type]
+            manifest=store.manifest,
+            index=store.index,
+            _items={},
+        )
+
+    stats = store.stats()
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        StoreStats(
+            store_id=stats.store_id,
+            path=_BytesPath(),  # type: ignore[arg-type]
+            schema_version=stats.schema_version,
+            active_fingerprint_count=stats.active_fingerprint_count,
+            value_log_count=stats.value_log_count,
+            value_record_count=stats.value_record_count,
+            visible_record_count=stats.visible_record_count,
+            value_bytes=stats.value_bytes,
+            index_backend=stats.index_backend,
+            retention_policy=stats.retention_policy,
+            tombstone_count=stats.tombstone_count,
+            last_completed_transaction=stats.last_completed_transaction,
+            commitments_enabled=stats.commitments_enabled,
+        )
 
 
 def test_local_store_constructor_rejects_index_item_count_mismatch(tmp_path) -> None:
@@ -223,6 +259,15 @@ def test_store_path_entrypoints_reject_non_path_like_values(path_value: object) 
         open_store(path_value)  # type: ignore[arg-type]
     with pytest.raises(ValidationError, match="path must be a path-like value"):
         load_manifest(path_value)  # type: ignore[arg-type]
+
+
+def test_store_path_entrypoints_reject_bytes_pathlike_values() -> None:
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        init_store(_BytesPath())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        open_store(_BytesPath())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        load_manifest(_BytesPath())  # type: ignore[arg-type]
 
 
 def test_load_manifest_reconstructs_fingerprints_and_index_config(tmp_path) -> None:
