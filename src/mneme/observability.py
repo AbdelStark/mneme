@@ -43,6 +43,9 @@ _SECRET_FIELD_MARKERS: Final = (
     "secret",
     "token",
 )
+_COMPACT_SECRET_FIELD_MARKERS: Final = tuple(
+    marker.replace("_", "") for marker in _SECRET_FIELD_MARKERS
+)
 _METADATA_FIELD_MARKERS: Final = ("meta", "metadata")
 _PRIVATE_DATASET_FIELDS: Final = frozenset({"dataset_id", "dataset_name"})
 _SAFE_METADATA_PREFIX: Final = "safe_"
@@ -265,8 +268,12 @@ def _is_array_like(value: object) -> bool:
         return True
     if not isinstance(value, Sequence) or isinstance(value, str | bytes | bytearray):
         return False
-    return all(
-        isinstance(item, int | float) and not isinstance(item, bool) for item in value
+    return all(_is_numeric_scalar(item) for item in value)
+
+
+def _is_numeric_scalar(value: object) -> bool:
+    return isinstance(value, int | float | np.integer | np.floating) and not isinstance(
+        value, bool | np.bool_
     )
 
 
@@ -283,7 +290,10 @@ def _is_path_field(key: str) -> bool:
 
 
 def _is_secret_field(key: str) -> bool:
-    return any(marker in key for marker in _SECRET_FIELD_MARKERS)
+    compact_key = "".join(character for character in key if character.isalnum())
+    return any(marker in key for marker in _SECRET_FIELD_MARKERS) or any(
+        marker in compact_key for marker in _COMPACT_SECRET_FIELD_MARKERS
+    )
 
 
 def _is_metadata_field(key: str) -> bool:
@@ -291,8 +301,12 @@ def _is_metadata_field(key: str) -> bool:
 
 
 def _looks_like_absolute_path(value: str) -> bool:
-    return value.startswith("/") or (
-        len(value) >= 3 and value[1:3] == ":\\" and value[0].isalpha()
+    return (
+        value.startswith(("/", "\\\\"))
+        or len(value) >= 3
+        and value[0].isalpha()
+        and value[1] == ":"
+        and value[2] in ("\\", "/")
     )
 
 

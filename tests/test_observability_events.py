@@ -222,17 +222,24 @@ def test_event_redaction_removes_arrays_paths_secrets_and_unsafe_metadata() -> N
         status="ok",
         started=None,
         latent=np.array([9.0, 8.0], dtype=np.float32),
-        summary_vector=[1.0, 2.0],
+        summary_vector=[np.float32(1.0), np.float32(2.0)],
         action=np.array([0.25], dtype=np.float32),
         observation={"pixels": [255, 0], "room": "private-lab"},
         store_path=Path("/Users/abdel/private/store"),
         secret_token="super-secret-token",
+        **{
+            "apiKey": "camel-secret",
+            "api-key": "kebab-secret",
+            "privateKey": "private-key-secret",
+        },
         dataset_id="private-dataset-name",
         metadata={
             "unsafe_note": "leak-me",
             "api_key": "secret-api-key",
             "safe_label": "fixture",
             "safe_path": "/Users/abdel/private/dataset",
+            "safe_windows_note": "C:/Users/abdel/private/dataset",
+            "safe_unc_note": "\\\\server\\share\\dataset",
         },
         raw_content_id=b"abcdef",
     )
@@ -256,19 +263,29 @@ def test_event_redaction_removes_arrays_paths_secrets_and_unsafe_metadata() -> N
     assert event["observation"] == "<redacted:observation>"
     assert event["store_path"] == "<redacted:path>"
     assert event["secret_token"] == "<redacted:secret>"
+    assert event["apiKey"] == "<redacted:secret>"
+    assert event["api-key"] == "<redacted:secret>"
+    assert event["privateKey"] == "<redacted:secret>"
     assert event["dataset_id"] == "<redacted:dataset>"
     assert event["metadata"] == {
         "safe_label": "fixture",
         "safe_path": "<redacted:path>",
+        "safe_unc_note": "<redacted:path>",
+        "safe_windows_note": "<redacted:path>",
     }
     assert event["raw_content_id"] == {"redacted": "bytes", "length": 6}
 
     dumped = json.dumps(event, sort_keys=True)
     assert "super-secret-token" not in dumped
+    assert "camel-secret" not in dumped
+    assert "kebab-secret" not in dumped
+    assert "private-key-secret" not in dumped
     assert "secret-api-key" not in dumped
     assert "leak-me" not in dumped
     assert "private-dataset-name" not in dumped
     assert "/Users/abdel" not in dumped
+    assert "C:/Users" not in dumped
+    assert "\\\\server" not in dumped
     assert "9.0" not in dumped
 
 
