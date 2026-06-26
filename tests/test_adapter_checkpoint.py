@@ -247,6 +247,8 @@ def test_load_checkpoint_rejects_missing_weights_file(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError, match="weights file not found"):
         load_adapter_checkpoint(tmp_path)
+    with pytest.raises(ValidationError, match="require_weights must be a bool"):
+        load_adapter_checkpoint(tmp_path, require_weights="yes")  # type: ignore[arg-type]
 
     checkpoint = load_adapter_checkpoint(tmp_path, require_weights=False)
 

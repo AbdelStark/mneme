@@ -184,6 +184,8 @@ def load_adapter_checkpoint(
 ) -> AdapterCheckpoint:
     """Load a checkpoint sidecar and validate its base fingerprint and weights."""
 
+    if not isinstance(require_weights, bool):
+        raise ValidationError("require_weights must be a bool")
     metadata_path = _metadata_path(path)
     metadata = load_adapter_checkpoint_metadata(metadata_path)
     if expected_base_fingerprint is not None:

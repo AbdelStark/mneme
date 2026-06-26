@@ -359,7 +359,8 @@ records `schema_version`, `adapter_kind`, JSON-compatible `adapter_config`,
 directory containing `adapter.json` or a metadata JSON path, validates the
 sidecar, rejects absolute or parent-traversing weight paths, checks that the
 weight file exists by default, and raises `FingerprintMismatchError` when
-`expected_base_fingerprint` does not match the sidecar.
+`expected_base_fingerprint` does not match the sidecar. The `require_weights`
+option must be a real `bool` value.
 
 `BenchmarkRunner` is the opt-in external benchmark interface. `BenchmarkSpec`
 requires an external `DatasetRef`, split, model checkpoint URI, comparison modes
