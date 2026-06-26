@@ -77,11 +77,11 @@ class Transition:
         z_next = _validate_latent(self.z_next, "z_next")
         delta = _validate_latent(self.delta, "delta")
         if z_next != src or delta != src:
-            raise ValueError("z_src, z_next, and delta must share shape and dtype")
+            raise ValidationError("z_src, z_next, and delta must share shape and dtype")
         _validate_action(self.action, "action")
         _validate_non_negative_int(self.t, "t")
         if not isinstance(self.episode_id, UUID):
-            raise TypeError("episode_id must be a UUID")
+            raise ValidationError("episode_id must be a UUID")
         if self.reward is not None:
             _validate_finite_number(self.reward, "reward")
 
@@ -273,9 +273,9 @@ def _validate_positive_int(value: object, field_name: str) -> None:
 
 def _validate_non_negative_int(value: object, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f"{field_name} must be an integer")
+        raise ValidationError(f"{field_name} must be an integer")
     if value < 0:
-        raise ValueError(f"{field_name} must be >= 0")
+        raise ValidationError(f"{field_name} must be >= 0")
 
 
 def _validate_finite_number(value: object, field_name: str) -> None:

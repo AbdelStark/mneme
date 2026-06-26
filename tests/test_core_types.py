@@ -188,15 +188,15 @@ def test_transition_validation_rejects_invalid_shape_dtype_uuid_and_step() -> No
         "episode_id": uuid4(),
     }
 
-    with pytest.raises(ValueError, match="share shape and dtype"):
+    with pytest.raises(ValidationError, match="share shape and dtype"):
         Transition(**(valid | {"delta": np.array([[1.0]], dtype=np.float32)}))
     with pytest.raises(TypeError, match="numeric dtype"):
         Transition(**(valid | {"z_src": np.array(["bad"])}))
     with pytest.raises(ValueError, match="z_src must contain only finite values"):
         Transition(**(valid | {"z_src": np.array([float("nan")], dtype=np.float32)}))
-    with pytest.raises(ValueError, match="t must be >= 0"):
+    with pytest.raises(ValidationError, match="t must be >= 0"):
         Transition(**(valid | {"t": -1}))
-    with pytest.raises(TypeError, match="episode_id must be a UUID"):
+    with pytest.raises(ValidationError, match="episode_id must be a UUID"):
         Transition(**(valid | {"episode_id": str(uuid4())}))
 
 
