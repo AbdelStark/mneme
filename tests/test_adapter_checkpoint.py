@@ -148,6 +148,44 @@ def test_load_checkpoint_metadata_accepts_sidecar_path(tmp_path: Path) -> None:
     assert load_adapter_checkpoint_metadata(sidecar) == metadata
 
 
+@pytest.mark.parametrize(
+    ("path", "match"),
+    (
+        ("", "path must not be empty"),
+        (object(), "path must be a path-like value"),
+    ),
+)
+def test_checkpoint_metadata_helpers_reject_malformed_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    path: object,
+    match: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValidationError, match=match):
+        save_adapter_checkpoint_metadata(path, _metadata())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match=match):
+        load_adapter_checkpoint_metadata(path)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match=match):
+        load_adapter_checkpoint(path)  # type: ignore[arg-type]
+
+    assert not (tmp_path / ADAPTER_CHECKPOINT_METADATA_FILE).exists()
+
+
+def test_checkpoint_metadata_helpers_reject_bytes_pathlike() -> None:
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"adapter.json"
+
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        save_adapter_checkpoint_metadata(BytesPath(), _metadata())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        load_adapter_checkpoint_metadata(BytesPath())  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        load_adapter_checkpoint(BytesPath())  # type: ignore[arg-type]
+
+
 def test_load_checkpoint_rejects_missing_metadata_fields(tmp_path: Path) -> None:
     sidecar = tmp_path / ADAPTER_CHECKPOINT_METADATA_FILE
     payload = _metadata().to_json()

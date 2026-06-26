@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from os import PathLike, fspath
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any, Final
@@ -157,7 +158,9 @@ def save_adapter_checkpoint_metadata(
         ) from exc
 
 
-def load_adapter_checkpoint_metadata(path: str | Path) -> AdapterCheckpointMetadata:
+def load_adapter_checkpoint_metadata(
+    path: str | Path,
+) -> AdapterCheckpointMetadata:
     """Load and validate an adapter checkpoint metadata sidecar."""
 
     metadata_path = _metadata_path(path)
@@ -211,8 +214,8 @@ def load_adapter_checkpoint(
     )
 
 
-def _metadata_path(path: str | Path) -> Path:
-    candidate = Path(path)
+def _metadata_path(path: object) -> Path:
+    candidate = _require_path(path, "path")
     if candidate.suffix == ".json":
         return candidate
     return candidate / ADAPTER_CHECKPOINT_METADATA_FILE
@@ -272,11 +275,14 @@ def _require_relative_file(value: object, field_name: str) -> str:
 
 
 def _require_path(value: object, field_name: str) -> Path:
-    if isinstance(value, str) and not value:
+    if not isinstance(value, str | PathLike):
+        raise ValidationError(f"{field_name} must be a path-like value")
+    raw = fspath(value)
+    if not isinstance(raw, str):
+        raise ValidationError(f"{field_name} must resolve to a text path")
+    if not raw:
         raise ValidationError(f"{field_name} must not be empty")
-    if isinstance(value, str | Path):
-        return Path(value)
-    raise ValidationError(f"{field_name} must be a path-like value")
+    return Path(raw)
 
 
 def _freeze_json_mapping(
