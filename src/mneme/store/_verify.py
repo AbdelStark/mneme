@@ -12,6 +12,7 @@ import numpy as np
 from mneme.core import (
     Cid,
     MemoryItem,
+    MnemeError,
     StoreCorruptionError,
     StoreError,
     ValidationError,
@@ -275,9 +276,20 @@ def commit_init_store(path: str | Path) -> CommitInitReport:
             already_initialized=False,
             errors=verification.errors,
         )
-    store = open_store(path)
-    already_initialized = store.manifest.commitment.enabled
-    root = store.commit()
+    try:
+        store = open_store(path)
+        already_initialized = store.manifest.commitment.enabled
+        root = store.commit()
+    except (MnemeError, OSError) as exc:
+        return CommitInitReport(
+            ok=False,
+            store_id=verification.store_id,
+            item_count=verification.item_count,
+            root=None,
+            commitment_path=_COMMITMENT_FILE,
+            already_initialized=False,
+            errors=(f"commitment initialization failed: {exc}",),
+        )
     return CommitInitReport(
         ok=True,
         store_id=str(store.manifest.store_id),
@@ -344,24 +356,33 @@ def rebuild_index(path: str | Path) -> IndexRebuildReport:
         )
     visible_items = _visible_items(manifest, items)
 
-    _write_json_atomic(
-        root / _INDEX_BACKEND_FILE,
-        {"backend": manifest.index.backend, "params": dict(manifest.index.params)},
-    )
-    _write_json_atomic(
-        root / _INDEX_DATA_FILE,
-        {
-            "schema_version": INDEX_DATA_SCHEMA,
-            "backend": manifest.index.backend,
-            "item_count": len(visible_items),
-            "items": [
-                {"content_id": cid.hex(), "key": _key_to_json(item.key)}
-                for cid, item in sorted(
-                    visible_items.items(), key=lambda entry: entry[0]
-                )
-            ],
-        },
-    )
+    try:
+        _write_json_atomic(
+            root / _INDEX_BACKEND_FILE,
+            {"backend": manifest.index.backend, "params": dict(manifest.index.params)},
+        )
+        _write_json_atomic(
+            root / _INDEX_DATA_FILE,
+            {
+                "schema_version": INDEX_DATA_SCHEMA,
+                "backend": manifest.index.backend,
+                "item_count": len(visible_items),
+                "items": [
+                    {"content_id": cid.hex(), "key": _key_to_json(item.key)}
+                    for cid, item in sorted(
+                        visible_items.items(), key=lambda entry: entry[0]
+                    )
+                ],
+            },
+        )
+    except OSError as exc:
+        return IndexRebuildReport(
+            ok=False,
+            item_count=0,
+            index_backend=manifest.index.backend,
+            data_path=_INDEX_DATA_FILE,
+            errors=(f"index rebuild could not write snapshot: {exc}",),
+        )
     return IndexRebuildReport(
         ok=True,
         item_count=len(visible_items),

@@ -246,6 +246,31 @@ def test_index_rebuild_cli_returns_documented_success(tmp_path: Path) -> None:
     assert (root / "index" / "data.json").is_file()
 
 
+def test_rebuild_index_reports_snapshot_write_failure(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    data_path = root / "index" / "data.json"
+    data_path.mkdir()
+
+    report = rebuild_index(root)
+
+    assert not report.ok
+    assert report.item_count == 0
+    assert report.index_backend == "flat"
+    assert any(
+        "index rebuild could not write snapshot" in error for error in report.errors
+    )
+
+    cli = run_cli("index", "rebuild", root)
+    assert cli.returncode == int(CliExitCode.DATA_VALIDATION)
+    payload = json.loads(cli.stdout)
+    assert payload["ok"] is False
+    assert any(
+        "index rebuild could not write snapshot" in error for error in payload["errors"]
+    )
+
+
 def test_commit_init_upgrades_healthy_v0_1_store_and_preserves_ids(
     tmp_path: Path,
 ) -> None:
@@ -305,6 +330,39 @@ def test_commit_init_refuses_corrupt_value_log_without_writing_sidecar(
         "root": None,
         "files": [],
     }
+
+
+def test_commit_init_reports_sidecar_write_failure(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    receipts_path = root / "receipts"
+    receipts_path.rmdir()
+    receipts_path.write_text("occupied", encoding="utf-8")
+
+    report = commit_init_store(root)
+
+    assert not report.ok
+    assert report.item_count == 1
+    assert report.root is None
+    assert any(
+        "commitment state could not be written" in error for error in report.errors
+    )
+    manifest_json = json.loads((root / "manifest.json").read_text())
+    assert manifest_json["commitment"] == {
+        "enabled": False,
+        "backend": None,
+        "root": None,
+        "files": [],
+    }
+
+    cli = run_cli("store", "commit-init", root)
+    assert cli.returncode == int(CliExitCode.DATA_VALIDATION)
+    payload = json.loads(cli.stdout)
+    assert payload["ok"] is False
+    assert any(
+        "commitment state could not be written" in error for error in payload["errors"]
+    )
 
 
 def test_commit_init_cli_returns_upgrade_report(tmp_path: Path) -> None:
