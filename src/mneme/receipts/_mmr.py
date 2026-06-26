@@ -266,7 +266,13 @@ def save_commitment_state(path: str | Path, state: CommitmentState) -> Path:
 
     if not isinstance(state, CommitmentState):
         raise ValidationError("state must be a CommitmentState")
-    return write_strict_json_file(path, state.to_json(), sort_keys=True, indent=2)
+    target = Path(path)
+    try:
+        return write_strict_json_file(target, state.to_json(), sort_keys=True, indent=2)
+    except OSError as exc:
+        raise ReceiptVerificationError(
+            f"commitment state could not be written: {target}"
+        ) from exc
 
 
 def load_commitment_state(path: str | Path) -> CommitmentState:

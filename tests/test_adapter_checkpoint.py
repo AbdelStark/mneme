@@ -166,6 +166,14 @@ def test_load_checkpoint_wraps_unreadable_metadata_path(tmp_path: Path) -> None:
         load_adapter_checkpoint_metadata(tmp_path)
 
 
+def test_save_checkpoint_metadata_wraps_unwritable_path(tmp_path: Path) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="metadata could not be written"):
+        save_adapter_checkpoint_metadata(blocked_parent / "adapter.json", _metadata())
+
+
 def test_checkpoint_metadata_rejects_malformed_base_fingerprint_fields() -> None:
     payload = _metadata().to_json()
     base_fingerprint = payload["base_fingerprint"]

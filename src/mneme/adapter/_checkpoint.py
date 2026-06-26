@@ -140,12 +140,17 @@ def save_adapter_checkpoint_metadata(
     if not isinstance(metadata, AdapterCheckpointMetadata):
         raise ValidationError("metadata must be AdapterCheckpointMetadata")
     metadata_path = _metadata_path(path)
-    return write_strict_json_file(
-        metadata_path,
-        metadata.to_json(),
-        indent=2,
-        sort_keys=True,
-    )
+    try:
+        return write_strict_json_file(
+            metadata_path,
+            metadata.to_json(),
+            indent=2,
+            sort_keys=True,
+        )
+    except OSError as exc:
+        raise ValidationError(
+            f"adapter checkpoint metadata could not be written: {metadata_path}"
+        ) from exc
 
 
 def load_adapter_checkpoint_metadata(path: str | Path) -> AdapterCheckpointMetadata:
