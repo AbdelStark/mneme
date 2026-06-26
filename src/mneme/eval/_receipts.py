@@ -15,6 +15,7 @@ from mneme.core import (
     Retrieval,
     content_id,
 )
+from mneme.core._time import utc_now_iso
 from mneme.eval._profile import (
     _detect_git_commit,
     _latency_metrics,
@@ -24,7 +25,6 @@ from mneme.eval._profile import (
     _query_vectors,
     _require_non_negative_int,
     _require_positive_int,
-    _utc_now,
     _visible_items,
 )
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport
@@ -194,7 +194,7 @@ def run_receipt_profile_evaluation(
         command=tuple(command),
         package_version=__version__,
         git_commit=_detect_git_commit() if git_commit is None else git_commit,
-        created_at=_utc_now() if created_at is None else created_at,
+        created_at=utc_now_iso() if created_at is None else created_at,
         platform=_profile_platform_summary(),
         seed=seed,
         dataset=DatasetRef(

@@ -5,7 +5,6 @@ from __future__ import annotations
 import platform as platform_module
 import subprocess
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from uuid import UUID
 
 import numpy as np
@@ -13,6 +12,7 @@ import numpy as np
 from mneme._version import __version__
 from mneme.condition import CondCtx, KnnCorrector
 from mneme.core import EncoderFingerprint, MemoryItem, Retrieval, Transition
+from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalReport
 from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
 
@@ -57,7 +57,7 @@ def run_fixture_evaluation(
             command=tuple(command),
             package_version=__version__,
             git_commit=_detect_git_commit() if git_commit is None else git_commit,
-            created_at=_utc_now() if created_at is None else created_at,
+            created_at=utc_now_iso() if created_at is None else created_at,
             platform=_platform_summary(),
             seed=seed,
             dataset=DatasetRef(
@@ -168,10 +168,6 @@ def _as_array(value: object) -> np.ndarray:
     if not isinstance(value, np.ndarray):
         raise TypeError("fixture corrector returned a non-NumPy value")
     return value
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _platform_summary() -> dict[str, str]:

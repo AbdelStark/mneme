@@ -139,6 +139,46 @@ def test_invalid_report_schema_and_metrics_fail_closed() -> None:
 
 
 @pytest.mark.parametrize(
+    "created_at",
+    [
+        None,
+        "",
+        "not-a-timestamp",
+        "2026-06-24T00:00:00",
+        "2026-06-24T01:00:00+01:00",
+    ],
+)
+def test_eval_report_requires_utc_created_at(created_at: object) -> None:
+    values = _report().to_json()
+    values["dataset"] = _dataset()
+    values["created_at"] = created_at
+
+    with pytest.raises(
+        ValidationError,
+        match="created_at must be an ISO 8601 UTC timestamp",
+    ):
+        EvalReport(**values)
+
+    data = _report().to_json()
+    data["created_at"] = created_at
+    with pytest.raises(
+        ValidationError,
+        match="created_at must be an ISO 8601 UTC timestamp",
+    ):
+        validate_report_json(data)
+
+
+def test_eval_report_accepts_explicit_zero_offset_created_at() -> None:
+    values = _report().to_json()
+    values["dataset"] = _dataset()
+    values["created_at"] = "2026-06-24T00:00:00+00:00"
+
+    report = EvalReport(**values)
+
+    assert report.created_at == "2026-06-24T00:00:00+00:00"
+
+
+@pytest.mark.parametrize(
     ("kwargs", "match"),
     (
         ({"command": object()}, "command must be a sequence"),

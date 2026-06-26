@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
-from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -27,6 +26,7 @@ from mneme.core import (
     content_id,
 )
 from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalReport
 from mneme.remote import (
     HttpJsonRequester,
@@ -122,7 +122,7 @@ def run_remote_conformance_evaluation(
         command=tuple(command),
         package_version=__version__,
         git_commit=_detect_git_commit() if git_commit is None else git_commit,
-        created_at=_utc_now() if created_at is None else created_at,
+        created_at=utc_now_iso() if created_at is None else created_at,
         platform=_platform_summary(),
         seed=seed,
         dataset=DatasetRef(
@@ -295,10 +295,6 @@ async def _call_asgi(
     if not isinstance(decoded, Mapping):
         raise EvaluationError("ASGI response body must be a JSON object")
     return HttpJsonResponse(status, decoded)
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _platform_summary() -> dict[str, str]:

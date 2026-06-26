@@ -27,6 +27,8 @@ All notable user-visible changes are recorded here.
 - Hardened remote query response validation against unsorted result distances.
 - Hardened retrieval receipt validation against malformed or non-UTC
   `created_at` timestamps.
+- Hardened evaluation report validation against malformed or non-UTC
+  `created_at` timestamps and centralized report timestamp generation.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

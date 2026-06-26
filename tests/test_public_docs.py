@@ -118,6 +118,18 @@ def test_data_model_metadata_boundary_matches_core_validation() -> None:
     assert "Binary metadata is stored as base64" not in data_model
 
 
+def test_evaluation_docs_state_report_timestamp_boundary() -> None:
+    evaluation = Path("docs/evaluation.md").read_text(encoding="utf-8")
+    rfc = Path(
+        "docs/rfcs/RFC-0009-evaluation-and-reproducibility-harness.md"
+    ).read_text(
+        encoding="utf-8",
+    )
+
+    assert "Report `created_at` values are ISO 8601 UTC timestamps." in evaluation
+    assert "`created_at` values are ISO 8601 UTC timestamps" in rfc
+
+
 def test_changelog_has_initial_unreleased_section() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
 

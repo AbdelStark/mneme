@@ -49,6 +49,9 @@ class EvalReport:
     passed: bool
 ```
 
+`created_at` values are ISO 8601 UTC timestamps so report artifacts can be
+ordered and compared without relying on local timezone context.
+
 Required v0.1 commands:
 
 ```text

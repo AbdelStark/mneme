@@ -8,7 +8,6 @@ import platform as platform_module
 import subprocess
 import time
 from collections.abc import Callable, Sequence
-from datetime import UTC, datetime
 from typing import Final
 
 import numpy as np
@@ -27,6 +26,7 @@ from mneme.core import (
     SummaryVec,
     Transition,
 )
+from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport
 from mneme.index import FlatIndex, create_index_backend
 from mneme.store import LocalStore
@@ -155,7 +155,7 @@ def run_profile_evaluation(
         command=tuple(command),
         package_version=__version__,
         git_commit=_detect_git_commit() if git_commit is None else git_commit,
-        created_at=_utc_now() if created_at is None else created_at,
+        created_at=utc_now_iso() if created_at is None else created_at,
         platform=_profile_platform_summary(),
         seed=seed,
         dataset=DatasetRef(
@@ -327,10 +327,6 @@ def _require_positive_int(value: object, field_name: str) -> None:
 def _require_non_negative_int(value: object, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise EvaluationError(f"{field_name} must be a non-negative integer")
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _profile_platform_summary() -> dict[str, str]:

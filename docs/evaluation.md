@@ -2,7 +2,7 @@
 
 Mneme evaluation commands write schema-versioned JSON reports. Each report states
 its command, seed, package version, dataset reference, metrics, artifacts, and
-caveats.
+caveats. Report `created_at` values are ISO 8601 UTC timestamps.
 
 ## Fixture Drift And Gate Report
 

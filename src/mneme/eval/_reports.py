@@ -11,6 +11,7 @@ from typing import Any, Final, Literal, TypeAlias
 
 from mneme.core import EvaluationError, SchemaVersionError, ValidationError
 from mneme.core._json import write_strict_json_file
+from mneme.core._time import require_utc_timestamp
 
 DATASET_REF_SCHEMA: Final = "mneme.dataset_ref.v1"
 EVAL_REPORT_SCHEMA: Final = "mneme.eval_report.v1"
@@ -100,7 +101,7 @@ class EvalReport:
         object.__setattr__(self, "command", _string_tuple(self.command, "command"))
         _require_string(self.package_version, "package_version")
         _optional_string(self.git_commit, "git_commit")
-        _require_string(self.created_at, "created_at")
+        require_utc_timestamp(self.created_at, "created_at")
         object.__setattr__(
             self,
             "platform",
@@ -145,7 +146,10 @@ class EvalReport:
                 mapping.get("package_version"), "package_version"
             ),
             git_commit=_optional_string(mapping.get("git_commit"), "git_commit"),
-            created_at=_require_string(mapping.get("created_at"), "created_at"),
+            created_at=require_utc_timestamp(
+                mapping.get("created_at"),
+                "created_at",
+            ),
             platform=_freeze_string_mapping(mapping.get("platform"), "platform"),
             seed=_optional_int(mapping.get("seed"), "seed"),
             dataset=DatasetRef.from_json(mapping.get("dataset")),

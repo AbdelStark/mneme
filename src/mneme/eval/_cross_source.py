@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -27,6 +26,7 @@ from mneme.core import (
     Transition,
     build_item,
 )
+from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import LocalStore, init_store
@@ -54,7 +54,7 @@ def run_cross_source_transfer_evaluation(
     fingerprint = _fingerprint()
     target = _target_case()
     corrector = KnnCorrector(tau=1.0, lambda_max=1.0, alpha=10.0, delta0=1.0)
-    report_created_at = _utc_now() if created_at is None else created_at
+    report_created_at = utc_now_iso() if created_at is None else created_at
 
     with tempfile.TemporaryDirectory(prefix="mneme-cross-source-") as tmp:
         root = Path(tmp)
@@ -393,10 +393,6 @@ def _l2(left: np.ndarray, right: np.ndarray) -> float:
 
 def _json_size(payload: Mapping[str, object]) -> int:
     return len(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _platform_summary() -> dict[str, str]:

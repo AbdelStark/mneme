@@ -7,7 +7,6 @@ import platform as platform_module
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
@@ -15,6 +14,7 @@ from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
 from mneme._version import __version__
 from mneme.core import EvaluationError, MnemeError
 from mneme.core._json import loads_strict_json
+from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport, write_report_json
 
 BenchmarkMode: TypeAlias = Literal["no_memory", "corrector", "in_context", "adapter"]
@@ -209,7 +209,7 @@ def run_external_benchmark(
         command=spec.command,
         package_version=package_version,
         git_commit=_detect_git_commit() if git_commit is None else git_commit,
-        created_at=_utc_now() if created_at is None else created_at,
+        created_at=utc_now_iso() if created_at is None else created_at,
         platform=_benchmark_platform_summary(spec.hardware),
         seed=spec.seed,
         dataset=spec.dataset,
@@ -336,10 +336,6 @@ def _benchmark_platform_summary(hardware: Mapping[str, str]) -> dict[str, str]:
     }
     summary.update(dict(hardware))
     return summary
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _detect_git_commit() -> str | None:
