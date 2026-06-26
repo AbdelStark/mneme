@@ -7,6 +7,7 @@ import platform as platform_module
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from os import PathLike, fspath
 from pathlib import Path
 from types import MappingProxyType
 from typing import Final, Literal, Protocol, TypeAlias, runtime_checkable
@@ -152,7 +153,7 @@ def parse_benchmark_modes(value: str) -> tuple[BenchmarkMode, ...]:
 def load_benchmark_dataset_ref(path: str | Path) -> DatasetRef:
     """Load an external benchmark dataset manifest."""
 
-    manifest_path = Path(path)
+    manifest_path = _require_path(path, "benchmark dataset path")
     try:
         data = loads_strict_json(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
@@ -324,6 +325,17 @@ def _require_non_empty_str(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise EvaluationError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _require_path(value: object, field_name: str) -> Path:
+    if not isinstance(value, str | PathLike):
+        raise EvaluationError(f"{field_name} must be a path-like value")
+    raw = fspath(value)
+    if not isinstance(raw, str):
+        raise EvaluationError(f"{field_name} must resolve to a text path")
+    if not raw:
+        raise EvaluationError(f"{field_name} must not be empty")
+    return Path(raw)
 
 
 def _benchmark_platform_summary(hardware: Mapping[str, str]) -> dict[str, str]:

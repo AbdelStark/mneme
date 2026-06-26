@@ -85,6 +85,37 @@ def test_missing_dataset_file_fails_with_actionable_error(tmp_path: Path) -> Non
         load_benchmark_dataset_ref(missing)
 
 
+@pytest.mark.parametrize(
+    ("path", "match"),
+    (
+        ("", "benchmark dataset path must not be empty"),
+        (object(), "benchmark dataset path must be a path-like value"),
+    ),
+)
+def test_dataset_manifest_rejects_malformed_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    path: object,
+    match: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(EvaluationError, match=match):
+        load_benchmark_dataset_ref(path)  # type: ignore[arg-type]
+
+
+def test_dataset_manifest_rejects_bytes_pathlike() -> None:
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"dataset.json"
+
+    with pytest.raises(
+        EvaluationError,
+        match="benchmark dataset path must resolve to a text path",
+    ):
+        load_benchmark_dataset_ref(BytesPath())  # type: ignore[arg-type]
+
+
 def test_unreadable_dataset_path_fails_with_actionable_error(
     tmp_path: Path,
 ) -> None:
