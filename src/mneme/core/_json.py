@@ -33,6 +33,7 @@ def loads_strict_json(value: str | bytes | bytearray) -> object:
 
     decoded: object = json.loads(
         value,
+        object_pairs_hook=_reject_duplicate_object_keys,
         parse_constant=_reject_json_constant,
         parse_float=_parse_json_float,
     )
@@ -66,6 +67,15 @@ def write_strict_json_file(
 
 def _reject_json_constant(value: str) -> NoReturn:
     raise ValueError(f"invalid JSON constant: {value}")
+
+
+def _reject_duplicate_object_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    decoded: dict[str, object] = {}
+    for key, item in pairs:
+        if key in decoded:
+            raise ValueError(f"duplicate JSON object key: {key}")
+        decoded[key] = item
+    return decoded
 
 
 def _require_string_object_keys(value: object) -> None:

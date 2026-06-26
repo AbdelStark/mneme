@@ -40,6 +40,7 @@ All notable user-visible changes are recorded here.
   CLI error JSON instead of leaking raw serialization errors.
 - Hardened CLI handler result normalization against invalid JSON object keys.
 - Hardened strict JSON serialization against non-string object keys.
+- Hardened strict JSON decoding against duplicate object keys.
 - Hardened store manifest and retention tombstone validation against malformed
   or non-UTC timestamps.
 - Hardened store verification against malformed persisted index snapshot item

@@ -35,6 +35,14 @@ def test_loads_strict_json_rejects_overflowed_numbers() -> None:
         loads_strict_json('{"metrics": [-1e999]}')
 
 
+def test_loads_strict_json_rejects_duplicate_object_keys() -> None:
+    with pytest.raises(ValueError, match="duplicate JSON object key: metric"):
+        loads_strict_json('{"metric": 1, "metric": 2}')
+
+    with pytest.raises(ValueError, match="duplicate JSON object key: case"):
+        loads_strict_json('{"metrics": [{"case": 1, "case": 2}]}')
+
+
 def test_strict_json_preserves_deterministic_formatting() -> None:
     assert dumps_strict_json({"b": 1, "a": True}, sort_keys=True, indent=2) == (
         '{\n  "a": true,\n  "b": 1\n}'
