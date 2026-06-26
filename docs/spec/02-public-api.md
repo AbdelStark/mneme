@@ -318,9 +318,9 @@ the parametric latent unchanged for empty retrievals unless they document a
 stricter typed failure mode. `CondCtx` carries the current latent, optional goal
 latent, optional step, and JSON-safe metadata for one conditioning call.
 `KnnCorrector` is the v0.1 training-free reference conditioner. It computes a
-distance-softmax nonparametric estimate from retrieved `Transition` values,
-supports `delta` and `absolute` modes, and gates the memory estimate toward zero
-as nearest-neighbor distance grows.
+distance-softmax nonparametric estimate from retrieved `Transition` values with
+finite non-negative distances, supports `delta` and `absolute` modes, and gates
+the memory estimate toward zero as nearest-neighbor distance grows.
 The default gate parameters are fixture baselines, not universal safety
 guarantees; deployment-safe fallback depends on calibrating nearest-neighbor
 distance distributions for the target encoder, summarizer, and task.

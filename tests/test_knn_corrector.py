@@ -128,6 +128,31 @@ def test_invalid_retrieval_distances_raise_typed_error() -> None:
         )
 
 
+def test_malformed_retrieval_distances_fail_at_conditioner_boundary() -> None:
+    corrector = KnnCorrector()
+
+    negative = Retrieval(items=(_retrieval().items[0],), distances=(-0.1,))
+    with pytest.raises(ValidationError, match="distances must be non-negative"):
+        corrector.condition(
+            np.array([1.0, 0.0], dtype=np.float32),
+            negative,
+            CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
+        )
+
+    nonnumeric = object.__new__(Retrieval)
+    object.__setattr__(nonnumeric, "items", _retrieval().items[:1])
+    object.__setattr__(nonnumeric, "distances", ("near",))
+    object.__setattr__(nonnumeric, "receipt", None)
+    object.__setattr__(nonnumeric, "schema_version", "mneme.retrieval.v1")
+
+    with pytest.raises(ValidationError, match="distances must be finite numbers"):
+        corrector.condition(
+            np.array([1.0, 0.0], dtype=np.float32),
+            nonnumeric,
+            CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
+        )
+
+
 def test_distance_gate_near_and_far_cases() -> None:
     corrector = KnnCorrector()
 

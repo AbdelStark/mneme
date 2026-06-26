@@ -49,7 +49,7 @@ Algorithm:
 if retrieval empty:
     return parametric
 
-d_i = finite distances from retrieval
+d_i = finite non-negative distances from retrieval
 w_i = softmax(-d_i / tau)
 if mode == "delta":
     z_knn = ctx.current_latent + sum_i w_i * transition_i.delta
@@ -62,7 +62,8 @@ z_pred = (1 - lambda) * parametric + lambda * z_knn
 ```
 
 The conditioner validates that retrieved values are transitions, shapes match,
-distances are finite, and required `ctx.current_latent` exists for delta mode.
+distances are finite and non-negative, and required `ctx.current_latent` exists
+for delta mode.
 It returns the same backend as `parametric` where possible. NumPy outputs
 preserve the parametric dtype. Torch paths use inference mode, detach tensor
 inputs, copy retrieved tensors through CPU NumPy for deterministic fixture-scale
