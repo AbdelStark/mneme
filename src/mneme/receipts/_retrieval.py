@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from types import MappingProxyType
@@ -22,6 +21,7 @@ from mneme.core import (
     ValidationError,
     content_id,
 )
+from mneme.core._json import dumps_strict_json
 from mneme.core._time import require_utc_timestamp, utc_now_iso
 from mneme.receipts._mmr import InclusionProof, verify_inclusion_proof
 
@@ -303,7 +303,7 @@ def _canonical_item_id(item: MemoryItem) -> Cid:
 
 
 def _query_vector_digest(vector: np.ndarray) -> bytes:
-    metadata = json.dumps(
+    metadata = dumps_strict_json(
         {
             "dtype": str(vector.dtype),
             "shape": [int(dim) for dim in vector.shape],

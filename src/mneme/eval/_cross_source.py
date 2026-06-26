@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import platform as platform_module
 import subprocess
 import tempfile
@@ -26,6 +25,7 @@ from mneme.core import (
     Transition,
     build_item,
 )
+from mneme.core._json import dumps_strict_json
 from mneme.core._time import utc_now_iso
 from mneme.eval._reports import DatasetRef, EvalMetric, EvalReport
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
@@ -392,7 +392,9 @@ def _l2(left: np.ndarray, right: np.ndarray) -> float:
 
 
 def _json_size(payload: Mapping[str, object]) -> int:
-    return len(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
+    return len(
+        dumps_strict_json(payload, sort_keys=True, separators=(",", ":")).encode()
+    )
 
 
 def _platform_summary() -> dict[str, str]:

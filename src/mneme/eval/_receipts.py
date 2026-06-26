@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Sequence
 from typing import Final
 
@@ -15,6 +14,7 @@ from mneme.core import (
     Retrieval,
     content_id,
 )
+from mneme.core._json import dumps_strict_json
 from mneme.core._time import utc_now_iso
 from mneme.eval._profile import (
     _detect_git_commit,
@@ -290,7 +290,9 @@ def _trend_item_counts(item_count: int) -> tuple[int, ...]:
 
 
 def _json_size(data: object) -> int:
-    return len(json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    return len(
+        dumps_strict_json(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    )
 
 
 def _mean(values: Sequence[int | float]) -> float:

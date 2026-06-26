@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.metadata
 import subprocess
 import sys
@@ -70,3 +71,26 @@ def test_core_import_avoids_optional_runtime_dependencies() -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_production_json_uses_strict_helper_boundary() -> None:
+    allowed = Path("src/mneme/core/_json.py")
+    offenders: list[str] = []
+
+    for path in Path("src/mneme").rglob("*.py"):
+        if path == allowed:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr in {"dumps", "loads"}
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "json"
+            ):
+                offenders.append(f"{path}:{node.lineno} json.{func.attr}")
+
+    assert offenders == []
