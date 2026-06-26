@@ -161,7 +161,7 @@ class StoreStats:
         object.__setattr__(
             self,
             "commitments_enabled",
-            _require_stats_bool(self.commitments_enabled, "commitments_enabled"),
+            _require_bool(self.commitments_enabled, "commitments_enabled"),
         )
 
 
@@ -280,7 +280,7 @@ def _require_stats_path(value: object) -> Path:
     return path
 
 
-def _require_stats_bool(value: object, field_name: str) -> bool:
+def _require_bool(value: object, field_name: str) -> bool:
     if not isinstance(value, bool):
         raise ValidationError(f"{field_name} must be a bool")
     return value
@@ -737,6 +737,7 @@ def init_store(
 ) -> LocalStore:
     """Create a local store layout and schema-versioned manifest."""
 
+    exist_ok = _require_bool(exist_ok, "exist_ok")
     root = Path(path)
     manifest_path = root / _MANIFEST_FILE
     if manifest_path.exists() and not exist_ok:
@@ -789,6 +790,7 @@ def open_store(
 ) -> LocalStore:
     """Open a local store, optionally initializing it when absent."""
 
+    create = _require_bool(create, "create")
     root = Path(path)
     manifest_path = root / _MANIFEST_FILE
     if not manifest_path.exists():

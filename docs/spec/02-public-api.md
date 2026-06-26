@@ -391,6 +391,8 @@ These constructors centralize validation and prevent callers from bypassing sche
 `init_store` creates the local v0.1 directory layout and schema-versioned
 manifest. `open_store(...).stats()` returns manifest-derived store id, value-log,
 index, transaction, and commitment-reservation fields.
+`init_store(exist_ok=...)` and `open_store(create=...)` require real `bool`
+values rather than truthy placeholders.
 `LocalStore.put` and `put_batch` append length-prefixed, checksummed value
 records under a transaction intent/commit file, update the manifest, and rebuild
 queryability from the value log on restart.

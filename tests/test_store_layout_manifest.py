@@ -180,6 +180,21 @@ def test_open_store_create_initializes_missing_store_and_stats_read_manifest(
     assert not stats.commitments_enabled
 
 
+def test_store_open_and_init_bool_flags_reject_non_bool_values(tmp_path) -> None:
+    missing_root = tmp_path / "missing-store"
+
+    with pytest.raises(ValidationError, match="create must be a bool"):
+        open_store(missing_root, create="yes")  # type: ignore[arg-type]
+
+    assert not missing_root.exists()
+
+    root = tmp_path / "store"
+    init_store(root)
+
+    with pytest.raises(ValidationError, match="exist_ok must be a bool"):
+        init_store(root, exist_ok="yes")  # type: ignore[arg-type]
+
+
 def test_load_manifest_reconstructs_fingerprints_and_index_config(tmp_path) -> None:
     root = tmp_path / "store"
     init_store(root, active_fingerprints=[_fingerprint()])
