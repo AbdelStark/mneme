@@ -64,6 +64,17 @@ def _item() -> MemoryItem:
     )
 
 
+class TensorLikeLatent:
+    def __init__(
+        self,
+        *,
+        shape: object = (1,),
+        dtype: object = "torch.float32",
+    ) -> None:
+        self.shape = shape
+        self.dtype = dtype
+
+
 def test_public_core_types_import() -> None:
     assert ENCODER_FINGERPRINT_SCHEMA == "mneme.encoder_fingerprint.v1"
     assert TRANSITION_SCHEMA == "mneme.transition.v1"
@@ -204,6 +215,40 @@ def test_transition_validation_rejects_invalid_shape_dtype_uuid_and_step() -> No
         Transition(**(valid | {"episode_id": str(uuid4())}))
     with pytest.raises(ValidationError, match="reward must be finite"):
         Transition(**(valid | {"reward": float("nan")}))
+
+
+@pytest.mark.parametrize("shape", [(True,), (1.2,), ("1",)])
+def test_transition_rejects_tensor_like_non_integer_shape_dimensions(
+    shape: object,
+) -> None:
+    latent = TensorLikeLatent(shape=shape)
+
+    with pytest.raises(
+        ValidationError,
+        match="z_src shape must be an integer sequence",
+    ):
+        Transition(
+            z_src=latent,
+            action=np.array([0.1], dtype=np.float32),
+            z_next=latent,
+            delta=latent,
+            t=0,
+            episode_id=uuid4(),
+        )
+
+
+def test_transition_rejects_tensor_like_dtype_substring_false_positive() -> None:
+    latent = TensorLikeLatent(dtype="notint")
+
+    with pytest.raises(ValidationError, match="z_src must have a numeric dtype"):
+        Transition(
+            z_src=latent,
+            action=np.array([0.1], dtype=np.float32),
+            z_next=latent,
+            delta=latent,
+            t=0,
+            episode_id=uuid4(),
+        )
 
 
 def test_query_validation_rejects_bad_k_ef_metric_and_temporal_decay() -> None:

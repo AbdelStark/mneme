@@ -29,6 +29,7 @@ RETRIEVAL_SCHEMA: Final = "mneme.retrieval.v1"
 
 _SUPPORTED_MAJOR: Final = 1
 _RESERVED_META_KEYS: Final = frozenset({"schema_version", "content_id", "encoder_fp"})
+_NUMERIC_DTYPE_PREFIXES: Final = ("float", "int", "uint", "complex", "bfloat")
 
 
 class Metric(StrEnum):
@@ -238,7 +239,7 @@ def _validate_latent(value: object, field_name: str) -> tuple[tuple[int, ...], s
             raise ValidationError(f"{field_name} must have a numeric dtype")
         if not bool(np.isfinite(value).all()):
             raise ValidationError(f"{field_name} must contain only finite values")
-        shape = tuple(int(dim) for dim in value.shape)
+        shape = _shape_from_sequence(value.shape, field_name)
         _validate_shape(shape, field_name)
         return shape, str(value.dtype)
 
@@ -246,17 +247,36 @@ def _validate_latent(value: object, field_name: str) -> tuple[tuple[int, ...], s
     dtype_obj = getattr(value, "dtype", None)
     if shape_obj is None or dtype_obj is None:
         raise ValidationError(f"{field_name} must expose shape and dtype")
-    try:
-        shape = tuple(int(dim) for dim in shape_obj)
-    except (TypeError, ValueError) as exc:
-        raise ValidationError(
-            f"{field_name} shape must be an integer sequence"
-        ) from exc
+    shape = _shape_from_sequence(shape_obj, field_name)
     _validate_shape(shape, field_name)
-    dtype = str(dtype_obj)
-    if not any(token in dtype for token in ("float", "int", "uint")):
-        raise ValidationError(f"{field_name} must have a numeric dtype")
+    dtype = _numeric_dtype_text(dtype_obj, field_name)
     return shape, dtype
+
+
+def _shape_from_sequence(value: object, field_name: str) -> tuple[int, ...]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise ValidationError(f"{field_name} shape must be an integer sequence")
+    return tuple(_shape_dim(dim, field_name) for dim in value)
+
+
+def _shape_dim(value: object, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValidationError(f"{field_name} shape must be an integer sequence")
+    index_method = getattr(value, "__index__", None)
+    if not callable(index_method):
+        raise ValidationError(f"{field_name} shape must be an integer sequence")
+    dim = index_method()
+    if isinstance(dim, bool) or not isinstance(dim, int):
+        raise ValidationError(f"{field_name} shape must be an integer sequence")
+    return dim
+
+
+def _numeric_dtype_text(value: object, field_name: str) -> str:
+    dtype = str(value)
+    normalized = dtype.removeprefix("torch.").removeprefix("numpy.")
+    if not normalized or not normalized.startswith(_NUMERIC_DTYPE_PREFIXES):
+        raise ValidationError(f"{field_name} must have a numeric dtype")
+    return dtype
 
 
 def _validate_shape(shape: tuple[int, ...], field_name: str) -> None:
