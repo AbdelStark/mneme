@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
-from pathlib import Path
 from typing import NoReturn, TextIO
 
+from mneme.cli._arguments import add_eval_output_seed_arguments
 from mneme.eval._cross_source import run_cross_source_transfer_evaluation
 from mneme.eval._entrypoints import run_eval_entrypoint, write_report_for_entrypoint
 
@@ -19,8 +19,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
 
 def _run(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     parser = argparse.ArgumentParser(prog="mneme eval cross-source")
-    parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--seed", default=0, type=int)
+    add_eval_output_seed_arguments(parser)
     args = parser.parse_args(argv)
     command = (
         "mneme",

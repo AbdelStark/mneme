@@ -10,7 +10,12 @@ from typing import Any, NoReturn, TextIO
 
 import numpy as np
 
-from mneme.cli._arguments import non_negative_float, non_negative_int, positive_int
+from mneme.cli._arguments import (
+    add_eval_output_seed_arguments,
+    add_eval_profile_arguments,
+    add_eval_receipts_arguments,
+    non_negative_float,
+)
 from mneme.cli._runtime import (
     JsonResult,
     error_json,
@@ -151,34 +156,33 @@ def _build_parser() -> argparse.ArgumentParser:
         "fixtures",
         help="write deterministic fixture evaluation report",
     )
-    fixtures_parser.add_argument("--out", required=True, type=Path)
-    fixtures_parser.add_argument("--seed", default=0, type=int)
+    add_eval_output_seed_arguments(fixtures_parser)
     fixtures_parser.set_defaults(command="eval fixtures", handler=_handle_eval_fixtures)
 
     profile_parser = eval_subparsers.add_parser(
         "profile",
         help="write local recall, latency, and footprint report",
     )
-    _add_eval_profile_args(profile_parser)
+    add_eval_profile_arguments(profile_parser)
     profile_parser.set_defaults(command="eval profile", handler=_handle_eval_profile)
     recall_parser = eval_subparsers.add_parser(
         "recall",
         help="write local recall profile report",
     )
-    _add_eval_profile_args(recall_parser)
+    add_eval_profile_arguments(recall_parser)
     recall_parser.set_defaults(command="eval recall", handler=_handle_eval_profile)
     latency_parser = eval_subparsers.add_parser(
         "latency",
         help="write local latency profile report",
     )
-    _add_eval_profile_args(latency_parser)
+    add_eval_profile_arguments(latency_parser)
     latency_parser.set_defaults(command="eval latency", handler=_handle_eval_profile)
 
     receipts_eval_parser = eval_subparsers.add_parser(
         "receipts",
         help="write local receipt overhead report",
     )
-    _add_eval_receipts_args(receipts_eval_parser)
+    add_eval_receipts_arguments(receipts_eval_parser)
     receipts_eval_parser.set_defaults(
         command="eval receipts",
         handler=_handle_eval_receipts,
@@ -197,8 +201,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "remote-conformance",
         help="write fixture-scale local-vs-remote conformance report",
     )
-    remote_conformance_parser.add_argument("--out", required=True, type=Path)
-    remote_conformance_parser.add_argument("--seed", default=0, type=int)
+    add_eval_output_seed_arguments(remote_conformance_parser)
     remote_conformance_parser.set_defaults(
         command="eval remote-conformance",
         handler=_handle_eval_remote_conformance,
@@ -208,8 +211,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "cross-source",
         help="write fixture-scale cross-source transfer report",
     )
-    cross_source_parser.add_argument("--out", required=True, type=Path)
-    cross_source_parser.add_argument("--seed", default=0, type=int)
+    add_eval_output_seed_arguments(cross_source_parser)
     cross_source_parser.set_defaults(
         command="eval cross-source",
         handler=_handle_eval_cross_source,
@@ -543,41 +545,6 @@ def _load_receipt(path: Path) -> RetrievalReceipt:
 
 def _root_from_hex(value: str) -> bytes:
     return cid_from_hex(value, "root", error_type=ReceiptVerificationError)
-
-
-def _add_eval_profile_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--store", required=True, type=Path)
-    parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--k", default=4, type=positive_int)
-    parser.add_argument(
-        "--metric",
-        default=Metric.L2.value,
-        choices=[metric.value for metric in Metric],
-    )
-    parser.add_argument("--queries", default=8, type=positive_int)
-    parser.add_argument("--warmup", default=2, type=non_negative_int)
-    parser.add_argument("--measurements", default=20, type=positive_int)
-    parser.add_argument(
-        "--approx-backend",
-        default="faiss_hnsw",
-        help="approximate backend to compare, or 'none'",
-    )
-    parser.add_argument("--seed", default=0, type=int)
-
-
-def _add_eval_receipts_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--store", required=True, type=Path)
-    parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--k", default=4, type=positive_int)
-    parser.add_argument(
-        "--metric",
-        default=Metric.L2.value,
-        choices=[metric.value for metric in Metric],
-    )
-    parser.add_argument("--queries", default=8, type=positive_int)
-    parser.add_argument("--warmup", default=2, type=non_negative_int)
-    parser.add_argument("--measurements", default=20, type=positive_int)
-    parser.add_argument("--seed", default=0, type=int)
 
 
 def _stats_json(stats: StoreStats) -> dict[str, Any]:

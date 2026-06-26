@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
-from pathlib import Path
 from typing import TextIO
 
+from mneme.cli._arguments import add_eval_output_seed_arguments
 from mneme.eval._entrypoints import run_eval_entrypoint, write_report_for_entrypoint
 from mneme.eval._remote_conformance import run_remote_conformance_evaluation
 
@@ -17,8 +17,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
 
 def _run(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m mneme.eval.remote_conformance")
-    parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--seed", default=0, type=int)
+    add_eval_output_seed_arguments(parser)
     args = parser.parse_args(argv)
     command = (
         "mneme",

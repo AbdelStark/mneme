@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
-from pathlib import Path
 from typing import NoReturn, TextIO
 
-from mneme.cli._arguments import non_negative_int, positive_int
+from mneme.cli._arguments import add_eval_profile_arguments
 from mneme.core import Metric
 from mneme.eval._entrypoints import (
     run_eval_entrypoint,
@@ -25,23 +24,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
 
 def _run(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> int:
     parser = argparse.ArgumentParser(prog="mneme eval profile")
-    parser.add_argument("--store", required=True, type=Path)
-    parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--k", default=4, type=positive_int)
-    parser.add_argument(
-        "--metric",
-        default=Metric.L2.value,
-        choices=[metric.value for metric in Metric],
-    )
-    parser.add_argument("--queries", default=8, type=positive_int)
-    parser.add_argument("--warmup", default=2, type=non_negative_int)
-    parser.add_argument("--measurements", default=20, type=positive_int)
-    parser.add_argument(
-        "--approx-backend",
-        default="faiss_hnsw",
-        help="approximate backend to compare, or 'none'",
-    )
-    parser.add_argument("--seed", default=0, type=int)
+    add_eval_profile_arguments(parser)
     args = parser.parse_args(argv)
     approx_backend = None if args.approx_backend == "none" else args.approx_backend
     command = (
