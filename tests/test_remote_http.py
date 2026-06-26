@@ -167,6 +167,28 @@ def test_remote_http_bearer_token_required(tmp_path: Path) -> None:
     assert authorized.stats()["visible_record_count"] == 0
 
 
+def test_remote_http_duplicate_authorization_headers_fail_closed(
+    tmp_path: Path,
+) -> None:
+    app = MemoryStoreASGIApp(init_store(tmp_path / "store"), bearer_token="secret")
+
+    response = asyncio.run(
+        _call_asgi_raw(
+            app,
+            "POST",
+            "/stats",
+            b'{"schema_version": "mneme.stats.request.v1"}',
+            RemoteHttpConfig("http://testserver", bearer_token="secret"),
+            extra_headers=[(b"authorization", b"Bearer secret")],
+        )
+    )
+
+    assert response.status_code == 401
+    assert response.payload["schema_version"] == "mneme.error.v1"
+    assert response.payload["error_type"] == "ValidationError"
+    assert "bearer token" in str(response.payload["message"])
+
+
 def test_remote_http_asgi_app_validates_bearer_token(tmp_path: Path) -> None:
     store = init_store(tmp_path / "store")
 
@@ -443,12 +465,16 @@ async def _call_asgi_raw(
     path: str,
     body: bytes,
     config: RemoteHttpConfig,
+    *,
+    extra_headers: list[tuple[bytes, bytes]] | None = None,
 ) -> HttpJsonResponse:
     sent = False
     messages: list[dict[str, object]] = []
     headers = [(b"content-type", b"application/json")]
     if config.bearer_token is not None:
         headers.append((b"authorization", f"Bearer {config.bearer_token}".encode()))
+    if extra_headers is not None:
+        headers.extend(extra_headers)
 
     async def receive() -> dict[str, object]:
         nonlocal sent

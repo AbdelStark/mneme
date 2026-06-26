@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 import http.client
 import importlib
 import math
@@ -402,10 +403,15 @@ def _json_bytes(payload: JsonObject) -> bytes:
 
 def _authorized(scope: AsgiScope, token: str) -> bool:
     expected = f"Bearer {token}".encode()
+    seen = False
+    matched = False
     for name, value in _scope_headers(scope):
         if name.lower() == b"authorization":
-            return value == expected
-    return False
+            if seen:
+                return False
+            seen = True
+            matched = hmac.compare_digest(value, expected)
+    return seen and matched
 
 
 def _scope_headers(scope: AsgiScope) -> tuple[tuple[bytes, bytes], ...]:

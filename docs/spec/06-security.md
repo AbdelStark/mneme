@@ -101,7 +101,8 @@ must state these controls before it is presented as supported:
 - Metadata redaction failure in tests: fail CI.
 - Remote response with mismatched fingerprint: reject before conditioning.
 - Malformed remote error envelope: reject with the local schema or validation error.
-- Missing or invalid remote bearer token: reject before dispatching to the store.
+- Missing, duplicate, or invalid remote bearer token: reject before dispatching
+  to the store.
 - Anonymous writable shared store: unsupported deployment; add authentication
   and network controls before use.
 
