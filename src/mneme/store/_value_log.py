@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import math
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
@@ -260,6 +261,9 @@ def _array_from_json(data: object) -> np.ndarray:
         )
     except binascii.Error as exc:
         raise StoreCorruptionError("array data must be base64") from exc
+    expected_bytes = math.prod(shape_data) * dtype.itemsize
+    if len(raw) != expected_bytes:
+        raise StoreCorruptionError("array data does not match dtype and shape")
     try:
         array = np.frombuffer(raw, dtype=dtype).reshape(tuple(shape_data)).copy()
     except ValueError as exc:

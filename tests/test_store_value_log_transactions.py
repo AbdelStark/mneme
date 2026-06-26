@@ -447,6 +447,23 @@ def test_value_log_boolean_array_shape_is_store_corruption(tmp_path: Path) -> No
         open_store(root)
 
 
+@pytest.mark.parametrize("shape", ([1], [3]))
+def test_value_log_array_byte_count_mismatch_is_store_corruption(
+    tmp_path: Path,
+    shape: list[int],
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    record = _value_record(content_id="00" * 32)
+    record["item"]["key"]["shape"] = shape
+    _write_raw_value_record(root / "values" / "log-000000.mnv", record)
+
+    with pytest.raises(
+        StoreCorruptionError, match="array data does not match dtype and shape"
+    ):
+        open_store(root)
+
+
 def test_value_log_nonfinite_array_payload_is_store_corruption(
     tmp_path: Path,
 ) -> None:
