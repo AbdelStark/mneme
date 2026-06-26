@@ -22,6 +22,7 @@ from mneme.core._json import loads_strict_json
 from mneme.observability import ObservabilityConfig, emit_event, start_event_timer
 from mneme.store._local import (
     _COMMITMENT_FILE,
+    _require_local_store_path,
     _write_json_atomic,
     load_manifest,
     open_store,
@@ -187,7 +188,7 @@ def verify_store(
 ) -> StoreVerificationReport:
     """Verify manifest, value logs, content ids, checksums, and index refs."""
 
-    root = Path(path)
+    root = _require_local_store_path(path)
     started = start_event_timer(observability)
     try:
         report = _verify_store_report(root)
@@ -332,7 +333,7 @@ def _verify_store_report(root: Path) -> StoreVerificationReport:
 def rebuild_index(path: str | Path) -> IndexRebuildReport:
     """Rebuild the persisted flat-index snapshot from append-only value logs."""
 
-    root = Path(path)
+    root = _require_local_store_path(path)
     errors: list[str] = []
     try:
         manifest = load_manifest(root)

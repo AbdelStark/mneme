@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from uuid import uuid4
 
@@ -159,6 +160,32 @@ def test_rebuild_index_restores_snapshot_and_query_results(tmp_path: Path) -> No
         QuerySpec(np.array([2.9, 0.0], dtype=np.float32), k=1, metric=Metric.L2)
     )
     assert retrieval.items[0].content_id == cids[1]
+
+
+@pytest.mark.parametrize("entrypoint", (verify_store, rebuild_index, commit_init_store))
+def test_store_maintenance_entrypoints_reject_empty_paths_without_side_effects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    entrypoint: Callable[[str], object],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValidationError, match="path must not be empty"):
+        entrypoint("")
+
+    assert not (tmp_path / "manifest.json").exists()
+    assert not (tmp_path / "values").exists()
+    assert not (tmp_path / "index").exists()
+    assert not (tmp_path / "transactions").exists()
+    assert not (tmp_path / "receipts").exists()
+
+
+@pytest.mark.parametrize("entrypoint", (verify_store, rebuild_index, commit_init_store))
+def test_store_maintenance_entrypoints_reject_non_path_values(
+    entrypoint: Callable[[object], object],
+) -> None:
+    with pytest.raises(ValidationError, match="path must be a path-like value"):
+        entrypoint(object())  # type: ignore[arg-type]
 
 
 def test_verify_store_rejects_nonstandard_index_backend_json(
