@@ -19,6 +19,8 @@ All notable user-visible changes are recorded here.
   metadata.
 - Hardened cross-attention adapter validation for malformed tensor-like shape
   metadata.
+- Hardened kNN conditioning distance validation against boolean-like malformed
+  retrieval payloads.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

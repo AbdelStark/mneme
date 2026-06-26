@@ -279,7 +279,13 @@ def _require_same_shape(
 
 def _require_distances(retrieval: Retrieval) -> np.ndarray:
     try:
+        if any(
+            isinstance(distance, (bool, np.bool_)) for distance in retrieval.distances
+        ):
+            raise ValidationError("retrieval distances must be finite numbers")
         distances = np.asarray(retrieval.distances, dtype=np.float64)
+    except ValidationError:
+        raise
     except (TypeError, ValueError) as exc:
         raise ValidationError("retrieval distances must be finite numbers") from exc
     if distances.shape != (len(retrieval.items),):

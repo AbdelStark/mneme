@@ -128,6 +128,25 @@ def test_invalid_retrieval_distances_raise_typed_error() -> None:
         )
 
 
+@pytest.mark.parametrize("distance", (True, np.bool_(True)))
+def test_boolean_retrieval_distances_fail_at_conditioner_boundary(
+    distance: object,
+) -> None:
+    corrector = KnnCorrector()
+    retrieval = object.__new__(Retrieval)
+    object.__setattr__(retrieval, "items", _retrieval().items[:1])
+    object.__setattr__(retrieval, "distances", (distance,))
+    object.__setattr__(retrieval, "receipt", None)
+    object.__setattr__(retrieval, "schema_version", "mneme.retrieval.v1")
+
+    with pytest.raises(ValidationError, match="distances must be finite numbers"):
+        corrector.condition(
+            np.array([1.0, 0.0], dtype=np.float32),
+            retrieval,
+            CondCtx(np.array([1.0, 0.0], dtype=np.float32)),
+        )
+
+
 def test_malformed_retrieval_distances_fail_at_conditioner_boundary() -> None:
     corrector = KnnCorrector()
 
