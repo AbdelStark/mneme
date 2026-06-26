@@ -748,11 +748,6 @@ def init_store(
         observability=observability,
     )
 
-    root.mkdir(parents=True, exist_ok=True)
-    for dirname in _LAYOUT_DIRS:
-        (root / dirname).mkdir(exist_ok=True)
-    (root / _VALUE_LOG).touch(exist_ok=True)
-
     now = _utc_now()
     manifest = StoreManifest(
         schema_version=STORE_MANIFEST_SCHEMA,
@@ -771,11 +766,18 @@ def init_store(
             files=(),
         ),
     )
-    _write_json_atomic(manifest_path, manifest.to_json())
-    _write_json_atomic(
-        root / _INDEX_BACKEND_FILE,
-        {"backend": manifest.index.backend, "params": dict(manifest.index.params)},
-    )
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        for dirname in _LAYOUT_DIRS:
+            (root / dirname).mkdir(exist_ok=True)
+        (root / _VALUE_LOG).touch(exist_ok=True)
+        _write_json_atomic(manifest_path, manifest.to_json())
+        _write_json_atomic(
+            root / _INDEX_BACKEND_FILE,
+            {"backend": manifest.index.backend, "params": dict(manifest.index.params)},
+        )
+    except OSError as exc:
+        raise StoreError(f"store layout could not be initialized: {root}") from exc
     return _store_from_manifest(root, manifest, observability=observability)
 
 

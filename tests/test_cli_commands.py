@@ -70,6 +70,19 @@ def test_store_init_cli_reports_typed_duplicate_store_error(tmp_path: Path) -> N
     assert error["error_type"] == "StoreError"
 
 
+def test_store_init_cli_reports_typed_layout_error(tmp_path: Path) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+
+    result = run_cli("store", "init", blocked_parent / "store")
+
+    assert result.returncode == int(CliExitCode.INTERNAL)
+    error = _stdout_json(result)
+    assert error["schema_version"] == "mneme.cli_error.v1"
+    assert error["error_type"] == "StoreError"
+    assert "layout could not be initialized" in str(error["errors"][0])
+
+
 def test_store_verify_cli_success_and_validation_failure(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)

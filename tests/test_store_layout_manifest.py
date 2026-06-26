@@ -262,6 +262,14 @@ def test_init_store_rejects_invalid_index_params_before_layout(tmp_path) -> None
     assert not root.exists()
 
 
+def test_init_store_wraps_layout_filesystem_errors(tmp_path) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("occupied", encoding="utf-8")
+
+    with pytest.raises(StoreError, match="layout could not be initialized"):
+        init_store(blocked_parent / "store")
+
+
 def test_unknown_manifest_major_version_fails_closed(tmp_path) -> None:
     root = tmp_path / "store"
     init_store(root)
