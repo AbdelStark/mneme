@@ -20,6 +20,7 @@ from mneme.core import (
 )
 from mneme.core._ids import require_cid_bytes
 from mneme.index._protocols import Index
+from mneme.observability import ObservabilityConfig
 
 _COSINE_NORM_TOLERANCE = 1e-4
 
@@ -35,8 +36,10 @@ class FaissHnswIndex:
         m: int = 32,
         ef_construction: int = 40,
         ef_search: int | None = None,
+        observability: ObservabilityConfig | None = None,
     ) -> None:
         self._faiss = _load_faiss()
+        self.observability = observability
         self.m = _positive_int(m, "m")
         self.ef_construction = _positive_int(ef_construction, "ef_construction")
         self.ef_search = (
@@ -55,7 +58,12 @@ class FaissHnswIndex:
         self._dirty = True
 
     @classmethod
-    def from_params(cls, params: Mapping[str, Any] | None) -> FaissHnswIndex:
+    def from_params(
+        cls,
+        params: Mapping[str, Any] | None,
+        *,
+        observability: ObservabilityConfig | None = None,
+    ) -> FaissHnswIndex:
         """Build a backend from manifest-style index parameters."""
 
         params = {} if params is None else dict(params)
@@ -67,6 +75,7 @@ class FaissHnswIndex:
             m=params.get("m", 32),
             ef_construction=params.get("ef_construction", 40),
             ef_search=params.get("ef_search"),
+            observability=observability,
         )
 
     def add(self, cid: Cid, key: SummaryVec) -> None:
@@ -178,7 +187,7 @@ def create_index_backend(
     if backend == "flat":
         return FlatIndex(observability=observability)
     if backend == FaissHnswIndex.backend:
-        return FaissHnswIndex.from_params(params)
+        return FaissHnswIndex.from_params(params, observability=observability)
     raise IndexUnavailableError(f"unsupported index backend: {backend}")
 
 

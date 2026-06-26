@@ -301,9 +301,11 @@ inner-product score, matching the `Index` protocol.
 `search_index` applies shared `QuerySpec` semantics around an index backend:
 fail-closed fingerprint checks, deterministic over-fetch before store filters,
 stable de-duplication by first occurrence, optional temporal decay, and final
-top-k truncation. `planned_search_k` returns `k` for unfiltered exact search and
-`max(k * 4, ef or k)` when filters require over-fetching unless callers provide
-a different multiplier.
+top-k truncation. When an observed backend returns duplicate ids, duplicate
+removal emits a structured `mneme.index.search` warning with
+`duplicate_result_count`. `planned_search_k` returns `k` for unfiltered exact
+search and `max(k * 4, ef or k)` when filters require over-fetching unless
+callers provide a different multiplier.
 
 `Conditioner` is the public protocol for memory-conditioned prediction. It
 accepts an already computed parametric latent, a retrieval, and `CondCtx`; it

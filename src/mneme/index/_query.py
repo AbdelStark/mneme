@@ -14,6 +14,7 @@ from mneme.core import (
     QuerySpec,
 )
 from mneme.index._protocols import Index
+from mneme.observability import ObservabilityConfig, emit_event
 
 FilterPredicate = Callable[[Cid], bool]
 
@@ -70,7 +71,8 @@ def search_index(
 
     while True:
         raw = index.search(spec.vector, fetch_k, metric=spec.metric, ef=spec.ef)
-        results = deduplicate_results(raw)
+        results, duplicate_count = _deduplicate_results_with_count(raw)
+        _emit_duplicate_warning(index, raw, results, duplicate_count)
         if filter_predicate is not None:
             results = [result for result in results if filter_predicate(result[0])]
         if spec.temporal_decay is not None:
@@ -88,14 +90,48 @@ def search_index(
 def deduplicate_results(results: list[tuple[Cid, float]]) -> list[tuple[Cid, float]]:
     """Remove duplicate ids while preserving first occurrence order."""
 
+    deduped, _ = _deduplicate_results_with_count(results)
+    return deduped
+
+
+def _deduplicate_results_with_count(
+    results: list[tuple[Cid, float]],
+) -> tuple[list[tuple[Cid, float]], int]:
     deduped: list[tuple[Cid, float]] = []
     seen: set[Cid] = set()
+    duplicate_count = 0
     for cid, distance in results:
+        distance_value = _finite_float(distance, "distance")
         if cid in seen:
+            duplicate_count += 1
             continue
         seen.add(cid)
-        deduped.append((cid, _finite_float(distance, "distance")))
-    return deduped
+        deduped.append((cid, distance_value))
+    return deduped, duplicate_count
+
+
+def _emit_duplicate_warning(
+    index: Index,
+    raw: list[tuple[Cid, float]],
+    deduped: list[tuple[Cid, float]],
+    duplicate_count: int,
+) -> None:
+    if duplicate_count <= 0:
+        return
+    observability = getattr(index, "observability", None)
+    if not isinstance(observability, ObservabilityConfig):
+        return
+    emit_event(
+        observability,
+        event="mneme.index.search",
+        operation="index.search.deduplicate",
+        status="warning",
+        started=None,
+        backend=getattr(index, "backend", type(index).__name__),
+        raw_hit_count=len(raw),
+        hit_count=len(deduped),
+        duplicate_result_count=duplicate_count,
+    )
 
 
 def apply_temporal_decay(

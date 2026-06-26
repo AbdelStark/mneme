@@ -47,6 +47,7 @@ Query metrics:
 - `mneme_query_distance_mean`
 - `mneme_query_backend`
 - `mneme_query_fingerprint_match`
+- `mneme_query_duplicate_results`
 
 Conditioning metrics:
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import numpy as np
 import pytest
 
@@ -17,12 +19,27 @@ from mneme.index import (
     planned_search_k,
     search_index,
 )
+from mneme.observability import EVENT_SCHEMA_VERSION, ObservabilityConfig
+
+
+class RecordingSink:
+    def __init__(self) -> None:
+        self.events: list[dict[str, object]] = []
+
+    def emit(self, event: Mapping[str, object]) -> None:
+        self.events.append(dict(event))
 
 
 class DuplicateIndex:
-    def __init__(self, results: list[tuple[bytes, float]]) -> None:
+    def __init__(
+        self,
+        results: list[tuple[bytes, float]],
+        *,
+        observability: ObservabilityConfig | None = None,
+    ) -> None:
         self.results = results
         self.calls: list[int] = []
+        self.observability = observability
 
     def add(self, cid: bytes, key: np.ndarray) -> None:
         raise NotImplementedError
@@ -93,6 +110,32 @@ def test_deduplicate_results_preserves_first_occurrence() -> None:
 def test_deduplicate_results_rejects_nonfinite_distances() -> None:
     with pytest.raises(QueryError, match="distance must be a finite number"):
         deduplicate_results([(b"a", float("nan"))])
+    with pytest.raises(QueryError, match="distance must be a finite number"):
+        deduplicate_results([(b"a", 0.1), (b"a", float("nan"))])
+
+
+def test_search_index_emits_duplicate_warning_event() -> None:
+    sink = RecordingSink()
+    index = DuplicateIndex(
+        [(b"a", 0.1), (b"a", 0.0), (b"b", 0.2)],
+        observability=ObservabilityConfig(event_sink=sink),
+    )
+
+    result = search_index(index, _query(k=2))
+
+    assert result == [(b"a", 0.1), (b"b", 0.2)]
+    event = sink.events[-1]
+    event.pop("duration_ms", None)
+    assert event == {
+        "event": "mneme.index.search",
+        "schema_version": EVENT_SCHEMA_VERSION,
+        "operation": "index.search.deduplicate",
+        "status": "warning",
+        "backend": "DuplicateIndex",
+        "raw_hit_count": 3,
+        "hit_count": 2,
+        "duplicate_result_count": 1,
+    }
 
 
 def test_planned_search_k_overfetches_for_filters() -> None:

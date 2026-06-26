@@ -11,6 +11,7 @@ import pytest
 
 from mneme.core import Metric, OptionalDependencyError, QueryError
 from mneme.index import FaissHnswIndex, FlatIndex, Index, create_index_backend
+from mneme.observability import ObservabilityConfig
 from mneme.store import init_store
 
 
@@ -116,13 +117,16 @@ def test_faiss_hnsw_backend_params_and_package_extra(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _install_fake_faiss(monkeypatch)
+    observability = ObservabilityConfig()
 
     backend = create_index_backend(
         "faiss_hnsw",
         {"m": 8, "ef_construction": 12, "ef_search": 10},
+        observability=observability,
     )
 
     assert isinstance(backend, FaissHnswIndex)
+    assert backend.observability is observability
     with pytest.raises(QueryError, match="unsupported faiss_hnsw params"):
         create_index_backend("faiss_hnsw", {"unknown": 1})
 
