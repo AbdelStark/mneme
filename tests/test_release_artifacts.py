@@ -148,6 +148,34 @@ def test_release_artifact_validator_reports_missing_sdist_metadata(
     assert any("sdist missing PKG-INFO metadata" in error for error in report.errors)
 
 
+def test_release_artifact_validator_requires_optional_extra_metadata(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(
+        tmp_path,
+        version=mneme.__version__,
+        include_optional_extras=False,
+    )
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any(
+        "wheel metadata missing optional extra: index" in error
+        for error in report.errors
+    )
+    assert any(
+        "sdist metadata missing optional dependency: uvicorn>=0.30; extra == 'remote'"
+        in error
+        for error in report.errors
+    )
+
+
 def test_release_artifact_validator_reports_unreadable_archive_paths(
     tmp_path: Path,
 ) -> None:
@@ -292,12 +320,13 @@ def _write_fake_dist(
     *,
     version: str,
     include_sdist_metadata: bool = True,
+    include_optional_extras: bool = True,
     wheel_extra_files: dict[str, str] | None = None,
     sdist_extra_files: dict[str, str] | None = None,
 ) -> Path:
     dist = tmp_path / "dist"
     dist.mkdir()
-    metadata = _metadata(version)
+    metadata = _metadata(version, include_optional_extras=include_optional_extras)
     dist_info = f"mneme-{version}.dist-info"
     wheel = dist / f"mneme-{version}-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
@@ -338,11 +367,25 @@ def _write_fake_dist(
     return dist
 
 
-def _metadata(version: str) -> str:
+def _metadata(version: str, *, include_optional_extras: bool = True) -> str:
+    optional = (
+        """Provides-Extra: index
+Provides-Extra: ml
+Provides-Extra: receipts
+Provides-Extra: remote
+Requires-Dist: faiss-cpu>=1.8; extra == 'index'
+Requires-Dist: torch>=2.3; extra == 'ml'
+Requires-Dist: cryptography>=42; extra == 'receipts'
+Requires-Dist: uvicorn>=0.30; extra == 'remote'
+"""
+        if include_optional_extras
+        else ""
+    )
     return f"""Metadata-Version: 2.4
 Name: mneme
 Version: {version}
 Summary: Episodic memory and retrieval for latent world models.
+Classifier: Typing :: Typed
 Project-URL: Documentation, https://abdelstark.github.io/mneme/
 Project-URL: Source, https://github.com/AbdelStark/mneme
 Project-URL: Issues, https://github.com/AbdelStark/mneme/issues
@@ -352,6 +395,7 @@ License-File: LICENSE
 Requires-Python: >=3.11
 Requires-Dist: blake3>=0.4
 Requires-Dist: numpy>=1.26
+{optional}
 
 """
 

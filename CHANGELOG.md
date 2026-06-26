@@ -15,6 +15,8 @@ All notable user-visible changes are recorded here.
 - Aligned PRD, architecture, and remote RFC package-boundary docs with the
   shipped `mneme.remote` package and optional extra names.
 - Hardened release artifact validation against packaged Python bytecode.
+- Hardened release artifact validation for typed-package and optional-extra
+  metadata.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

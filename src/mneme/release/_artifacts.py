@@ -28,6 +28,13 @@ REQUIRED_PROJECT_URLS: Final = (
     "Changelog",
 )
 REQUIRED_RUNTIME_DEPENDENCIES: Final = ("blake3>=0.4", "numpy>=1.26")
+REQUIRED_OPTIONAL_EXTRAS: Final = {
+    "index": "faiss-cpu>=1.8; extra == 'index'",
+    "ml": "torch>=2.3; extra == 'ml'",
+    "receipts": "cryptography>=42; extra == 'receipts'",
+    "remote": "uvicorn>=0.30; extra == 'remote'",
+}
+REQUIRED_CLASSIFIERS: Final = ("Typing :: Typed",)
 REQUIRED_SDIST_FILES: Final = (
     "CITATION.cff",
     "CHANGELOG.md",
@@ -338,6 +345,19 @@ def _validate_metadata(
     for dependency in REQUIRED_RUNTIME_DEPENDENCIES:
         if dependency not in _headers(message, "Requires-Dist"):
             errors.append(f"{source} metadata missing dependency: {dependency}")
+    provides_extra = set(_headers(message, "Provides-Extra"))
+    requires_dist = set(_headers(message, "Requires-Dist"))
+    for extra, dependency in REQUIRED_OPTIONAL_EXTRAS.items():
+        if extra not in provides_extra:
+            errors.append(f"{source} metadata missing optional extra: {extra}")
+        if dependency not in requires_dist:
+            errors.append(
+                f"{source} metadata missing optional dependency: {dependency}"
+            )
+    classifiers = set(_headers(message, "Classifier"))
+    for classifier in REQUIRED_CLASSIFIERS:
+        if classifier not in classifiers:
+            errors.append(f"{source} metadata missing classifier: {classifier}")
     project_urls = _headers(message, "Project-URL")
     for label in REQUIRED_PROJECT_URLS:
         if not any(value.startswith(f"{label}, ") for value in project_urls):
