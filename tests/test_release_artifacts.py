@@ -128,6 +128,48 @@ def test_release_artifact_validator_rejects_unsafe_archive_paths(
     )
 
 
+def test_release_artifact_validator_allows_sdist_root_directory_entry(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(
+        tmp_path,
+        version=mneme.__version__,
+        include_sdist_root_directory=True,
+    )
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert report.ok, report.errors
+
+
+def test_release_artifact_validator_rejects_sdist_top_level_files(
+    tmp_path: Path,
+) -> None:
+    dist = _write_fake_dist(
+        tmp_path,
+        version=mneme.__version__,
+        sdist_unrooted_files={"PKG-INFO": "unrooted metadata\n"},
+    )
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert any(
+        "sdist contains top-level file outside root: PKG-INFO" in error
+        for error in report.errors
+    )
+
+
 def test_release_artifact_validator_reports_missing_sdist_metadata(
     tmp_path: Path,
 ) -> None:
@@ -321,8 +363,10 @@ def _write_fake_dist(
     version: str,
     include_sdist_metadata: bool = True,
     include_optional_extras: bool = True,
+    include_sdist_root_directory: bool = False,
     wheel_extra_files: dict[str, str] | None = None,
     sdist_extra_files: dict[str, str] | None = None,
+    sdist_unrooted_files: dict[str, str] | None = None,
 ) -> Path:
     dist = tmp_path / "dist"
     dist.mkdir()
@@ -342,6 +386,10 @@ def _write_fake_dist(
     root = f"mneme-{version}"
     sdist = dist / f"{root}.tar.gz"
     with tarfile.open(sdist, "w:gz") as archive:
+        if include_sdist_root_directory:
+            info = tarfile.TarInfo(root)
+            info.type = tarfile.DIRTYPE
+            archive.addfile(info)
         if include_sdist_metadata:
             _add_tar_text(archive, f"{root}/PKG-INFO", metadata)
         for name in (
@@ -364,6 +412,8 @@ def _write_fake_dist(
             _add_tar_text(archive, f"{root}/{name}", f"{name}\n")
         for name, text in (sdist_extra_files or {}).items():
             _add_tar_text(archive, f"{root}/{name}", text)
+        for name, text in (sdist_unrooted_files or {}).items():
+            _add_tar_text(archive, name, text)
     return dist
 
 

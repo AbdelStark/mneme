@@ -277,10 +277,11 @@ def _validate_sdist(
         errors.append(f"sdist filename must be {expected_name}: {path.name}")
     try:
         with tarfile.open(path, "r:gz") as archive:
-            names = set(archive.getnames())
+            members = archive.getmembers()
+            names = {member.name for member in members}
             _reject_unsafe_archive_paths(names, "sdist", errors)
             _reject_generated_python_artifacts(names, "sdist", errors)
-            root = _sdist_root(names, errors)
+            root = _sdist_root(members, errors)
             if root is not None:
                 for required in REQUIRED_SDIST_FILES:
                     candidate = f"{root}/{required}"
@@ -317,8 +318,16 @@ def _validate_sdist(
         errors.append(f"sdist could not be read: {exc}")
 
 
-def _sdist_root(names: set[str], errors: list[str]) -> str | None:
-    roots = {name.split("/", 1)[0] for name in names if "/" in name}
+def _sdist_root(members: Sequence[tarfile.TarInfo], errors: list[str]) -> str | None:
+    roots: set[str] = set()
+    for member in members:
+        name = member.name
+        if not name:
+            continue
+        root = name.split("/", 1)[0]
+        roots.add(root)
+        if "/" not in name and not member.isdir():
+            errors.append(f"sdist contains top-level file outside root: {name}")
     if len(roots) != 1:
         errors.append("sdist must contain exactly one root directory")
         return None
