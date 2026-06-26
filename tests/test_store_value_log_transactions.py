@@ -239,6 +239,18 @@ def test_value_log_checksum_corruption_is_detected_on_open(tmp_path: Path) -> No
         open_store(root)
 
 
+def test_unreadable_value_log_path_raises_store_corruption(tmp_path: Path) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    log_path = root / "values" / "log-000000.mnv"
+    log_path.unlink()
+    log_path.mkdir()
+
+    with pytest.raises(StoreCorruptionError, match="value log could not be read"):
+        open_store(root)
+
+
 def test_value_log_invalid_content_id_hex_is_store_corruption(
     tmp_path: Path,
 ) -> None:

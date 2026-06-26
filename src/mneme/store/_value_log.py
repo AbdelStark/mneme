@@ -68,28 +68,35 @@ def read_value_records_with_offsets(
 
     if start_offset < 0:
         raise StoreCorruptionError("value log start offset must be non-negative")
-    with path.open("rb") as handle:
-        handle.seek(0, 2)
-        size = handle.tell()
-        if start_offset > size:
-            raise StoreCorruptionError("value log start offset is beyond end of file")
-        handle.seek(start_offset)
-        while True:
-            start = handle.tell()
-            header = handle.read(_HEADER_SIZE)
-            if not header:
-                return
-            if len(header) != _HEADER_SIZE:
-                raise StoreCorruptionError("value log has a partial record header")
-            length = int.from_bytes(header[:_LENGTH_SIZE], "big")
-            expected_checksum = header[_LENGTH_SIZE:]
-            payload = handle.read(length)
-            if len(payload) != length:
-                raise StoreCorruptionError("value log has a partial record payload")
-            if blake3(payload).digest(length=_CHECKSUM_SIZE) != expected_checksum:
-                raise StoreCorruptionError("value log record checksum mismatch")
-            end = handle.tell()
-            yield _decode_record(payload), start, end
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, 2)
+            size = handle.tell()
+            if start_offset > size:
+                raise StoreCorruptionError(
+                    "value log start offset is beyond end of file"
+                )
+            handle.seek(start_offset)
+            while True:
+                start = handle.tell()
+                header = handle.read(_HEADER_SIZE)
+                if not header:
+                    return
+                if len(header) != _HEADER_SIZE:
+                    raise StoreCorruptionError("value log has a partial record header")
+                length = int.from_bytes(header[:_LENGTH_SIZE], "big")
+                expected_checksum = header[_LENGTH_SIZE:]
+                payload = handle.read(length)
+                if len(payload) != length:
+                    raise StoreCorruptionError("value log has a partial record payload")
+                if blake3(payload).digest(length=_CHECKSUM_SIZE) != expected_checksum:
+                    raise StoreCorruptionError("value log record checksum mismatch")
+                end = handle.tell()
+                yield _decode_record(payload), start, end
+    except FileNotFoundError as exc:
+        raise StoreCorruptionError(f"value log missing: {path}") from exc
+    except OSError as exc:
+        raise StoreCorruptionError(f"value log could not be read: {path}") from exc
 
 
 def _encode_record(item: MemoryItem) -> bytes:

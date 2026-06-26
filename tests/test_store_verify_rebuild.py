@@ -104,6 +104,34 @@ def test_verify_store_reports_corrupt_value_log_with_typed_failure(
     assert json.loads(cli.stdout)["ok"] is False
 
 
+def test_verify_and_rebuild_report_unreadable_value_log(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    log_path = root / "values" / "log-000000.mnv"
+    log_path.unlink()
+    log_path.mkdir()
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any("value log could not be read" in error for error in report.errors)
+    with pytest.raises(StoreCorruptionError, match="value log could not be read"):
+        verify_store(root, raise_on_error=True)
+
+    rebuild = rebuild_index(root)
+    assert not rebuild.ok
+    assert any("value log could not be read" in error for error in rebuild.errors)
+
+    cli = run_cli("store", "verify", root)
+    assert cli.returncode == int(CliExitCode.DATA_VALIDATION)
+    payload = json.loads(cli.stdout)
+    assert payload["ok"] is False
+    assert any("value log could not be read" in error for error in payload["errors"])
+
+
 def test_rebuild_index_restores_snapshot_and_query_results(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)
