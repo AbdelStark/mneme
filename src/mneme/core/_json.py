@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import NoReturn
 
@@ -17,6 +18,7 @@ def dumps_strict_json(
 ) -> str:
     """Serialize JSON while rejecting non-standard NaN and Infinity constants."""
 
+    _require_string_object_keys(value)
     return json.dumps(
         value,
         sort_keys=sort_keys,
@@ -64,6 +66,17 @@ def write_strict_json_file(
 
 def _reject_json_constant(value: str) -> NoReturn:
     raise ValueError(f"invalid JSON constant: {value}")
+
+
+def _require_string_object_keys(value: object) -> None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError("JSON object keys must be strings")
+            _require_string_object_keys(item)
+    elif isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        for item in value:
+            _require_string_object_keys(item)
 
 
 def _parse_json_float(value: str) -> float:

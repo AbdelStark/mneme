@@ -14,6 +14,14 @@ def test_dumps_strict_json_rejects_nonstandard_constants() -> None:
         dumps_strict_json({"metric": float("nan")})
 
 
+def test_dumps_strict_json_rejects_non_string_object_keys() -> None:
+    with pytest.raises(TypeError, match="JSON object keys must be strings"):
+        dumps_strict_json({1: "coerced"})
+
+    with pytest.raises(TypeError, match="JSON object keys must be strings"):
+        dumps_strict_json({"nested": [{None: "coerced"}]})
+
+
 def test_loads_strict_json_rejects_nonstandard_constants() -> None:
     with pytest.raises(ValueError, match="invalid JSON constant: NaN"):
         loads_strict_json('{"metric": NaN}')
@@ -40,6 +48,18 @@ def test_write_strict_json_file_serializes_before_filesystem_side_effects(
 
     with pytest.raises(ValueError, match="Out of range float values"):
         write_strict_json_file(output, {"metric": float("nan")}, indent=2)
+
+    assert not output.exists()
+    assert not output.parent.exists()
+
+
+def test_write_strict_json_file_rejects_non_string_keys_before_side_effects(
+    tmp_path,
+) -> None:
+    output = tmp_path / "reports" / "bad.json"
+
+    with pytest.raises(TypeError, match="JSON object keys must be strings"):
+        write_strict_json_file(output, {"nested": [{1: "coerced"}]}, indent=2)
 
     assert not output.exists()
     assert not output.parent.exists()
