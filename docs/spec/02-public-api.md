@@ -287,7 +287,8 @@ Importing `mneme.adapter` must also avoid importing torch; requesting
 `MeanPoolSummarizer` is the v0.1 default summarizer. It mean-pools all
 non-feature axes, returns a contiguous finite `float32` vector, and L2-normalizes
 by default for cosine keys. Deterministic projection is intentionally deferred
-until v0.2 or the first large-latent adapter that needs it.
+until v0.2 or the first large-latent adapter that needs it. Malformed
+summarizer configuration raises `ValidationError`.
 
 Encoder adapters should build fingerprints with `build_encoder_fingerprint`.
 The helper binds the summarizer id and summarizer config into

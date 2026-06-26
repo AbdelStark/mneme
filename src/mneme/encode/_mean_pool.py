@@ -30,9 +30,9 @@ class MeanPoolSummarizer:
                 "deterministic projection is deferred until v0.2"
             )
         if not isinstance(self.normalize, bool):
-            raise TypeError("normalize must be a bool")
+            raise ValidationError("normalize must be a bool")
         if not isinstance(self.id, str) or not self.id:
-            raise ValueError("id must be a non-empty string")
+            raise ValidationError("id must be a non-empty string")
 
     def summarize(self, z: Latent) -> SummaryVec:
         """Return a contiguous finite float32 summary vector."""

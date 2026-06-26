@@ -52,7 +52,7 @@ class MeanPoolSummarizer:
     id: str = "meanpool-v1"
 ```
 
-The default flattens all non-feature axes by averaging, converts to CPU `float32`, optionally applies deterministic projection if `output_dim` is set, and L2-normalizes for cosine search. Projection matrices are generated from a recorded seed and included in `config_digest`.
+The default flattens all non-feature axes by averaging, converts to CPU `float32`, and L2-normalizes for cosine search. Deterministic projection is reserved for v0.2; v0.1 raises `UnsupportedOperationError` when `output_dim` is set.
 
 Fingerprint fields:
 

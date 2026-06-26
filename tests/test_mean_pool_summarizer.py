@@ -90,3 +90,19 @@ def test_mean_pool_summarizer_rejects_invalid_latents(
 def test_projection_is_explicitly_deferred() -> None:
     with pytest.raises(UnsupportedOperationError, match="deferred"):
         MeanPoolSummarizer(output_dim=4)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"normalize": "yes"}, "normalize must be a bool"),
+        ({"id": ""}, "id must be a non-empty string"),
+        ({"id": object()}, "id must be a non-empty string"),
+    ],
+)
+def test_mean_pool_summarizer_rejects_invalid_config(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    with pytest.raises(ValidationError, match=match):
+        MeanPoolSummarizer(**kwargs)  # type: ignore[arg-type]
