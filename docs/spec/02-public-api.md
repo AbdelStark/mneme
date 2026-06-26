@@ -92,6 +92,7 @@ class Retrieval:
 These v0.1 carriers are exported from `mneme.core`: `Latent`, `SummaryVec`,
 `Cid`, `Metric`, `EncoderFingerprint`, `Transition`, `MemoryItem`,
 `QuerySpec`, and `Retrieval`. `Cid` is a 32-byte BLAKE3 content digest.
+Unsupported carrier schema versions raise `SchemaVersionError`.
 `mneme.core` may import NumPy, but it must not import optional ML, index,
 receipt, or remote backends.
 

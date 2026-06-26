@@ -13,7 +13,7 @@ from uuid import UUID
 import numpy as np
 import numpy.typing as npt
 
-from mneme.core._errors import QueryError
+from mneme.core._errors import QueryError, SchemaVersionError
 from mneme.core._ids import require_cid_bytes
 
 Latent: TypeAlias = Any
@@ -178,14 +178,14 @@ class Retrieval:
 
 def _validate_schema_version(schema_version: str, expected: str) -> None:
     if not isinstance(schema_version, str):
-        raise TypeError("schema_version must be a string")
+        raise SchemaVersionError("schema_version must be a string")
     prefix, _, major_text = schema_version.rpartition(".v")
     expected_prefix, _, _ = expected.rpartition(".v")
     if prefix != expected_prefix or not major_text.isdigit():
-        raise ValueError(f"unsupported schema version: {schema_version!r}")
+        raise SchemaVersionError(f"unsupported schema version: {schema_version!r}")
     major = int(major_text)
     if major != _SUPPORTED_MAJOR or schema_version != expected:
-        raise ValueError(f"unsupported schema version: {schema_version!r}")
+        raise SchemaVersionError(f"unsupported schema version: {schema_version!r}")
 
 
 def _require_non_empty_str(value: str, field_name: str) -> None:

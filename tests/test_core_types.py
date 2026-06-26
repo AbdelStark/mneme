@@ -20,6 +20,7 @@ from mneme.core import (
     QueryError,
     QuerySpec,
     Retrieval,
+    SchemaVersionError,
     SummaryVec,
     Transition,
 )
@@ -126,8 +127,19 @@ def test_invalid_schema_major_versions_are_rejected(
     }
     call_kwargs = base_kwargs[factory] | kwargs
 
-    with pytest.raises(ValueError, match="unsupported schema version"):
+    with pytest.raises(SchemaVersionError, match="unsupported schema version"):
         factory(**call_kwargs)
+
+
+def test_schema_version_must_be_a_string() -> None:
+    with pytest.raises(SchemaVersionError, match="schema_version must be a string"):
+        EncoderFingerprint(
+            encoder_id="encoder",
+            summarizer_id="mean_pool",
+            weights_digest=None,
+            config_digest="sha256:config",
+            schema_version=1,  # type: ignore[arg-type]
+        )
 
 
 def test_summary_vec_validation_rejects_invalid_dtype_shape_and_values() -> None:
