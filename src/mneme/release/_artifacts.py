@@ -137,9 +137,10 @@ def validate_release_artifacts(
 ) -> ReleaseArtifactReport:
     """Validate built package artifacts and fixture evidence for a release."""
 
-    dist_dir = Path(dist)
     errors: list[str] = []
     checked: list[str] = []
+    dist_dir = _path_input(dist, "dist", errors)
+    dist_dir_text = str(dist_dir) if dist_dir is not None else "<invalid>"
     installed_version = _installed_version(PACKAGE_NAME)
     version = expected_version or installed_version
     if version is None:
@@ -148,7 +149,9 @@ def validate_release_artifacts(
 
     wheels: list[Path] = []
     sdists: list[Path] = []
-    if not dist_dir.is_dir():
+    if dist_dir is None:
+        pass
+    elif not dist_dir.is_dir():
         errors.append(f"dist directory not found: {dist_dir}")
     else:
         wheels = sorted(dist_dir.glob("*.whl"))
@@ -161,14 +164,19 @@ def validate_release_artifacts(
     if sdist is not None:
         _validate_sdist(sdist, version=version, errors=errors, checked=checked)
 
-    fixture_path = Path(fixture_report) if fixture_report is not None else None
-    _validate_fixture_report(fixture_path, errors=errors, checked=checked)
+    if fixture_report is None:
+        fixture_path = None
+        _validate_fixture_report(fixture_path, errors=errors, checked=checked)
+    else:
+        fixture_path = _path_input(fixture_report, "fixture_report", errors)
+        if fixture_path is not None:
+            _validate_fixture_report(fixture_path, errors=errors, checked=checked)
 
     return ReleaseArtifactReport(
         ok=not errors,
         package_name=PACKAGE_NAME,
         version=version,
-        dist_dir=str(dist_dir),
+        dist_dir=dist_dir_text,
         wheel=wheel.name if wheel is not None else None,
         sdist=sdist.name if sdist is not None else None,
         fixture_report=str(fixture_path) if fixture_path is not None else None,
@@ -220,6 +228,20 @@ def _single_artifact(
         errors.append(f"expected exactly one {label} artifact, found {len(paths)}")
         return None
     return paths[0]
+
+
+def _path_input(value: object, field_name: str, errors: list[str]) -> Path | None:
+    if isinstance(value, str) and not value:
+        errors.append(f"{field_name} must not be empty")
+        return None
+    if isinstance(value, str | Path):
+        path = Path(value)
+        if not str(path):
+            errors.append(f"{field_name} must not be empty")
+            return None
+        return path
+    errors.append(f"{field_name} must be a path-like value")
+    return None
 
 
 def _validate_wheel(

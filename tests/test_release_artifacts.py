@@ -54,6 +54,56 @@ def test_release_artifact_validator_requires_fixture_report(tmp_path: Path) -> N
     assert any("fixture report is invalid" in error for error in report.errors)
 
 
+@pytest.mark.parametrize(
+    ("dist", "match"),
+    (
+        ("", "dist must not be empty"),
+        (object(), "dist must be a path-like value"),
+    ),
+)
+def test_release_artifact_validator_rejects_malformed_dist_paths(
+    tmp_path: Path,
+    dist: object,
+    match: str,
+) -> None:
+    fixture_report = _write_fixture_report(tmp_path)
+
+    report = validate_release_artifacts(
+        dist,  # type: ignore[arg-type]
+        fixture_report=fixture_report,
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert report.dist_dir == "<invalid>"
+    assert any(match in error for error in report.errors)
+
+
+@pytest.mark.parametrize(
+    ("fixture_report", "match"),
+    (
+        ("", "fixture_report must not be empty"),
+        (object(), "fixture_report must be a path-like value"),
+    ),
+)
+def test_release_artifact_validator_rejects_malformed_fixture_report_paths(
+    tmp_path: Path,
+    fixture_report: object,
+    match: str,
+) -> None:
+    dist = _write_fake_dist(tmp_path, version=mneme.__version__)
+
+    report = validate_release_artifacts(
+        dist,
+        fixture_report=fixture_report,  # type: ignore[arg-type]
+        expected_version=mneme.__version__,
+    )
+
+    assert not report.ok
+    assert report.fixture_report is None
+    assert any(match in error for error in report.errors)
+
+
 def test_release_artifact_validator_rejects_nonstandard_fixture_json(
     tmp_path: Path,
 ) -> None:
