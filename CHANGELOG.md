@@ -22,6 +22,8 @@ All notable user-visible changes are recorded here.
 - Hardened kNN conditioning distance validation against boolean-like malformed
   retrieval payloads.
 - Aligned data-model metadata documentation with byte-rejection validation.
+- Hardened remote query response validation against result-count expansion beyond
+  the requested `k`.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

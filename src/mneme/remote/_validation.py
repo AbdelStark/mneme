@@ -51,6 +51,8 @@ def validate_query_response(
         raise ValidationError("request must be a QueryRequest or QuerySpec")
 
     retrieval = parsed.retrieval
+    if len(retrieval.items) > spec.k:
+        raise ValidationError("remote query response returned more than requested k")
     for item in retrieval.items:
         cid = content_id(item)
         if item.content_id != cid:

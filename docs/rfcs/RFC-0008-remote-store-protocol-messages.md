@@ -100,6 +100,7 @@ Client validation:
 - validate vector and value arrays;
 - recompute content ids for returned items;
 - reject fingerprint mismatch;
+- reject query responses with more items than the requested `QuerySpec.k`;
 - verify receipt when requested;
 - map remote errors to local typed errors.
 

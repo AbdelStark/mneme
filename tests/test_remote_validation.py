@@ -90,6 +90,17 @@ def test_validate_query_response_rejects_fingerprint_mismatch() -> None:
         validate_query_response(response, spec)
 
 
+def test_validate_query_response_rejects_more_items_than_requested() -> None:
+    items = (_built_item(1.0), _built_item(2.0))
+    response = QueryResponse(Retrieval(items=items, distances=(0.0, 1.0)))
+
+    with pytest.raises(ValidationError, match="more than requested k"):
+        validate_query_response(
+            response.to_json(),
+            QuerySpec(items[0].key, k=1, metric=Metric.L2),
+        )
+
+
 def test_validate_query_response_maps_receipt_failure_to_typed_error() -> None:
     item = _built_item(1.0)
     spec = QuerySpec(
