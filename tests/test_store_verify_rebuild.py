@@ -64,6 +64,11 @@ def _item(key_value: float, *, step: int = 0) -> MemoryItem:
     )
 
 
+class _BytesPath:
+    def __fspath__(self) -> bytes:
+        return b"store"
+
+
 def test_verify_store_succeeds_on_healthy_fixture(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)
@@ -186,6 +191,14 @@ def test_store_maintenance_entrypoints_reject_non_path_values(
 ) -> None:
     with pytest.raises(ValidationError, match="path must be a path-like value"):
         entrypoint(object())  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("entrypoint", (verify_store, rebuild_index, commit_init_store))
+def test_store_maintenance_entrypoints_reject_bytes_pathlike_values(
+    entrypoint: Callable[[object], object],
+) -> None:
+    with pytest.raises(ValidationError, match="path must resolve to a text path"):
+        entrypoint(_BytesPath())  # type: ignore[arg-type]
 
 
 def test_verify_store_rejects_nonstandard_index_backend_json(

@@ -266,7 +266,8 @@ def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
 def commit_init_store(path: str | Path) -> CommitInitReport:
     """Upgrade a verified local store by initializing its commitment state."""
 
-    verification = verify_store(path)
+    root = _require_local_store_path(path)
+    verification = verify_store(root)
     if not verification.ok:
         return CommitInitReport(
             ok=False,
@@ -278,9 +279,9 @@ def commit_init_store(path: str | Path) -> CommitInitReport:
             errors=verification.errors,
         )
     try:
-        store = open_store(path)
+        store = open_store(root)
         already_initialized = store.manifest.commitment.enabled
-        root = store.commit()
+        commitment_root = store.commit()
     except (MnemeError, OSError) as exc:
         return CommitInitReport(
             ok=False,
@@ -295,7 +296,7 @@ def commit_init_store(path: str | Path) -> CommitInitReport:
         ok=True,
         store_id=str(store.manifest.store_id),
         item_count=verification.item_count,
-        root=root.hex(),
+        root=commitment_root.hex(),
         commitment_path=_COMMITMENT_FILE,
         already_initialized=already_initialized,
         errors=(),
