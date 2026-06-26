@@ -17,6 +17,8 @@ All notable user-visible changes are recorded here.
 - Hardened release artifact validation against packaged Python bytecode.
 - Hardened release artifact validation for typed-package and optional-extra
   metadata.
+- Hardened cross-attention adapter validation for malformed tensor-like shape
+  metadata.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

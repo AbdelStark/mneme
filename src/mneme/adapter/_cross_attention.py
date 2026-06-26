@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+from collections.abc import Sequence
 from typing import Any
 
 from mneme.core import DTypeError, OptionalDependencyError, ShapeError, ValidationError
@@ -167,12 +168,25 @@ def _is_torch_tensor(value: object) -> bool:
 
 def _shape_tuple(value: object, field_name: str) -> tuple[int, ...]:
     shape = getattr(value, "shape", None)
-    if shape is None:
-        raise ShapeError(f"{field_name} must expose shape")
-    try:
-        return tuple(int(dim) for dim in shape)
-    except (TypeError, ValueError) as exc:
-        raise ShapeError(f"{field_name} shape must be an integer sequence") from exc
+    if (
+        shape is None
+        or isinstance(shape, str | bytes | bytearray)
+        or not isinstance(shape, Sequence)
+    ):
+        raise ShapeError(f"{field_name} shape must be an integer sequence")
+    return tuple(_shape_dim(dim, field_name) for dim in shape)
+
+
+def _shape_dim(value: object, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ShapeError(f"{field_name} shape must be an integer sequence")
+    index_method = getattr(value, "__index__", None)
+    if not callable(index_method):
+        raise ShapeError(f"{field_name} shape must be an integer sequence")
+    dim = index_method()
+    if isinstance(dim, bool) or not isinstance(dim, int):
+        raise ShapeError(f"{field_name} shape must be an integer sequence")
+    return dim
 
 
 def _move_tensor(

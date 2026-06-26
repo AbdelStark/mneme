@@ -60,6 +60,16 @@ class FakeTensor:
         )
 
 
+class FakeMalformedShapeTensor(FakeTensor):
+    def __init__(self, shape: object) -> None:
+        super().__init__(np.zeros((1, 1, 1)))
+        self._shape = shape
+
+    @property
+    def shape(self) -> object:
+        return self._shape
+
+
 class FakeModule:
     def __init__(self) -> None:
         self.training = True
@@ -272,6 +282,18 @@ def test_cross_attn_adapter_rejects_invalid_shapes_and_config(
             FakeTensor(np.zeros((2, 3, 3))),
             FakeTensor(np.ones((2, 4), dtype=bool), dtype="torch.bool"),
         )
+
+
+@pytest.mark.parametrize("shape", [(True, 5, 4), (2, 5.5, 4), (2, "5", 4)])
+def test_cross_attn_adapter_rejects_non_integer_shape_dimensions(
+    monkeypatch: pytest.MonkeyPatch,
+    shape: object,
+) -> None:
+    adapter_class, _calls = _load_adapter_with_fake_torch(monkeypatch)
+    adapter = adapter_class(latent_dim=3, hidden_dim=4, num_heads=2, num_layers=1)
+
+    with pytest.raises(ShapeError, match="predictor_hidden shape"):
+        adapter(FakeMalformedShapeTensor(shape), FakeTensor(np.zeros((2, 3, 3))))
 
 
 def _load_adapter_with_fake_torch(
