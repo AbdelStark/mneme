@@ -15,6 +15,7 @@ from mneme.cli._arguments import (
     add_eval_profile_arguments,
     add_eval_receipts_arguments,
     non_negative_float,
+    positive_int,
 )
 from mneme.cli._runtime import (
     JsonResult,
@@ -138,7 +139,7 @@ def _build_parser() -> argparse.ArgumentParser:
     query_parser = subparsers.add_parser("query", help="query a local store")
     query_parser.add_argument("path", type=Path)
     query_parser.add_argument("--vector", required=True, type=Path)
-    query_parser.add_argument("--k", required=True, type=int)
+    query_parser.add_argument("--k", required=True, type=positive_int)
     query_parser.add_argument(
         "--metric",
         default=Metric.COSINE.value,

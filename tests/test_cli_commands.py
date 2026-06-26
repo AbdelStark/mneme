@@ -152,17 +152,14 @@ def test_query_cli_emits_result_without_raw_memory_fields(tmp_path: Path) -> Non
     assert "metadata" not in result.stdout
 
 
-def test_query_cli_reports_typed_query_error(tmp_path: Path) -> None:
+def test_query_cli_rejects_non_positive_k_before_vector_io(tmp_path: Path) -> None:
     root = tmp_path / "store"
-    vector_path = tmp_path / "query.json"
-    init_store(root)
-    vector_path.write_text("[1.0, 0.0]", encoding="utf-8")
 
     result = run_cli(
         "query",
         root,
         "--vector",
-        vector_path,
+        tmp_path / "missing-query.json",
         "--k",
         "0",
         "--metric",
@@ -171,9 +168,9 @@ def test_query_cli_reports_typed_query_error(tmp_path: Path) -> None:
     )
 
     assert result.returncode == int(CliExitCode.USER_INPUT)
-    error = _stdout_json(result)
-    assert error["schema_version"] == "mneme.cli_error.v1"
-    assert error["error_type"] == "QueryError"
+    assert result.stdout == ""
+    assert "argument --k: must be a positive integer" in result.stderr
+    assert "missing-query.json" not in result.stderr
 
 
 def test_query_cli_rejects_nonstandard_vector_json(tmp_path: Path) -> None:
