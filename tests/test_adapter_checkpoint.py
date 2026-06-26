@@ -174,6 +174,24 @@ def test_save_checkpoint_metadata_wraps_unwritable_path(tmp_path: Path) -> None:
         save_adapter_checkpoint_metadata(blocked_parent / "adapter.json", _metadata())
 
 
+def test_save_checkpoint_metadata_wraps_runtime_serialization_errors(
+    tmp_path: Path,
+) -> None:
+    metadata = _metadata()
+    output = tmp_path / "reports" / "adapter.json"
+    object.__setattr__(metadata, "adapter_config", {"bad": object()})
+
+    with pytest.raises(
+        ValidationError,
+        match="metadata could not be serialized",
+    ) as exc_info:
+        save_adapter_checkpoint_metadata(output, metadata)
+
+    assert isinstance(exc_info.value.__cause__, TypeError)
+    assert not output.exists()
+    assert not output.parent.exists()
+
+
 def test_checkpoint_metadata_rejects_malformed_base_fingerprint_fields() -> None:
     payload = _metadata().to_json()
     base_fingerprint = payload["base_fingerprint"]

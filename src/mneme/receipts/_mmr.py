@@ -269,6 +269,10 @@ def save_commitment_state(path: str | Path, state: CommitmentState) -> Path:
     target = Path(path)
     try:
         return write_strict_json_file(target, state.to_json(), sort_keys=True, indent=2)
+    except (AttributeError, TypeError, ValueError, ValidationError) as exc:
+        raise ReceiptVerificationError(
+            f"commitment state could not be serialized: {target}"
+        ) from exc
     except OSError as exc:
         raise ReceiptVerificationError(
             f"commitment state could not be written: {target}"

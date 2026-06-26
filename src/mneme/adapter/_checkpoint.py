@@ -147,6 +147,10 @@ def save_adapter_checkpoint_metadata(
             indent=2,
             sort_keys=True,
         )
+    except (AttributeError, TypeError, ValueError, ValidationError) as exc:
+        raise ValidationError(
+            f"adapter checkpoint metadata could not be serialized: {metadata_path}"
+        ) from exc
     except OSError as exc:
         raise ValidationError(
             f"adapter checkpoint metadata could not be written: {metadata_path}"

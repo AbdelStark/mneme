@@ -166,6 +166,24 @@ def test_commitment_state_wraps_unwritable_sidecar(tmp_path: Path) -> None:
         save_commitment_state(path / "commitment.json", CommitmentState.empty())
 
 
+def test_commitment_state_wraps_runtime_serialization_errors(
+    tmp_path: Path,
+) -> None:
+    state = CommitmentState.empty()
+    output = tmp_path / "reports" / "commitment.json"
+    object.__setattr__(state, "item_count", object())
+
+    with pytest.raises(
+        ReceiptVerificationError,
+        match="commitment state could not be serialized",
+    ) as exc_info:
+        save_commitment_state(output, state)
+
+    assert isinstance(exc_info.value.__cause__, TypeError)
+    assert not output.exists()
+    assert not output.parent.exists()
+
+
 def test_store_commit_persists_mmr_sidecar_and_proves_value_log_order(
     tmp_path: Path,
 ) -> None:
