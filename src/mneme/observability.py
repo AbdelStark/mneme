@@ -122,7 +122,10 @@ def emit_event(
         payload["error_type"] = type(error).__name__
     for key, value in fields.items():
         payload[key] = redact_event_value(value, field_name=key, config=config)
-    config.event_sink.emit(payload)
+    try:
+        config.event_sink.emit(payload)
+    except Exception:
+        return
 
 
 def redact_event_value(

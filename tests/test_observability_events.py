@@ -42,6 +42,11 @@ class RecordingSink:
         self.events.append(dict(event))
 
 
+class FailingSink:
+    def emit(self, event: Mapping[str, object]) -> None:
+        raise RuntimeError(f"sink failed for {event.get('event')}")
+
+
 def _vec(values: list[float]) -> np.ndarray:
     return np.asarray(values, dtype=np.float32)
 
@@ -347,3 +352,19 @@ def test_error_events_include_typed_error_fields() -> None:
         "QueryError",
         "ValidationError",
     ]
+
+
+def test_observability_sink_failures_do_not_break_operations() -> None:
+    index = FlatIndex(ObservabilityConfig(event_sink=FailingSink()))
+    cid = _cid(1)
+    index.add(cid, _vec([1.0, 0.0]))
+
+    assert index.search(_vec([1.0, 0.0]), 1, metric=Metric.L2) == [(cid, 0.0)]
+
+
+def test_observability_sink_failures_do_not_mask_original_errors() -> None:
+    index = FlatIndex(ObservabilityConfig(event_sink=FailingSink()))
+    index.add(_cid(1), _vec([1.0, 0.0]))
+
+    with pytest.raises(QueryError, match="k must be >= 1"):
+        index.search(_vec([1.0, 0.0]), 0, metric=Metric.L2)
