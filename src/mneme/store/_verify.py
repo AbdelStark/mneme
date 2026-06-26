@@ -530,7 +530,13 @@ def _validate_index_data(
     if not isinstance(items, list):
         return [*errors, "index data items must be a list"]
     item_count = data.get("item_count")
-    if item_count != len(items):
+    if (
+        isinstance(item_count, bool)
+        or not isinstance(item_count, int)
+        or item_count < 0
+    ):
+        errors.append("index data item_count must be a non-negative integer")
+    elif item_count != len(items):
         errors.append(
             f"index data item_count mismatch: item_count={item_count!r} "
             f"actual={len(items)}"

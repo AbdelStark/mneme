@@ -260,6 +260,29 @@ def test_verify_store_rejects_non_digest_index_content_ids(tmp_path: Path) -> No
     )
 
 
+@pytest.mark.parametrize("item_count", [True, 1.0])
+def test_verify_store_rejects_malformed_index_item_count(
+    tmp_path: Path,
+    item_count: object,
+) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    store.put(_item(1.0))
+    assert rebuild_index(root).ok
+    data_path = root / "index" / "data.json"
+    snapshot = json.loads(data_path.read_text(encoding="utf-8"))
+    snapshot["item_count"] = item_count
+    data_path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+    report = verify_store(root)
+
+    assert not report.ok
+    assert any(
+        "index data item_count must be a non-negative integer" in error
+        for error in report.errors
+    )
+
+
 def test_index_rebuild_cli_returns_documented_success(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)
