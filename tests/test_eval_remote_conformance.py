@@ -138,3 +138,43 @@ def test_remote_conformance_asgi_call_rejects_malformed_status(
                 RemoteHttpConfig("http://mneme-conformance"),
             )
         )
+
+
+def test_remote_conformance_asgi_call_requires_response_start() -> None:
+    class MissingStartApp:
+        async def __call__(self, scope, receive, send) -> None:
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": b'{"schema_version": "mneme.stats.response.v1"}',
+                }
+            )
+
+    with pytest.raises(EvaluationError, match="response start message is missing"):
+        asyncio.run(
+            _call_asgi(
+                MissingStartApp(),
+                "POST",
+                "/stats",
+                {},
+                RemoteHttpConfig("http://mneme-conformance"),
+            )
+        )
+
+
+def test_remote_conformance_asgi_call_rejects_non_bytes_body_chunks() -> None:
+    class MalformedBodyChunkApp:
+        async def __call__(self, scope, receive, send) -> None:
+            await send({"type": "http.response.start", "status": 200})
+            await send({"type": "http.response.body", "body": "not-bytes"})
+
+    with pytest.raises(EvaluationError, match="body chunks must be bytes"):
+        asyncio.run(
+            _call_asgi(
+                MalformedBodyChunkApp(),
+                "POST",
+                "/stats",
+                {},
+                RemoteHttpConfig("http://mneme-conformance"),
+            )
+        )

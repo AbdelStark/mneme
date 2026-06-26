@@ -276,15 +276,8 @@ async def _call_asgi(
         receive,
         send,
     )
-    start = next(
-        message for message in messages if message["type"] == "http.response.start"
-    )
-    bodies = [
-        message.get("body", b"")
-        for message in messages
-        if message["type"] == "http.response.body"
-    ]
-    response_body = b"".join(body for body in bodies if isinstance(body, bytes))
+    start = _response_start(messages)
+    response_body = _response_body(messages)
     status = start.get("status")
     if isinstance(status, bool) or not isinstance(status, int):
         raise EvaluationError("ASGI response status must be an integer")
@@ -297,6 +290,25 @@ async def _call_asgi(
     if not isinstance(decoded, Mapping):
         raise EvaluationError("ASGI response body must be a JSON object")
     return HttpJsonResponse(status, decoded)
+
+
+def _response_start(messages: Sequence[Mapping[str, object]]) -> Mapping[str, object]:
+    for message in messages:
+        if message.get("type") == "http.response.start":
+            return message
+    raise EvaluationError("ASGI response start message is missing")
+
+
+def _response_body(messages: Sequence[Mapping[str, object]]) -> bytes:
+    chunks: list[bytes] = []
+    for message in messages:
+        if message.get("type") != "http.response.body":
+            continue
+        body = message.get("body", b"")
+        if not isinstance(body, bytes):
+            raise EvaluationError("ASGI response body chunks must be bytes")
+        chunks.append(body)
+    return b"".join(chunks)
 
 
 def _platform_summary() -> dict[str, str]:
