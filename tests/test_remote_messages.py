@@ -171,6 +171,23 @@ def test_query_response_round_trips_receipt_payload() -> None:
     assert decoded.retrieval.distances == (0.0,)
 
 
+def test_error_message_round_trips_optional_dependency_metadata() -> None:
+    message = ErrorMessage(
+        "OptionalDependencyError",
+        "missing uvicorn",
+        retryable=False,
+        extra="remote",
+        package="uvicorn",
+    )
+
+    payload = message.to_json()
+    decoded = ErrorMessage.from_json(payload)
+
+    assert payload["extra"] == "remote"
+    assert payload["package"] == "uvicorn"
+    assert decoded == message
+
+
 def test_memory_item_envelope_rejects_forged_content_id_on_serialization() -> None:
     item = replace(_built_item(1.0), content_id=b"\x11" * 32)
 
@@ -267,6 +284,11 @@ def test_message_constructors_reject_unsupported_schema_versions() -> None:
         (
             lambda: ErrorMessage("ValidationError", "invalid request", retryable="no"),
             "retryable",
+        ),
+        (lambda: ErrorMessage("ValidationError", "invalid request", extra=""), "extra"),
+        (
+            lambda: ErrorMessage("ValidationError", "invalid request", package=""),
+            "package",
         ),
     ),
 )

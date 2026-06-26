@@ -337,6 +337,29 @@ def test_stdlib_request_json_wraps_transport_failures(
         )
 
 
+def test_remote_http_preserves_optional_dependency_metadata() -> None:
+    class MissingOptionalDependencyStore:
+        def stats(self) -> Mapping[str, object]:
+            raise OptionalDependencyError(
+                "uvicorn is unavailable",
+                extra="remote",
+                package="uvicorn",
+            )
+
+    app = MemoryStoreASGIApp(MissingOptionalDependencyStore())
+    client = RemoteHttpClient(
+        RemoteHttpConfig("http://testserver"),
+        requester=_asgi_requester(app),
+    )
+
+    with pytest.raises(OptionalDependencyError) as raised:
+        client.stats()
+
+    assert "remote OptionalDependencyError: uvicorn is unavailable" in str(raised.value)
+    assert raised.value.extra == "remote"
+    assert raised.value.package == "uvicorn"
+
+
 def test_serve_asgi_app_missing_uvicorn_is_actionable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

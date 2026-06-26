@@ -95,7 +95,11 @@ def raise_for_remote_error(error: RemoteErrorPayload) -> None:
     if error_type == "EvaluationError":
         raise EvaluationError(message)
     if error_type == "OptionalDependencyError":
-        raise OptionalDependencyError(message)
+        raise OptionalDependencyError(
+            message,
+            extra=parsed.extra,
+            package=parsed.package,
+        )
     if error_type == "ValidationError":
         raise ValidationError(message)
     if error_type == "StoreError":

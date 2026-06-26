@@ -438,7 +438,15 @@ def _scope_text(scope: AsgiScope, key: str) -> str:
 def _error_message(exc: BaseException) -> ErrorMessage:
     error_type = type(exc).__name__ if isinstance(exc, MnemeError) else "StoreError"
     message = str(exc) or error_type
-    return ErrorMessage(error_type, message, retryable=_retryable(exc))
+    extra = exc.extra if isinstance(exc, OptionalDependencyError) else None
+    package = exc.package if isinstance(exc, OptionalDependencyError) else None
+    return ErrorMessage(
+        error_type,
+        message,
+        retryable=_retryable(exc),
+        extra=extra,
+        package=package,
+    )
 
 
 def _retryable(exc: BaseException) -> bool:

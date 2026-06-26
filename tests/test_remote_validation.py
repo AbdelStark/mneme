@@ -11,6 +11,7 @@ from mneme.core import (
     FingerprintMismatchError,
     MemoryItem,
     Metric,
+    OptionalDependencyError,
     QueryError,
     QuerySpec,
     ReceiptVerificationError,
@@ -160,6 +161,22 @@ def test_remote_error_mapping_raises_local_typed_errors() -> None:
         raise_for_remote_error(
             ErrorMessage("ReceiptVerificationError", "bad proof").to_json()
         )
+
+
+def test_remote_error_mapping_preserves_optional_dependency_metadata() -> None:
+    error = ErrorMessage(
+        "OptionalDependencyError",
+        "missing uvicorn",
+        extra="remote",
+        package="uvicorn",
+    )
+
+    with pytest.raises(OptionalDependencyError) as raised:
+        raise_for_remote_error(error.to_json())
+
+    assert "remote OptionalDependencyError: missing uvicorn" in str(raised.value)
+    assert raised.value.extra == "remote"
+    assert raised.value.package == "uvicorn"
 
 
 def _response_with_receipt(spec: QuerySpec, item: MemoryItem) -> QueryResponse:

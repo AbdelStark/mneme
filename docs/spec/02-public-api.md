@@ -428,7 +428,9 @@ fail-closed client check before conditioning on remote query results: it
 validates the response schema, recomputes returned item content ids, rejects
 encoder fingerprint mismatches, and verifies receipts when requested.
 `raise_for_remote_error(error)` maps remote error envelopes onto local typed
-exceptions.
+exceptions. Remote `OptionalDependencyError` envelopes preserve their `extra`
+and `package` metadata so clients can print the same actionable install hint as
+local optional-runtime failures.
 
 `RemoteHttpClient(RemoteHttpConfig(...))` is the first concrete transport
 adapter. It sends HTTP JSON messages for `put`, `query`, `prove`, `root`, and

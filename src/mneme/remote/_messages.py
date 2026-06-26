@@ -425,20 +425,29 @@ class ErrorMessage:
     message: str
     retryable: bool = False
     schema_version: str = ERROR_SCHEMA
+    extra: str | None = None
+    package: str | None = None
 
     def __post_init__(self) -> None:
         _validate_schema(self.schema_version, ERROR_SCHEMA)
         _require_string(self.error_type, "error_type")
         _require_string(self.message, "message")
         _require_bool(self.retryable, "retryable")
+        _optional_string(self.extra, "extra")
+        _optional_string(self.package, "package")
 
     def to_json(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "schema_version": self.schema_version,
             "error_type": self.error_type,
             "message": self.message,
             "retryable": self.retryable,
         }
+        if self.extra is not None:
+            payload["extra"] = self.extra
+        if self.package is not None:
+            payload["package"] = self.package
+        return payload
 
     @classmethod
     def from_json(cls, data: object) -> ErrorMessage:
@@ -450,6 +459,8 @@ class ErrorMessage:
             error_type=_require_string(mapping.get("error_type"), "error_type"),
             message=_require_string(mapping.get("message"), "message"),
             retryable=retryable,
+            extra=_optional_string(mapping.get("extra"), "extra"),
+            package=_optional_string(mapping.get("package"), "package"),
         )
 
 
@@ -623,6 +634,12 @@ def _require_string(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValidationError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _optional_string(value: object, field_name: str) -> str | None:
+    if value is None:
+        return None
+    return _require_string(value, field_name)
 
 
 def _require_bool(value: object, field_name: str) -> bool:
