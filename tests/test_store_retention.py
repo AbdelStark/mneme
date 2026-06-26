@@ -124,6 +124,33 @@ def test_retention_manifest_rejects_non_digest_tombstones(tmp_path: Path) -> Non
         open_store(root)
 
 
+def test_retention_manifest_rejects_malformed_tombstone_timestamps(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "store"
+    store = init_store(root)
+    cid = store.put(_item(1.0, step=1))
+    manifest_path = root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["retention_policy"] = {
+        "policy": "none",
+        "tombstones": [
+            {
+                "content_id": cid.hex(),
+                "reason": "count",
+                "created_at": "2026-06-24T00:00:00",
+            }
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        StoreCorruptionError,
+        match="tombstone created_at must be an ISO 8601 UTC timestamp",
+    ):
+        open_store(root)
+
+
 def test_count_retention_helper_uses_deterministic_tie_breaks() -> None:
     items = dict(
         _prepared_item_pairs(
@@ -177,6 +204,24 @@ def test_retention_helper_rejects_unvalidated_policy_numbers() -> None:
     with pytest.raises(StoreCorruptionError, match="tombstone content_id must be 32"):
         apply_retention_policy(
             {"policy": "none", "tombstones": [{"content_id": "00"}]},
+            {_prepared_cid(item): item},
+            transaction_id="txn-invalid",
+        )
+    with pytest.raises(
+        StoreCorruptionError,
+        match="tombstone created_at must be an ISO 8601 UTC timestamp",
+    ):
+        apply_retention_policy(
+            {
+                "policy": "none",
+                "tombstones": [
+                    {
+                        "content_id": _prepared_cid(item).hex(),
+                        "reason": "count",
+                        "created_at": "not-a-timestamp",
+                    }
+                ],
+            },
             {_prepared_cid(item): item},
             transaction_id="txn-invalid",
         )

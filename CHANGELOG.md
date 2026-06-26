@@ -29,6 +29,8 @@ All notable user-visible changes are recorded here.
   `created_at` timestamps.
 - Hardened evaluation report validation against malformed or non-UTC
   `created_at` timestamps and centralized report timestamp generation.
+- Hardened store manifest and retention tombstone validation against malformed
+  or non-UTC timestamps.
 - Made signed receipt verification fail-closed behavior explicit until a signing
   backend exists.
 - Aligned receipt security RFCs with the unsigned-only verifier and reserved

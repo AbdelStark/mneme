@@ -6,7 +6,6 @@ import math
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 from uuid import UUID, uuid4
@@ -28,6 +27,7 @@ from mneme.core import (
 )
 from mneme.core._ids import require_cid_bytes
 from mneme.core._json import dumps_strict_json, loads_strict_json
+from mneme.core._time import utc_now_iso
 from mneme.index import Index, create_index_backend, search_index
 from mneme.observability import (
     ObservabilityConfig,
@@ -651,7 +651,7 @@ class LocalStore:
             save_commitment_state(self.path / _COMMITMENT_FILE, state)
             self.manifest = replace(
                 self.manifest,
-                updated_at=_utc_now(),
+                updated_at=utc_now_iso(),
                 commitment=ManifestCommitmentState(
                     enabled=True,
                     backend=state.scheme,
@@ -749,7 +749,7 @@ def init_store(
         observability=observability,
     )
 
-    now = _utc_now()
+    now = utc_now_iso()
     manifest = StoreManifest(
         schema_version=STORE_MANIFEST_SCHEMA,
         store_id=uuid4() if store_id is None else store_id,
@@ -839,10 +839,6 @@ def _write_json_atomic(path: Path, data: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
-
-
 def _store_from_manifest(
     root: Path,
     manifest: StoreManifest,
@@ -917,7 +913,7 @@ def _manifest_after_commit(
             active_fingerprints.append(item.encoder_fp)
     updated = replace(
         manifest,
-        updated_at=_utc_now(),
+        updated_at=utc_now_iso(),
         active_fingerprints=tuple(active_fingerprints),
         value_logs=(updated_log, *manifest.value_logs[1:]),
         last_completed_transaction=txid,

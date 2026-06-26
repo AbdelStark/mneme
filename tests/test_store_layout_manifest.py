@@ -313,6 +313,33 @@ def test_manifest_rejects_unsupported_active_fingerprint_schema_as_corruption(
         open_store(root)
 
 
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    (
+        ("created_at", "not-a-timestamp"),
+        ("updated_at", "2026-06-24T00:00:00"),
+        ("updated_at", "2026-06-24T01:00:00+01:00"),
+    ),
+)
+def test_manifest_rejects_malformed_timestamps(
+    tmp_path,
+    field_name: str,
+    value: object,
+) -> None:
+    root = tmp_path / "store"
+    init_store(root)
+    manifest_path = root / "manifest.json"
+    manifest_json = json.loads(manifest_path.read_text())
+    manifest_json[field_name] = value
+    manifest_path.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+    with pytest.raises(
+        StoreCorruptionError,
+        match=f"{field_name} must be an ISO 8601 UTC timestamp",
+    ):
+        open_store(root)
+
+
 def test_missing_manifest_fails_without_create(tmp_path) -> None:
     root = tmp_path / "store"
     root.mkdir()

@@ -15,6 +15,7 @@ from mneme.core import (
     ValidationError,
 )
 from mneme.core._ids import cid_from_hex
+from mneme.core._time import require_utc_timestamp
 
 STORE_MANIFEST_SCHEMA: Final = "mneme.store_manifest.v1"
 _SUPPORTED_MAJOR: Final = 1
@@ -25,6 +26,14 @@ def _require_string(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise StoreCorruptionError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _require_utc_timestamp(value: object, field_name: str) -> str:
+    return require_utc_timestamp(
+        value,
+        field_name,
+        error_type=StoreCorruptionError,
+    )
 
 
 def _require_store_relative_path(value: object, field_name: str) -> str:
@@ -199,8 +208,8 @@ class StoreManifest:
         validate_manifest_schema(self.schema_version)
         if not isinstance(self.store_id, UUID):
             raise StoreCorruptionError("store_id must be a UUID")
-        _require_string(self.created_at, "created_at")
-        _require_string(self.updated_at, "updated_at")
+        _require_utc_timestamp(self.created_at, "created_at")
+        _require_utc_timestamp(self.updated_at, "updated_at")
         object.__setattr__(
             self,
             "active_fingerprints",
@@ -247,8 +256,8 @@ class StoreManifest:
         return cls(
             schema_version=STORE_MANIFEST_SCHEMA,
             store_id=store_id,
-            created_at=_require_string(mapping.get("created_at"), "created_at"),
-            updated_at=_require_string(mapping.get("updated_at"), "updated_at"),
+            created_at=_require_utc_timestamp(mapping.get("created_at"), "created_at"),
+            updated_at=_require_utc_timestamp(mapping.get("updated_at"), "updated_at"),
             active_fingerprints=tuple(
                 _fingerprint_from_json(item) for item in fingerprints
             ),
@@ -369,7 +378,7 @@ def _require_tombstones(value: object) -> list[dict[str, Any]]:
         tombstone: dict[str, Any] = {
             "content_id": cid.hex(),
             "reason": _require_string(mapping.get("reason"), "tombstone reason"),
-            "created_at": _require_string(
+            "created_at": _require_utc_timestamp(
                 mapping.get("created_at"), "tombstone created_at"
             ),
         }

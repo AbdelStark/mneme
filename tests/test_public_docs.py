@@ -130,6 +130,18 @@ def test_evaluation_docs_state_report_timestamp_boundary() -> None:
     assert "`created_at` values are ISO 8601 UTC timestamps" in rfc
 
 
+def test_persistence_docs_state_manifest_timestamp_boundary() -> None:
+    data_model = Path("docs/spec/03-data-model.md").read_text(encoding="utf-8")
+    rfc = Path(
+        "docs/rfcs/RFC-0004-memory-store-persistence-and-retention.md"
+    ).read_text(
+        encoding="utf-8",
+    )
+
+    assert "created and updated ISO 8601 UTC timestamps" in data_model
+    assert "ISO 8601 UTC `created_at` timestamps" in rfc
+
+
 def test_changelog_has_initial_unreleased_section() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
 

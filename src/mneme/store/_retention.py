@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from typing import Any, Final
 
 from mneme.core import Cid, MemoryItem, StoreCorruptionError
 from mneme.core._ids import cid_from_hex
+from mneme.core._time import require_utc_timestamp, utc_now_iso
 from mneme.store._manifest import StoreManifest
 
 _RETENTION_POLICIES: Final = frozenset({"none", "count", "age"})
@@ -86,6 +86,11 @@ def _retention_tombstones(policy: Mapping[str, Any]) -> dict[Cid, dict[str, Any]
             "tombstone content_id",
             error_type=StoreCorruptionError,
         )
+        require_utc_timestamp(
+            raw.get("created_at"),
+            "tombstone created_at",
+            error_type=StoreCorruptionError,
+        )
         tombstones[cid] = dict(raw)
     return tombstones
 
@@ -123,7 +128,7 @@ def _new_tombstones(
     reason: str,
     transaction_id: str,
 ) -> dict[Cid, dict[str, Any]]:
-    created_at = _utc_now()
+    created_at = utc_now_iso()
     return {
         cid: {
             "content_id": cid.hex(),
@@ -139,10 +144,6 @@ def _sorted_tombstones(
     tombstones: Mapping[Cid, Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     return [dict(tombstones[cid]) for cid in sorted(tombstones)]
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 __all__ = [

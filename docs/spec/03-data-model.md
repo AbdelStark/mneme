@@ -150,7 +150,7 @@ The manifest records:
 
 - store schema version
 - store id
-- created and updated timestamps
+- created and updated ISO 8601 UTC timestamps
 - active encoder fingerprints
 - value log file names and offsets
 - index backend and backend parameters

@@ -65,7 +65,9 @@ Retention policies:
 - `AgeRetention(max_age_seconds=N)` over stored transition event time `t`
 - `DensityRetention(max_items_per_bucket=N)` after summary bucketing exists
 
-Retention writes tombstones in the manifest. Physical compaction is a separate maintenance command and must produce a new value log and rebuilt index.
+Retention writes tombstones with ISO 8601 UTC `created_at` timestamps in the
+manifest. Physical compaction is a separate maintenance command and must produce
+a new value log and rebuilt index.
 
 ## Alternatives Considered
 
