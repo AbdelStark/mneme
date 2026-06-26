@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -62,8 +63,38 @@ def write_report_for_entrypoint(
     return int(CliExitCode.SUCCESS)
 
 
+def positive_int(value: str) -> int:
+    """Parse a positive integer for evaluation CLI arguments."""
+
+    parsed = _parse_int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def non_negative_int(value: str) -> int:
+    """Parse a non-negative integer for evaluation CLI arguments."""
+
+    parsed = _parse_int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be a non-negative integer")
+    return parsed
+
+
+def _parse_int(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+
+
 def _print_entrypoint_error(error: BaseException) -> None:
     print(f"{type(error).__name__}: {error}", file=sys.stderr)
 
 
-__all__ = ["run_eval_entrypoint", "write_report_for_entrypoint"]
+__all__ = [
+    "non_negative_int",
+    "positive_int",
+    "run_eval_entrypoint",
+    "write_report_for_entrypoint",
+]

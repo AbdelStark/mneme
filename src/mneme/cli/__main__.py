@@ -49,6 +49,7 @@ from mneme.eval import (
     write_replay_report_json,
     write_report_json,
 )
+from mneme.eval._entrypoints import non_negative_int, positive_int
 from mneme.receipts import RetrievalReceipt, verify_retrieval_receipt
 from mneme.store import (
     StoreStats,
@@ -547,15 +548,15 @@ def _root_from_hex(value: str) -> bytes:
 def _add_eval_profile_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--store", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--k", default=4, type=int)
+    parser.add_argument("--k", default=4, type=positive_int)
     parser.add_argument(
         "--metric",
         default=Metric.L2.value,
         choices=[metric.value for metric in Metric],
     )
-    parser.add_argument("--queries", default=8, type=int)
-    parser.add_argument("--warmup", default=2, type=int)
-    parser.add_argument("--measurements", default=20, type=int)
+    parser.add_argument("--queries", default=8, type=positive_int)
+    parser.add_argument("--warmup", default=2, type=non_negative_int)
+    parser.add_argument("--measurements", default=20, type=positive_int)
     parser.add_argument(
         "--approx-backend",
         default="faiss_hnsw",
@@ -567,15 +568,15 @@ def _add_eval_profile_args(parser: argparse.ArgumentParser) -> None:
 def _add_eval_receipts_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--store", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--k", default=4, type=int)
+    parser.add_argument("--k", default=4, type=positive_int)
     parser.add_argument(
         "--metric",
         default=Metric.L2.value,
         choices=[metric.value for metric in Metric],
     )
-    parser.add_argument("--queries", default=8, type=int)
-    parser.add_argument("--warmup", default=2, type=int)
-    parser.add_argument("--measurements", default=20, type=int)
+    parser.add_argument("--queries", default=8, type=positive_int)
+    parser.add_argument("--warmup", default=2, type=non_negative_int)
+    parser.add_argument("--measurements", default=20, type=positive_int)
     parser.add_argument("--seed", default=0, type=int)
 
 

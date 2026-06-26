@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import NoReturn, TextIO
 
 from mneme.core import Metric
-from mneme.eval._entrypoints import run_eval_entrypoint, write_report_for_entrypoint
+from mneme.eval._entrypoints import (
+    non_negative_int,
+    positive_int,
+    run_eval_entrypoint,
+    write_report_for_entrypoint,
+)
 from mneme.eval._receipts import run_receipt_profile_evaluation
 from mneme.store import open_store
 
@@ -23,15 +28,15 @@ def _run(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
     parser = argparse.ArgumentParser(prog="mneme eval receipts")
     parser.add_argument("--store", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--k", default=4, type=int)
+    parser.add_argument("--k", default=4, type=positive_int)
     parser.add_argument(
         "--metric",
         default=Metric.L2.value,
         choices=[metric.value for metric in Metric],
     )
-    parser.add_argument("--queries", default=8, type=int)
-    parser.add_argument("--warmup", default=2, type=int)
-    parser.add_argument("--measurements", default=20, type=int)
+    parser.add_argument("--queries", default=8, type=positive_int)
+    parser.add_argument("--warmup", default=2, type=non_negative_int)
+    parser.add_argument("--measurements", default=20, type=positive_int)
     parser.add_argument("--seed", default=0, type=int)
     args = parser.parse_args(argv)
     command = (

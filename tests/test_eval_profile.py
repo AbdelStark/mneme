@@ -10,6 +10,7 @@ import pytest
 from _entrypoint_runner import run_entrypoint
 
 from mneme.core import (
+    CliExitCode,
     EncoderFingerprint,
     EvaluationError,
     MemoryItem,
@@ -134,6 +135,24 @@ def test_profile_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     assert report.command[:4] == ("mneme", "eval", "profile", "--store")
     assert report.metrics["flat_recall_at_k"] == 1.0
     assert report.metrics["memory_footprint_bytes_per_item"] > 0.0
+
+
+def test_profile_eval_module_rejects_non_positive_query_count(
+    tmp_path: Path,
+) -> None:
+    completed = run_entrypoint(
+        profile_main,
+        "--store",
+        tmp_path / "missing-store",
+        "--out",
+        tmp_path / "profile.json",
+        "--queries",
+        "0",
+    )
+
+    assert completed.returncode == int(CliExitCode.USER_INPUT)
+    assert completed.stdout == ""
+    assert "argument --queries: must be a positive integer" in completed.stderr
 
 
 def _force_missing_faiss(monkeypatch: pytest.MonkeyPatch) -> None:

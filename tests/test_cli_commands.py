@@ -349,6 +349,25 @@ def test_eval_profile_cli_writes_and_prints_valid_report(tmp_path: Path) -> None
     assert printed.metrics["memory_footprint_bytes_per_item"] > 0.0
 
 
+def test_eval_profile_cli_rejects_non_positive_query_count(
+    tmp_path: Path,
+) -> None:
+    result = run_cli(
+        "eval",
+        "profile",
+        "--store",
+        tmp_path / "missing-store",
+        "--out",
+        tmp_path / "profile.json",
+        "--queries",
+        "0",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    assert result.stdout == ""
+    assert "argument --queries: must be a positive integer" in result.stderr
+
+
 def test_eval_recall_and_latency_aliases_emit_profile_reports(tmp_path: Path) -> None:
     root = tmp_path / "store"
     store = init_store(root)
@@ -418,6 +437,25 @@ def test_eval_receipts_cli_writes_and_prints_valid_report(tmp_path: Path) -> Non
     assert printed == written
     assert printed.artifacts["report_kind"] == "receipt-overhead"
     assert printed.metrics["receipt_proof_count_mean"] == 2.0
+
+
+def test_eval_receipts_cli_rejects_negative_warmup_count(
+    tmp_path: Path,
+) -> None:
+    result = run_cli(
+        "eval",
+        "receipts",
+        "--store",
+        tmp_path / "missing-store",
+        "--out",
+        tmp_path / "receipts.json",
+        "--warmup",
+        "-1",
+    )
+
+    assert result.returncode == int(CliExitCode.USER_INPUT)
+    assert result.stdout == ""
+    assert "argument --warmup: must be a non-negative integer" in result.stderr
 
 
 def test_eval_remote_conformance_cli_writes_and_prints_valid_report(

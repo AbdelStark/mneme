@@ -9,6 +9,7 @@ import pytest
 from _entrypoint_runner import run_entrypoint
 
 from mneme.core import (
+    CliExitCode,
     EncoderFingerprint,
     EvaluationError,
     MemoryItem,
@@ -104,6 +105,24 @@ def test_receipt_eval_module_writes_valid_report_json(tmp_path: Path) -> None:
     assert report.command[:4] == ("mneme", "eval", "receipts", "--store")
     assert report.metrics["receipt_proof_count_mean"] == 2.0
     assert report.artifacts["proof_size_trend"] == "metrics:proof_size_trend_*"
+
+
+def test_receipt_eval_module_rejects_negative_warmup_count(
+    tmp_path: Path,
+) -> None:
+    completed = run_entrypoint(
+        receipts_main,
+        "--store",
+        tmp_path / "missing-store",
+        "--out",
+        tmp_path / "receipts.json",
+        "--warmup",
+        "-1",
+    )
+
+    assert completed.returncode == int(CliExitCode.USER_INPUT)
+    assert completed.stdout == ""
+    assert "argument --warmup: must be a non-negative integer" in completed.stderr
 
 
 def _csv_ints(value: object) -> list[int]:
