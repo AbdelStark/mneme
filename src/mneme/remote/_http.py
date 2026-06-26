@@ -137,6 +137,10 @@ class RemoteHttpClient:
         *,
         requester: HttpJsonRequester | None = None,
     ) -> None:
+        if not isinstance(config, RemoteHttpConfig):
+            raise ValidationError("remote HTTP config must be a RemoteHttpConfig")
+        if requester is not None and not callable(requester):
+            raise ValidationError("remote HTTP requester must be callable")
         self.config = config
         self._requester = _stdlib_request_json if requester is None else requester
 
@@ -178,6 +182,8 @@ class RemoteHttpClient:
 
     def _post(self, path: str, payload: JsonObject) -> JsonObject:
         response = self._requester("POST", path, payload, self.config)
+        if not isinstance(response, HttpJsonResponse):
+            raise ValidationError("remote HTTP requester must return HttpJsonResponse")
         if response.status_code >= 400:
             raise_for_remote_error(response.payload)
         if response.status_code < 200 or response.status_code >= 300:

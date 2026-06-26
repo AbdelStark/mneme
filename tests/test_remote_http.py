@@ -154,6 +154,35 @@ def test_remote_http_client_validation_is_always_applied() -> None:
         client.query(spec)
 
 
+def test_remote_http_client_constructor_rejects_malformed_dependencies() -> None:
+    with pytest.raises(ValidationError, match="RemoteHttpConfig"):
+        RemoteHttpClient(object())  # type: ignore[arg-type]
+
+    with pytest.raises(ValidationError, match="requester must be callable"):
+        RemoteHttpClient(
+            RemoteHttpConfig("http://testserver"),
+            requester=object(),  # type: ignore[arg-type]
+        )
+
+
+def test_remote_http_client_rejects_malformed_requester_response() -> None:
+    def requester(
+        method: str,
+        path: str,
+        payload: Mapping[str, object],
+        config: RemoteHttpConfig,
+    ) -> object:
+        return {"schema_version": "mneme.stats.response.v1", "stats": {}}
+
+    client = RemoteHttpClient(
+        RemoteHttpConfig("http://testserver"),
+        requester=requester,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(ValidationError, match="return HttpJsonResponse"):
+        client.stats()
+
+
 def test_remote_http_server_errors_map_to_local_typed_errors(tmp_path: Path) -> None:
     app = MemoryStoreASGIApp(init_store(tmp_path / "store"))
     client = RemoteHttpClient(
