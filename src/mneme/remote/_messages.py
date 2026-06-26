@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any, Final, Literal
@@ -99,6 +100,9 @@ class RemoteArray:
             raw = base64.b64decode(self.data, validate=True)
         except binascii.Error as exc:
             raise ValidationError("array data must be base64") from exc
+        expected_bytes = math.prod(self.shape) * dtype.itemsize
+        if len(raw) != expected_bytes:
+            raise ValidationError("array data does not match dtype and shape")
         try:
             array = np.frombuffer(raw, dtype=dtype).reshape(self.shape).copy()
         except ValueError as exc:

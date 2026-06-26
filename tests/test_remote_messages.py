@@ -71,6 +71,17 @@ def test_remote_array_rejects_boolean_shape_dimensions() -> None:
         RemoteArray.from_json(payload)
 
 
+@pytest.mark.parametrize("shape", ([1], [3]))
+def test_remote_array_rejects_byte_count_mismatches(shape: list[int]) -> None:
+    payload = RemoteArray.from_array(np.array([1.0, 2.0], dtype=np.float32)).to_json()
+    payload["shape"] = shape
+
+    with pytest.raises(
+        ValidationError, match="array data does not match dtype and shape"
+    ):
+        RemoteArray.from_json(payload).to_array()
+
+
 def test_remote_array_rejects_nonnumeric_decoded_dtype() -> None:
     payload = {
         "dtype": "|S1",
