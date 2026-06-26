@@ -173,12 +173,20 @@ def _torch() -> Any:
         ) from exc
 
 
-def _require_splits(
-    batches: Mapping[str, Sequence[AdapterTrainingBatch]],
-) -> dict[str, tuple[AdapterTrainingBatch, ...]]:
+def _require_splits(batches: object) -> dict[str, tuple[AdapterTrainingBatch, ...]]:
+    if not isinstance(batches, Mapping):
+        raise EvaluationError("batches must be a mapping")
     split_batches: dict[str, tuple[AdapterTrainingBatch, ...]] = {}
     for split in _REQUIRED_SPLITS:
-        values = tuple(batches.get(split, ()))
+        raw_values = batches.get(split, ())
+        if isinstance(raw_values, str | bytes | bytearray) or not isinstance(
+            raw_values,
+            Sequence,
+        ):
+            raise EvaluationError(
+                f"{split} split must be a sequence of AdapterTrainingBatch"
+            )
+        values = tuple(raw_values)
         if not values:
             raise EvaluationError(f"{split} split must contain at least one batch")
         for batch in values:

@@ -262,6 +262,55 @@ def test_frozen_base_training_requires_all_splits(
         )
 
 
+def test_frozen_base_training_rejects_non_mapping_batches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_torch(monkeypatch)
+
+    with pytest.raises(EvaluationError, match="batches must be a mapping"):
+        train_frozen_base_adapter(
+            base_model=FakeBaseModel(),
+            adapter=FakeAdapter(),
+            batches=object(),  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize("train_batches", (object(), "not-a-sequence"))
+def test_frozen_base_training_rejects_malformed_split_collections(
+    monkeypatch: pytest.MonkeyPatch,
+    train_batches: object,
+) -> None:
+    _install_fake_torch(monkeypatch)
+
+    with pytest.raises(EvaluationError, match="train split must be a sequence"):
+        train_frozen_base_adapter(
+            base_model=FakeBaseModel(),
+            adapter=FakeAdapter(),
+            batches={
+                "train": train_batches,  # type: ignore[dict-item]
+                "calibration": _batches()["calibration"],
+                "validation": _batches()["validation"],
+            },
+        )
+
+
+def test_frozen_base_training_rejects_non_batch_split_items(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_torch(monkeypatch)
+
+    with pytest.raises(EvaluationError, match="train split contains"):
+        train_frozen_base_adapter(
+            base_model=FakeBaseModel(),
+            adapter=FakeAdapter(),
+            batches={
+                "train": (object(),),  # type: ignore[dict-item]
+                "calibration": _batches()["calibration"],
+                "validation": _batches()["validation"],
+            },
+        )
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     (
